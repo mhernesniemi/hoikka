@@ -6,6 +6,7 @@ import { collectionService } from "$lib/server/services/collections.js";
 import { translationService } from "$lib/server/services/translations.js";
 import { TRANSLATION_LANGUAGES } from "$lib/config/languages.js";
 import { PRODUCT_TYPES } from "$lib/config/products.js";
+import { dbError } from "$lib/server/db-error.js";
 import { error, fail, redirect } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
 
@@ -111,7 +112,7 @@ export const actions: Actions = {
 
 			return { success: true };
 		} catch (e) {
-			return fail(500, { error: "Failed to update product" });
+			return fail(500, { error: dbError(e, "Failed to update product") });
 		}
 	},
 
@@ -153,7 +154,7 @@ export const actions: Actions = {
 
 			return { facetSuccess: true };
 		} catch (e) {
-			return fail(500, { error: "Failed to update facet values" });
+			return fail(500, { error: dbError(e, "Failed to update facet values") });
 		}
 	},
 
@@ -184,7 +185,7 @@ export const actions: Actions = {
 
 			return { imageSuccess: true };
 		} catch (e) {
-			return fail(500, { imageError: "Failed to add image" });
+			return fail(500, { imageError: dbError(e, "Failed to add image") });
 		}
 	},
 
@@ -202,7 +203,7 @@ export const actions: Actions = {
 			await assetService.delete(assetId);
 			return { imageRemoved: true };
 		} catch (e) {
-			return fail(500, { imageError: "Failed to remove image" });
+			return fail(500, { imageError: dbError(e, "Failed to remove image") });
 		}
 	},
 
@@ -219,7 +220,7 @@ export const actions: Actions = {
 			await assetService.setFeaturedAsset(productId, assetId);
 			return { featuredSet: true };
 		} catch (e) {
-			return fail(500, { imageError: "Failed to set featured image" });
+			return fail(500, { imageError: dbError(e, "Failed to set featured image") });
 		}
 	},
 
@@ -235,7 +236,7 @@ export const actions: Actions = {
 			await categoryService.setProductCategories(productId, categoryIds);
 			return { categorySuccess: true };
 		} catch (e) {
-			return fail(500, { categoryError: "Failed to update categories" });
+			return fail(500, { categoryError: dbError(e, "Failed to update categories") });
 		}
 	},
 
@@ -259,7 +260,7 @@ export const actions: Actions = {
 
 			return { altUpdated: true };
 		} catch (e) {
-			return fail(500, { imageError: "Failed to update image" });
+			return fail(500, { imageError: dbError(e, "Failed to update image") });
 		}
 	}
 };

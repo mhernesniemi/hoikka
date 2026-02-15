@@ -1,6 +1,7 @@
 /**
  * Admin Customer Detail Page Server
  */
+import { dbError } from "$lib/server/db-error.js";
 import { error, fail } from "@sveltejs/kit";
 import type { PageServerLoad, Actions } from "./$types";
 import { customerService } from "$lib/server/services/customers";
@@ -38,8 +39,8 @@ export const actions: Actions = {
 		try {
 			await customerService.update(customerId, { vatId });
 			return { success: true, message: "VAT ID updated" };
-		} catch {
-			return fail(500, { error: "Failed to update VAT ID" });
+		} catch (e) {
+			return fail(500, { error: dbError(e, "Failed to update VAT ID") });
 		}
 	}
 };

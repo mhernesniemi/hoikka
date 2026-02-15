@@ -1,4 +1,5 @@
 import { contentPageService } from "$lib/server/services/content-pages.js";
+import { dbError } from "$lib/server/db-error.js";
 import { fail, redirect, isRedirect } from "@sveltejs/kit";
 import { slugify } from "$lib/utils.js";
 import type { Actions, PageServerLoad } from "./$types";
@@ -27,7 +28,7 @@ export const actions: Actions = {
 			throw redirect(303, `/admin/content-pages/${page.id}?created=1`);
 		} catch (err) {
 			if (isRedirect(err)) throw err;
-			return fail(500, { error: "Failed to create page" });
+			return fail(500, { error: dbError(err, "Failed to create page") });
 		}
 	},
 
@@ -42,8 +43,8 @@ export const actions: Actions = {
 		try {
 			await Promise.all(ids.map((id) => contentPageService.update(id, { published: true })));
 			return { success: true };
-		} catch {
-			return fail(500, { error: "Failed to publish pages" });
+		} catch (e) {
+			return fail(500, { error: dbError(e, "Failed to publish pages") });
 		}
 	},
 
@@ -58,8 +59,8 @@ export const actions: Actions = {
 		try {
 			await Promise.all(ids.map((id) => contentPageService.delete(id)));
 			return { success: true };
-		} catch {
-			return fail(500, { error: "Failed to delete pages" });
+		} catch (e) {
+			return fail(500, { error: dbError(e, "Failed to delete pages") });
 		}
 	}
 };

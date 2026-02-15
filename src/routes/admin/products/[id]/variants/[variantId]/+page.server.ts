@@ -3,6 +3,7 @@ import { facetService } from "$lib/server/services/facets.js";
 import { customerGroupService } from "$lib/server/services/customerGroups.js";
 import { translationService } from "$lib/server/services/translations.js";
 import { TRANSLATION_LANGUAGES } from "$lib/config/languages.js";
+import { dbError } from "$lib/server/db-error.js";
 import { error, fail, redirect } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
 
@@ -129,7 +130,7 @@ export const actions: Actions = {
 
 			return { success: true };
 		} catch (e) {
-			return fail(500, { error: "Failed to update variant" });
+			return fail(500, { error: dbError(e, "Failed to update variant") });
 		}
 	},
 

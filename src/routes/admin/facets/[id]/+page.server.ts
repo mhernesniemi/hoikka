@@ -1,6 +1,7 @@
 import { facetService } from "$lib/server/services/facets.js";
 import { translationService } from "$lib/server/services/translations.js";
 import { TRANSLATION_LANGUAGES } from "$lib/config/languages.js";
+import { dbError } from "$lib/server/db-error.js";
 import { error, fail, redirect, isRedirect } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
 
@@ -93,8 +94,8 @@ export const actions: Actions = {
 			}
 
 			return { success: true, message: "Facet updated" };
-		} catch {
-			return fail(500, { error: "Failed to update facet" });
+		} catch (e) {
+			return fail(500, { error: dbError(e, "Failed to update facet") });
 		}
 	},
 
@@ -106,7 +107,7 @@ export const actions: Actions = {
 			throw redirect(303, "/admin/facets");
 		} catch (err) {
 			if (isRedirect(err)) throw err;
-			return fail(500, { error: "Failed to delete facet" });
+			return fail(500, { error: dbError(err, "Failed to delete facet") });
 		}
 	}
 };

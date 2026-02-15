@@ -3,6 +3,7 @@ import { taxService } from "$lib/server/services/tax.js";
 import { translationService } from "$lib/server/services/translations.js";
 import { TRANSLATION_LANGUAGES } from "$lib/config/languages.js";
 import { slugify } from "$lib/utils.js";
+import { dbError } from "$lib/server/db-error.js";
 import { fail } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
 
@@ -50,7 +51,7 @@ export const actions: Actions = {
 
 			return { success: true };
 		} catch (e) {
-			return fail(500, { error: "Failed to create category" });
+			return fail(500, { error: dbError(e, "Failed to create category") });
 		}
 	},
 
@@ -83,7 +84,7 @@ export const actions: Actions = {
 
 			return { success: true };
 		} catch (e) {
-			return fail(500, { error: "Failed to update category" });
+			return fail(500, { error: dbError(e, "Failed to update category") });
 		}
 	},
 
@@ -114,7 +115,7 @@ export const actions: Actions = {
 
 			return { success: true };
 		} catch (e) {
-			return fail(500, { error: "Failed to create category" });
+			return fail(500, { error: dbError(e, "Failed to create category") });
 		}
 	},
 

@@ -1,4 +1,5 @@
 import { productService } from "$lib/server/services/products.js";
+import { dbError } from "$lib/server/db-error.js";
 import { fail, redirect, isRedirect } from "@sveltejs/kit";
 import type { PageServerLoad, Actions } from "./$types";
 
@@ -33,9 +34,9 @@ export const actions: Actions = {
 			});
 
 			throw redirect(303, `/admin/products/${product.id}?created`);
-		} catch (error) {
-			if (isRedirect(error)) throw error;
-			return fail(500, { error: "Failed to create product" });
+		} catch (err) {
+			if (isRedirect(err)) throw err;
+			return fail(500, { error: dbError(err, "Failed to create product") });
 		}
 	},
 
@@ -53,8 +54,8 @@ export const actions: Actions = {
 				success: true,
 				message: `${ids.length} product${ids.length !== 1 ? "s" : ""} published`
 			};
-		} catch {
-			return fail(500, { error: "Failed to publish products" });
+		} catch (e) {
+			return fail(500, { error: dbError(e, "Failed to publish products") });
 		}
 	},
 
@@ -69,8 +70,8 @@ export const actions: Actions = {
 		try {
 			await Promise.all(ids.map((id) => productService.delete(id)));
 			return { success: true };
-		} catch {
-			return fail(500, { error: "Failed to delete products" });
+		} catch (e) {
+			return fail(500, { error: dbError(e, "Failed to delete products") });
 		}
 	}
 };

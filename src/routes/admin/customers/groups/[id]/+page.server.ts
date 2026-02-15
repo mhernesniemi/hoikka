@@ -1,5 +1,6 @@
 import { customerGroupService } from "$lib/server/services/customerGroups.js";
 import { customerService } from "$lib/server/services/customers.js";
+import { dbError } from "$lib/server/db-error.js";
 import { error, fail, redirect, isRedirect } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
 
@@ -47,8 +48,8 @@ export const actions: Actions = {
 			});
 			await customerGroupService.setCustomers(id, customerIds);
 			return { success: true, message: "Group updated" };
-		} catch {
-			return fail(500, { error: "Failed to update group" });
+		} catch (e) {
+			return fail(500, { error: dbError(e, "Failed to update group") });
 		}
 	},
 
@@ -60,7 +61,7 @@ export const actions: Actions = {
 			throw redirect(303, "/admin/customers?tab=groups");
 		} catch (err) {
 			if (isRedirect(err)) throw err;
-			return fail(500, { error: "Failed to delete group" });
+			return fail(500, { error: dbError(err, "Failed to delete group") });
 		}
 	}
 };

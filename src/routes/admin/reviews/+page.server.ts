@@ -1,5 +1,6 @@
 import type { PageServerLoad, Actions } from "./$types";
 import { reviewService } from "$lib/server/services/reviews.js";
+import { dbError } from "$lib/server/db-error.js";
 import { fail } from "@sveltejs/kit";
 import type { ReviewStatus } from "$lib/types.js";
 
@@ -33,8 +34,8 @@ export const actions: Actions = {
 				success: true,
 				message: `${ids.length} review${ids.length !== 1 ? "s" : ""} approved`
 			};
-		} catch {
-			return fail(500, { error: "Failed to approve reviews" });
+		} catch (e) {
+			return fail(500, { error: dbError(e, "Failed to approve reviews") });
 		}
 	},
 
@@ -52,8 +53,8 @@ export const actions: Actions = {
 				success: true,
 				message: `${ids.length} review${ids.length !== 1 ? "s" : ""} rejected`
 			};
-		} catch {
-			return fail(500, { error: "Failed to reject reviews" });
+		} catch (e) {
+			return fail(500, { error: dbError(e, "Failed to reject reviews") });
 		}
 	},
 
@@ -71,8 +72,8 @@ export const actions: Actions = {
 				success: true,
 				message: `${ids.length} review${ids.length !== 1 ? "s" : ""} deleted`
 			};
-		} catch {
-			return fail(500, { error: "Failed to delete reviews" });
+		} catch (e) {
+			return fail(500, { error: dbError(e, "Failed to delete reviews") });
 		}
 	}
 };

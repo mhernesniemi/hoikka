@@ -5,6 +5,7 @@ import { productService } from "$lib/server/services/products.js";
 import { assetService } from "$lib/server/services/assets.js";
 import { translationService } from "$lib/server/services/translations.js";
 import { TRANSLATION_LANGUAGES } from "$lib/config/languages.js";
+import { dbError } from "$lib/server/db-error.js";
 import { error, fail, redirect, isRedirect } from "@sveltejs/kit";
 import { slugify } from "$lib/utils.js";
 
@@ -84,7 +85,7 @@ export const actions: Actions = {
 
 			return { success: true, message: "Collection updated successfully" };
 		} catch (err) {
-			return fail(500, { error: "Failed to update collection" });
+			return fail(500, { error: dbError(err, "Failed to update collection") });
 		}
 	},
 
@@ -111,7 +112,7 @@ export const actions: Actions = {
 			throw redirect(303, "/admin/collections");
 		} catch (err) {
 			if (isRedirect(err)) throw err;
-			return fail(500, { error: "Failed to delete collection" });
+			return fail(500, { error: dbError(err, "Failed to delete collection") });
 		}
 	},
 
@@ -138,8 +139,8 @@ export const actions: Actions = {
 			}
 			await assetService.addToCollection(collectionId, asset.id);
 			return { success: true, message: "Image added" };
-		} catch {
-			return fail(500, { error: "Failed to add image" });
+		} catch (e) {
+			return fail(500, { error: dbError(e, "Failed to add image") });
 		}
 	},
 
@@ -155,8 +156,8 @@ export const actions: Actions = {
 		try {
 			await assetService.removeFromCollection(collectionId, assetId);
 			return { success: true, message: "Image removed" };
-		} catch {
-			return fail(500, { error: "Failed to remove image" });
+		} catch (e) {
+			return fail(500, { error: dbError(e, "Failed to remove image") });
 		}
 	},
 
@@ -172,8 +173,8 @@ export const actions: Actions = {
 		try {
 			await assetService.updateAlt(assetId, alt || "");
 			return { success: true, message: "Image updated" };
-		} catch {
-			return fail(500, { error: "Failed to update image" });
+		} catch (e) {
+			return fail(500, { error: dbError(e, "Failed to update image") });
 		}
 	}
 };

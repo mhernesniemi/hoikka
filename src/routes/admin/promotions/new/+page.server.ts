@@ -3,6 +3,7 @@ import { promotionService } from "$lib/server/services/promotions.js";
 import { productService } from "$lib/server/services/products.js";
 import { collectionService } from "$lib/server/services/collections.js";
 import { customerGroupService } from "$lib/server/services/customerGroups.js";
+import { dbError } from "$lib/server/db-error.js";
 import { fail, redirect, isRedirect } from "@sveltejs/kit";
 
 export const load: PageServerLoad = async () => {
@@ -117,7 +118,7 @@ export const actions: Actions = {
 			throw redirect(303, `/admin/promotions/${promotion.id}?created`);
 		} catch (err) {
 			if (isRedirect(err)) throw err;
-			return fail(500, { error: "Failed to create promotion" });
+			return fail(500, { error: dbError(err, "Failed to create promotion") });
 		}
 	}
 };

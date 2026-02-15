@@ -1,5 +1,6 @@
 import type { PageServerLoad, Actions } from "./$types";
 import { collectionService } from "$lib/server/services/collections.js";
+import { dbError } from "$lib/server/db-error.js";
 import { fail, redirect, isRedirect } from "@sveltejs/kit";
 import { slugify } from "$lib/utils.js";
 
@@ -37,7 +38,7 @@ export const actions: Actions = {
 			throw redirect(303, `/admin/collections/${collection.id}?created`);
 		} catch (err) {
 			if (isRedirect(err)) throw err;
-			return fail(500, { error: "Failed to create collection" });
+			return fail(500, { error: dbError(err, "Failed to create collection") });
 		}
 	},
 
@@ -68,8 +69,8 @@ export const actions: Actions = {
 		try {
 			await Promise.all(ids.map((id) => collectionService.delete(id)));
 			return { success: true };
-		} catch {
-			return fail(500, { error: "Failed to delete collections" });
+		} catch (e) {
+			return fail(500, { error: dbError(e, "Failed to delete collections") });
 		}
 	}
 };

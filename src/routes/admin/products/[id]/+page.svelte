@@ -505,7 +505,12 @@
                     {variant.name}
                   </TableCell>
                   <TableCell class="text-sm">{(variant.price / 100).toFixed(2)} EUR</TableCell>
-                  <TableCell class="text-sm">{variant.stock}</TableCell>
+                  <TableCell
+                    class={cn(
+                      "text-sm",
+                      variant.trackInventory ? "text-foreground" : "text-placeholder"
+                    )}>{variant.trackInventory ? variant.stock : "Unlimited"}</TableCell
+                  >
                   <TableCell class="text-sm">
                     {#if variant.facetValues.length === 0}
                       <span class="text-placeholder">None</span>

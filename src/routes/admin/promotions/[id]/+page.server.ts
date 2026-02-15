@@ -3,6 +3,7 @@ import { promotionService } from "$lib/server/services/promotions.js";
 import { productService } from "$lib/server/services/products.js";
 import { collectionService } from "$lib/server/services/collections.js";
 import { customerGroupService } from "$lib/server/services/customerGroups.js";
+import { dbError } from "$lib/server/db-error.js";
 import { error, fail, redirect, isRedirect } from "@sveltejs/kit";
 
 export const load: PageServerLoad = async ({ params }) => {
@@ -103,7 +104,7 @@ export const actions: Actions = {
 
 			return { success: true };
 		} catch (err) {
-			return fail(500, { error: "Failed to update promotion" });
+			return fail(500, { error: dbError(err, "Failed to update promotion") });
 		}
 	},
 
@@ -115,7 +116,7 @@ export const actions: Actions = {
 			throw redirect(303, "/admin/promotions");
 		} catch (err) {
 			if (isRedirect(err)) throw err;
-			return fail(500, { error: "Failed to delete promotion" });
+			return fail(500, { error: dbError(err, "Failed to delete promotion") });
 		}
 	}
 };

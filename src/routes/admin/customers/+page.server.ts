@@ -1,5 +1,6 @@
 import { customerService } from "$lib/server/services/customers.js";
 import { customerGroupService } from "$lib/server/services/customerGroups.js";
+import { dbError } from "$lib/server/db-error.js";
 import { fail, redirect, isRedirect } from "@sveltejs/kit";
 import type { PageServerLoad, Actions } from "./$types";
 
@@ -27,8 +28,8 @@ export const actions: Actions = {
 		try {
 			await Promise.all(ids.map((id) => customerService.delete(id)));
 			return { success: true, message: "Customers deleted" };
-		} catch {
-			return fail(500, { error: "Failed to delete customers" });
+		} catch (e) {
+			return fail(500, { error: dbError(e, "Failed to delete customers") });
 		}
 	},
 
@@ -43,9 +44,9 @@ export const actions: Actions = {
 		try {
 			const group = await customerGroupService.create({ name });
 			throw redirect(303, `/admin/customers/groups/${group.id}?created`);
-		} catch (error) {
-			if (isRedirect(error)) throw error;
-			return fail(500, { error: "Failed to create group" });
+		} catch (err) {
+			if (isRedirect(err)) throw err;
+			return fail(500, { error: dbError(err, "Failed to create group") });
 		}
 	},
 
@@ -60,8 +61,8 @@ export const actions: Actions = {
 		try {
 			await Promise.all(ids.map((id) => customerGroupService.delete(id)));
 			return { success: true, message: "Groups deleted" };
-		} catch {
-			return fail(500, { error: "Failed to delete groups" });
+		} catch (e) {
+			return fail(500, { error: dbError(e, "Failed to delete groups") });
 		}
 	}
 };

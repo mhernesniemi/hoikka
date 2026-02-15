@@ -2,6 +2,7 @@ import type { PageServerLoad, Actions } from "./$types";
 import { contentPageService } from "$lib/server/services/content-pages.js";
 import { translationService } from "$lib/server/services/translations.js";
 import { TRANSLATION_LANGUAGES } from "$lib/config/languages.js";
+import { dbError } from "$lib/server/db-error.js";
 import { error, fail, redirect, isRedirect } from "@sveltejs/kit";
 import { slugify } from "$lib/utils.js";
 
@@ -61,7 +62,7 @@ export const actions: Actions = {
 
 			return { success: true, message: "Page updated successfully" };
 		} catch (err) {
-			return fail(500, { error: "Failed to update page" });
+			return fail(500, { error: dbError(err, "Failed to update page") });
 		}
 	},
 
@@ -73,7 +74,7 @@ export const actions: Actions = {
 			throw redirect(303, "/admin/content-pages");
 		} catch (err) {
 			if (isRedirect(err)) throw err;
-			return fail(500, { error: "Failed to delete page" });
+			return fail(500, { error: dbError(err, "Failed to delete page") });
 		}
 	}
 };
