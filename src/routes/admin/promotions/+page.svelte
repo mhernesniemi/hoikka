@@ -7,7 +7,7 @@
   import DeleteConfirmDialog from "$lib/components/admin/DeleteConfirmDialog.svelte";
   import { Checkbox } from "$lib/components/admin/ui/checkbox";
   import type { PageData } from "./$types";
-  import Gift from "@lucide/svelte/icons/gift";
+  import { Percent as PercentIcon } from "@lucide/svelte";
   import PlusIcon from "@lucide/svelte/icons/plus";
   import { formatDate } from "$lib/utils";
 
@@ -176,7 +176,7 @@
     {columns}
     searchPlaceholder="Filter promotions..."
     enableRowSelection={true}
-    emptyIcon={Gift}
+    emptyIcon={PercentIcon}
     emptyTitle="No promotions"
     emptyDescription="Get started by creating a new promotion."
   >

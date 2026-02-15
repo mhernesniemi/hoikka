@@ -23,7 +23,7 @@
   import Star from "@lucide/svelte/icons/star";
   import Tag from "@lucide/svelte/icons/tag";
   import FileText from "@lucide/svelte/icons/file-text";
-  import Percent from "@lucide/svelte/icons/percent";
+  import { Percent as PercentIcon } from "@lucide/svelte";
   import ExternalLink from "@lucide/svelte/icons/external-link";
   import ChevronsUpDown from "@lucide/svelte/icons/chevrons-up-down";
   import LogOut from "@lucide/svelte/icons/log-out";
@@ -134,7 +134,7 @@
             {:else if item.icon === "star"}
               <Star class="h-5 w-5" strokeWidth={1.6} />
             {:else if item.icon === "percent"}
-              <Percent class="h-5 w-5" strokeWidth={1.6} />
+              <PercentIcon class="h-5 w-5" strokeWidth={1.6} />
             {:else if item.icon === "file-text"}
               <FileText class="h-5 w-5" strokeWidth={1.6} />
             {/if}
