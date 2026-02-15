@@ -198,8 +198,8 @@
             </div>
           {:else}
             <div>
-              <Label for="title">Title <span class="text-muted-foreground">(optional)</span></Label>
-              <Input type="text" id="title" name="title" bind:value={promoTitle} />
+              <Label for="title">Title <span class="text-red-500">*</span></Label>
+              <Input type="text" id="title" name="title" bind:value={promoTitle} required />
               <p class="mt-1 text-xs text-muted-foreground">
                 Customers will see this in their cart and at checkout.
               </p>
