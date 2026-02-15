@@ -49,7 +49,13 @@
     variantSku = data.variant.sku;
     variantStock = data.variant.stock;
     variantPrice = data.variant.price / 100;
+    trackInventory = data.variant.trackInventory;
     imageUrl = data.variant.imageUrl ?? null;
+    groupPricingEnabled = data.groupPrices.length > 0;
+    groupPrices = data.groupPrices.map((gp) => ({
+      groupId: gp.groupId,
+      price: (gp.price / 100).toFixed(2)
+    }));
   });
 
   // Flatten facet values for combobox display
@@ -260,7 +266,7 @@
 
       <!-- Group Pricing -->
       <AdminCard title="Group Pricing">
-        <div class="space-y-4">
+        <div class="flex flex-col gap-4">
           <div class="flex items-center gap-2">
             <Checkbox id="groupPricingEnabled" bind:checked={groupPricingEnabled} />
             <label for="groupPricingEnabled" class="text-sm text-foreground-secondary">
@@ -281,7 +287,7 @@
                 to set group-specific prices.
               </p>
             {:else}
-              <div class="space-y-4">
+              <div class="flex flex-col gap-4">
                 <!-- Column headers -->
                 <div class="grid grid-cols-2 gap-4">
                   <span class="text-sm font-medium text-foreground-secondary">Group</span>
