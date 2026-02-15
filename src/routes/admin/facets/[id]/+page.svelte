@@ -265,6 +265,7 @@
             <div class="mt-3 flex gap-2">
               <input
                 type="text"
+                id="bulk-values"
                 bind:this={bulkInputEl}
                 bind:value={bulkInput}
                 onkeydown={handleBulkKeydown}

@@ -357,6 +357,7 @@
                     <label class="flex items-center gap-2">
                       <input
                         type="checkbox"
+                        id="saveAddressForFuture"
                         bind:checked={saveAddressForFuture}
                         class="h-4 w-4 rounded border-gray-300 text-blue-600"
                       />
