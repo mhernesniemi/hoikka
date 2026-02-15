@@ -76,15 +76,22 @@
     }
   });
 
+  // Effective price for selected variant (group price already stamped server-side)
+  const variantPrice = $derived(
+    selectedVariant ? (selectedVariant.effectivePrice ?? selectedVariant.price) : null
+  );
+
   const bestDiscount = $derived(
-    selectedVariant && data.activeDiscounts
-      ? findBestDiscount(data.activeDiscounts, product.id, selectedVariant.price)
+    selectedVariant && variantPrice && data.activeDiscounts
+      ? findBestDiscount(data.activeDiscounts, product.id, variantPrice)
       : null
   );
 
   const discountedVariantPrice = $derived(
-    bestDiscount && selectedVariant ? getDiscountedPrice(bestDiscount, selectedVariant.price) : null
+    bestDiscount && variantPrice ? getDiscountedPrice(bestDiscount, variantPrice) : null
   );
+
+  const displayVariantPrice = $derived(discountedVariantPrice ?? variantPrice);
 
   function getVariantName(variant: (typeof product.variants)[0]): string {
     return variant.name ?? variant.sku;
@@ -300,28 +307,28 @@
         </button>
       </div>
 
-      {#if selectedVariant}
+      {#if selectedVariant && displayVariantPrice !== null}
         <div class="mb-8">
-          {#if discountedVariantPrice !== null && bestDiscount}
+          {#if discountedVariantPrice !== null && variantPrice !== null}
             <div class="flex items-center gap-3">
-              <span class="text-lg text-gray-400 line-through"
-                >{formatPrice(selectedVariant.price)}</span
-              >
+              <span class="text-lg text-gray-400 line-through">{formatPrice(variantPrice)}</span>
               <span class="text-xl font-semibold text-red-600"
                 >{formatPrice(discountedVariantPrice)}</span
               >
-              <span class="rounded bg-red-600 px-2 py-0.5 text-xs font-semibold text-white">
-                {bestDiscount.discountType === "percentage"
-                  ? `-${bestDiscount.discountValue}%`
-                  : `-${formatPrice(bestDiscount.discountValue)}`}
-              </span>
+              {#if bestDiscount}
+                <span class="rounded bg-red-600 px-2 py-0.5 text-xs font-semibold text-white">
+                  {bestDiscount.discountType === "percentage"
+                    ? `-${bestDiscount.discountValue}%`
+                    : `-${formatPrice(bestDiscount.discountValue)}`}
+                </span>
+              {/if}
             </div>
-            {#if bestDiscount.title}
+            {#if bestDiscount?.title}
               <p class="mt-1 text-sm text-red-600">{bestDiscount.title}</p>
             {/if}
           {:else}
             <div class="text-xl font-semibold">
-              {formatPrice(selectedVariant.price)}
+              {formatPrice(displayVariantPrice)}
             </div>
           {/if}
         </div>

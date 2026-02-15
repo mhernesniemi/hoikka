@@ -7,12 +7,18 @@
   let {
     product,
     activeDiscounts = []
-  }: { product: ProductWithRelations; activeDiscounts?: ActiveDiscount[] } = $props();
+  }: {
+    product: ProductWithRelations;
+    activeDiscounts?: ActiveDiscount[];
+  } = $props();
 
   const name = $derived(product.name);
   const slug = $derived(product.slug);
+
   const lowestPrice = $derived(
-    product.variants.length > 0 ? Math.min(...product.variants.map((v) => v.price)) : null
+    product.variants.length > 0
+      ? Math.min(...product.variants.map((v) => v.effectivePrice ?? v.price))
+      : null
   );
 
   const bestDiscount = $derived(
@@ -22,6 +28,8 @@
   const discountedPrice = $derived(
     bestDiscount && lowestPrice ? getDiscountedPrice(bestDiscount, lowestPrice) : null
   );
+
+  const displayPrice = $derived(discountedPrice ?? lowestPrice);
 </script>
 
 <a
@@ -54,15 +62,15 @@
     <h3 class="text-sm font-medium text-gray-900 group-hover:text-blue-600">
       {name}
     </h3>
-    {#if lowestPrice !== null}
-      {#if discountedPrice !== null}
+    {#if displayPrice !== null}
+      {#if discountedPrice !== null && lowestPrice !== null}
         <div class="mt-1 flex items-center gap-2 text-sm">
           <span class="text-gray-400 line-through">{formatPrice(lowestPrice)}</span>
           <span class="font-semibold text-red-600">From {formatPrice(discountedPrice)}</span>
         </div>
       {:else}
         <p class="mt-1 text-sm text-gray-700">
-          From {formatPrice(lowestPrice)}
+          From {formatPrice(displayPrice)}
         </p>
       {/if}
     {/if}

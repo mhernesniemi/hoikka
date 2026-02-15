@@ -1,9 +1,9 @@
 import { error } from "@sveltejs/kit";
 import type { PageServerLoad } from "./$types";
 import { categoryService } from "$lib/server/services/categories.js";
-import { productService } from "$lib/server/services/products.js";
+import { productService, stampGroupPrices } from "$lib/server/services/products.js";
 
-export const load: PageServerLoad = async ({ params, url }) => {
+export const load: PageServerLoad = async ({ params, url, locals }) => {
 	const pathSegments = params.path.split("/").filter(Boolean);
 	const currentSlug = pathSegments[pathSegments.length - 1];
 
@@ -41,6 +41,11 @@ export const load: PageServerLoad = async ({ params, url }) => {
 	// Fetch full product data
 	const products = await Promise.all(productIds.map((id) => productService.getById(id))).then(
 		(results) => results.filter(Boolean)
+	);
+
+	await stampGroupPrices(
+		products.filter(Boolean) as NonNullable<(typeof products)[0]>[],
+		locals.customer?.id ?? null
 	);
 
 	return {

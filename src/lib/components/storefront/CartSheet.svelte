@@ -23,6 +23,8 @@
   const lines = $derived(cart?.lines ?? []);
   const subtotal = $derived(cart?.subtotal ?? 0);
   const discount = $derived(cart?.discount ?? 0);
+  const taxTotal = $derived(cart?.taxTotal ?? 0);
+  const cartIsTaxExempt = $derived(cart?.isTaxExempt ?? false);
 
   function formatPrice(cents: number): string {
     return (cents / 100).toFixed(2);
@@ -193,6 +195,18 @@
               <div class="flex justify-between text-sm text-green-600">
                 <span>Discount</span>
                 <span>-{formatPrice(discount)} EUR</span>
+              </div>
+            {/if}
+
+            {#if cartIsTaxExempt}
+              <div class="flex justify-between text-sm text-gray-500">
+                <span>Tax exempt (B2B)</span>
+                <span>0.00 EUR</span>
+              </div>
+            {:else if taxTotal > 0}
+              <div class="flex justify-between text-sm text-gray-500">
+                <span>Incl. VAT</span>
+                <span>{formatPrice(taxTotal)} EUR</span>
               </div>
             {/if}
           </div>

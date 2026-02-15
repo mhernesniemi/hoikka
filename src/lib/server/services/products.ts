@@ -13,7 +13,8 @@ import {
 	facets,
 	productAssets,
 	assets,
-	productVariantGroupPrices
+	productVariantGroupPrices,
+	customerGroupMembers
 } from "../db/schema.js";
 import type {
 	Product,
@@ -384,6 +385,56 @@ export class ProductService {
 	}
 
 	// ============================================================================
+	// GROUP PRICE RESOLUTION
+	// ============================================================================
+
+	/**
+	 * Resolve group prices for multiple variants in bulk.
+	 * Returns a map of variantId → lowest group price (or null if no group price applies).
+	 */
+	async resolveGroupPrices(
+		variantIds: number[],
+		customerId: number | null
+	): Promise<Map<number, number | null>> {
+		const result = new Map<number, number | null>();
+		if (!customerId || variantIds.length === 0) return result;
+
+		// Get customer's group memberships
+		const memberships = await db
+			.select({ groupId: customerGroupMembers.groupId })
+			.from(customerGroupMembers)
+			.where(eq(customerGroupMembers.customerId, customerId));
+
+		if (memberships.length === 0) return result;
+
+		const groupIds = memberships.map((m) => m.groupId);
+
+		// Get all matching group prices for the given variants
+		const groupPrices = await db
+			.select({
+				variantId: productVariantGroupPrices.variantId,
+				price: productVariantGroupPrices.price
+			})
+			.from(productVariantGroupPrices)
+			.where(
+				and(
+					inArray(productVariantGroupPrices.variantId, variantIds),
+					inArray(productVariantGroupPrices.groupId, groupIds)
+				)
+			);
+
+		// Group by variant and pick the lowest price
+		for (const gp of groupPrices) {
+			const current = result.get(gp.variantId);
+			if (current === undefined || current === null || gp.price < current) {
+				result.set(gp.variantId, gp.price);
+			}
+		}
+
+		return result;
+	}
+
+	// ============================================================================
 	// PRIVATE HELPERS
 	// ============================================================================
 
@@ -563,6 +614,24 @@ export class ProductService {
 		}
 
 		return [...seen.values()];
+	}
+}
+
+/**
+ * Resolve and stamp effectivePrice onto each variant for a customer.
+ * Combines group price resolution and application in one step.
+ */
+export async function stampGroupPrices(
+	products: ProductWithRelations[],
+	customerId: number | null
+): Promise<void> {
+	const variantIds = products.flatMap((p) => p.variants.map((v) => v.id));
+	const groupPrices = await productService.resolveGroupPrices(variantIds, customerId);
+	for (const product of products) {
+		for (const variant of product.variants) {
+			const gp = groupPrices.get(variant.id);
+			variant.effectivePrice = gp ?? variant.price;
+		}
 	}
 }
 

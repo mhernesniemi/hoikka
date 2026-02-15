@@ -1,4 +1,4 @@
-import { productService } from "$lib/server/services/products.js";
+import { productService, stampGroupPrices } from "$lib/server/services/products.js";
 import { wishlistService } from "$lib/server/services/wishlist.js";
 import { reviewService } from "$lib/server/services/reviews.js";
 import { categoryService } from "$lib/server/services/categories.js";
@@ -53,6 +53,8 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 		productCategories.length > 0
 			? await categoryService.getBreadcrumbs(productCategories[0].id)
 			: [];
+
+	await stampGroupPrices([product], locals.customer?.id ?? null);
 
 	return {
 		product,

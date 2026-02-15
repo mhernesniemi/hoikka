@@ -1,9 +1,9 @@
-import { productService } from "$lib/server/services/products.js";
+import { productService, stampGroupPrices } from "$lib/server/services/products.js";
 import { facetService } from "$lib/server/services/facets.js";
 import type { PageServerLoad } from "./$types";
 import type { FacetCount, FacetWithValues } from "$lib/types.js";
 
-export const load: PageServerLoad = async ({ url }) => {
+export const load: PageServerLoad = async ({ url, locals }) => {
 	const search = url.searchParams.get("q") ?? undefined;
 	const page = Number(url.searchParams.get("page")) || 1;
 	const limit = 12;
@@ -45,6 +45,8 @@ export const load: PageServerLoad = async ({ url }) => {
 			}));
 		}
 	}
+
+	await stampGroupPrices(result.items, locals.customer?.id ?? null);
 
 	return {
 		products: result.items,

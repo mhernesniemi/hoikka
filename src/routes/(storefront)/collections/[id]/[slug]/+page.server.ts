@@ -1,5 +1,6 @@
 import type { PageServerLoad } from "./$types";
 import { collectionService } from "$lib/server/services/collections.js";
+import { productService, stampGroupPrices } from "$lib/server/services/products.js";
 import { error, redirect } from "@sveltejs/kit";
 
 export const load: PageServerLoad = async ({ params, url, locals }) => {
@@ -29,6 +30,8 @@ export const load: PageServerLoad = async ({ params, url, locals }) => {
 		collection.id,
 		{ limit, offset }
 	);
+
+	await stampGroupPrices(products, locals.customer?.id ?? null);
 
 	return {
 		collection,

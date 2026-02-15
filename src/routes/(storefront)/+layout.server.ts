@@ -20,5 +20,11 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 
 	const cartItemCount = cart?.lines.reduce((sum, line) => sum + line.quantity, 0) ?? 0;
 
-	return { wishlistCount, cart, cartItemCount, searchCatalog, activeDiscounts };
+	return {
+		wishlistCount,
+		cart,
+		cartItemCount,
+		searchCatalog,
+		activeDiscounts
+	};
 };

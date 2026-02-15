@@ -78,6 +78,7 @@ export interface ProductVariantWithRelations extends ProductVariant {
 	facetValues: FacetValue[];
 	assets: Asset[];
 	featuredAsset?: Asset | null;
+	effectivePrice?: number;
 }
 
 // ============================================================================
