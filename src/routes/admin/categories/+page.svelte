@@ -373,11 +373,11 @@
     >
       <div class="my-4 grid grid-cols-2 gap-4">
         <div>
-          <Label for="create_name_en">Name</Label>
+          <Label for="create_name">Name</Label>
           <Input
             type="text"
-            id="create_name_en"
-            name="name_en"
+            id="create_name"
+            name="name"
             value={createName}
             oninput={handleCreateNameInput}
             placeholder="e.g., Electronics"
@@ -461,7 +461,7 @@
             <Input
               type="text"
               id="edit_name_{editingCategory.id}"
-              name="name_en"
+              name="name"
               value={editingCategory.name}
             />
           </div>

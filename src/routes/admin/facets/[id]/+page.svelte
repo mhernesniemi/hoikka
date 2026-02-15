@@ -245,7 +245,7 @@
           <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <Label for="facet_name">Name <span class="text-red-500">*</span></Label>
-              <Input type="text" id="facet_name" name="name_en" required bind:value={facetName} />
+              <Input type="text" id="facet_name" name="name" required bind:value={facetName} />
             </div>
             <div>
               <Label for="facet_code">Code <span class="text-red-500">*</span></Label>
@@ -414,7 +414,7 @@
   title="New Facet"
   action="/admin/facets?/create"
   placeholder="e.g., Color"
-  fieldName="name_en"
+  fieldName="name"
   slugField="code"
 />
 

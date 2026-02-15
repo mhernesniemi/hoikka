@@ -22,11 +22,11 @@ export const actions: Actions = {
 	create: async ({ request }) => {
 		const formData = await request.formData();
 		const slug = formData.get("slug") as string;
-		const nameEn = formData.get("name_en") as string;
+		const name = formData.get("name") as string;
 		const parentId = formData.get("parent_id") as string;
 		const taxCode = (formData.get("tax_code") as string) || "standard";
 
-		if (!slug || !nameEn) {
+		if (!slug || !name) {
 			return fail(400, { error: "Slug and name are required" });
 		}
 
@@ -34,7 +34,7 @@ export const actions: Actions = {
 			const category = await categoryService.create({
 				slug: slug.toLowerCase().replace(/\s+/g, "-"),
 				parentId: parentId ? Number(parentId) : null,
-				name: nameEn,
+				name: name,
 				taxCode
 			});
 
@@ -59,11 +59,11 @@ export const actions: Actions = {
 		const formData = await request.formData();
 		const id = Number(formData.get("id"));
 		const slug = formData.get("slug") as string;
-		const nameEn = formData.get("name_en") as string;
+		const name = formData.get("name") as string;
 		const parentId = formData.get("parent_id") as string;
 		const taxCode = (formData.get("tax_code") as string) || "standard";
 
-		if (!id || !slug || !nameEn) {
+		if (!id || !slug || !name) {
 			return fail(400, { error: "All fields are required" });
 		}
 
@@ -71,7 +71,7 @@ export const actions: Actions = {
 			await categoryService.update(id, {
 				slug: slug.toLowerCase().replace(/\s+/g, "-"),
 				parentId: parentId ? Number(parentId) : null,
-				name: nameEn,
+				name: name,
 				taxCode
 			});
 

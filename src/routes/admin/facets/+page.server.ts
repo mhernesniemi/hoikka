@@ -13,16 +13,16 @@ export const actions: Actions = {
 	create: async ({ request }) => {
 		const formData = await request.formData();
 		const code = formData.get("code") as string;
-		const nameEn = formData.get("name_en") as string;
+		const name = formData.get("name") as string;
 
-		if (!code || !nameEn) {
+		if (!code || !name) {
 			return fail(400, { error: "Code and name are required" });
 		}
 
 		try {
 			const facet = await facetService.create({
 				code: code.toLowerCase().replace(/\s+/g, "_"),
-				name: nameEn
+				name: name
 			});
 
 			throw redirect(303, `/admin/facets/${facet.id}?created`);

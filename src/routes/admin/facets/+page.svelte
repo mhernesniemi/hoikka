@@ -114,7 +114,7 @@
   title="New Facet"
   action="/admin/facets?/create"
   placeholder="e.g., Color"
-  fieldName="name_en"
+  fieldName="name"
   slugField="code"
 />
 
