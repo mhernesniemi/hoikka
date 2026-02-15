@@ -15,7 +15,7 @@
   import { translationsToMap, TRANSLATION_LANGUAGES } from "$lib/config/languages.js";
   import { slugify } from "$lib/utils";
   import UnsavedChangesDialog from "$lib/components/admin/UnsavedChangesDialog.svelte";
-  import * as Tooltip from "$lib/components/admin/ui/tooltip";
+  import IconButton from "$lib/components/admin/IconButton.svelte";
   import Plus from "@lucide/svelte/icons/plus";
   import Pencil from "@lucide/svelte/icons/pencil";
   import Trash2 from "@lucide/svelte/icons/trash-2";
@@ -311,34 +311,19 @@
                   </span>
                 </div>
                 <div class="flex shrink-0 items-center gap-1 pl-4">
-                  <Tooltip.Provider>
-                    <Tooltip.Root ignoreNonKeyboardFocus>
-                      <Tooltip.Trigger
-                        type="button"
-                        class="group flex h-7 w-7 items-center justify-center rounded-md hover:bg-foreground/10"
-                        onclick={() => openEditDialog(i)}
-                      >
-                        <Pencil
-                          class="h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground"
-                        />
-                      </Tooltip.Trigger>
-                      <Tooltip.Content>Edit value</Tooltip.Content>
-                    </Tooltip.Root>
-                  </Tooltip.Provider>
-                  <Tooltip.Provider>
-                    <Tooltip.Root ignoreNonKeyboardFocus>
-                      <Tooltip.Trigger
-                        type="button"
-                        class="group flex h-7 w-7 items-center justify-center rounded-md hover:bg-foreground/10"
-                        onclick={() => removeValue(i)}
-                      >
-                        <Trash2
-                          class="h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground"
-                        />
-                      </Tooltip.Trigger>
-                      <Tooltip.Content>Remove value</Tooltip.Content>
-                    </Tooltip.Root>
-                  </Tooltip.Provider>
+                  <IconButton
+                    icon={Pencil}
+                    tooltip="Edit value"
+                    size="sm"
+                    onclick={() => openEditDialog(i)}
+                  />
+                  <IconButton
+                    icon={Trash2}
+                    tooltip="Remove value"
+                    size="sm"
+                    variant="danger"
+                    onclick={() => removeValue(i)}
+                  />
                 </div>
               </div>
             {/each}

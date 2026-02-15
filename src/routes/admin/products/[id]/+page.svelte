@@ -3,7 +3,7 @@
   import { page } from "$app/stores";
   import { onMount } from "svelte";
   import { toast } from "svelte-sonner";
-  import { Button, buttonVariants } from "$lib/components/admin/ui/button";
+  import { Button } from "$lib/components/admin/ui/button";
   import { Checkbox } from "$lib/components/admin/ui/checkbox";
   import DeleteConfirmDialog from "$lib/components/admin/DeleteConfirmDialog.svelte";
   import CreateDialog from "$lib/components/admin/CreateDialog.svelte";
@@ -23,7 +23,7 @@
   import * as Popover from "$lib/components/admin/ui/popover";
   import * as Command from "$lib/components/admin/ui/command";
   import { Badge } from "$lib/components/admin/ui/badge";
-  import * as Tooltip from "$lib/components/admin/ui/tooltip";
+  import IconButton from "$lib/components/admin/IconButton.svelte";
   import ImagePicker from "$lib/components/admin/ImagePicker.svelte";
   import { RichTextEditor } from "$lib/components/admin/ui/rich-text-editor";
   import {
@@ -536,42 +536,17 @@
                   </TableCell>
                   <TableCell class="text-right text-sm">
                     <div class="flex items-center justify-end gap-1">
-                      <Tooltip.Provider>
-                        <Tooltip.Root ignoreNonKeyboardFocus>
-                          <Tooltip.Trigger>
-                            {#snippet child({ props })}
-                              <a
-                                {...props}
-                                href="/admin/products/{data.product.id}/variants/{variant.id}"
-                                class={buttonVariants({
-                                  variant: "ghost",
-                                  size: "icon",
-                                  className: "h-8 w-8 hover:bg-foreground/10 hover:text-foreground"
-                                })}
-                              >
-                                <Pencil class="h-4 w-4" />
-                              </a>
-                            {/snippet}
-                          </Tooltip.Trigger>
-                          <Tooltip.Content>Edit variant</Tooltip.Content>
-                        </Tooltip.Root>
-                      </Tooltip.Provider>
-                      <Tooltip.Provider>
-                        <Tooltip.Root ignoreNonKeyboardFocus>
-                          <Tooltip.Trigger
-                            type="button"
-                            class={buttonVariants({
-                              variant: "ghost",
-                              size: "icon",
-                              className: "h-8 w-8 hover:bg-red-500/10 hover:text-red-600"
-                            })}
-                            onclick={() => (variantToDelete = { id: variant.id, sku: variant.sku })}
-                          >
-                            <Trash2 class="h-4 w-4" />
-                          </Tooltip.Trigger>
-                          <Tooltip.Content>Delete variant</Tooltip.Content>
-                        </Tooltip.Root>
-                      </Tooltip.Provider>
+                      <IconButton
+                        icon={Pencil}
+                        tooltip="Edit variant"
+                        href="/admin/products/{data.product.id}/variants/{variant.id}"
+                      />
+                      <IconButton
+                        icon={Trash2}
+                        tooltip="Delete variant"
+                        variant="danger"
+                        onclick={() => (variantToDelete = { id: variant.id, sku: variant.sku })}
+                      />
                     </div>
                   </TableCell>
                 </TableRow>

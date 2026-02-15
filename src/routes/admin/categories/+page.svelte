@@ -11,7 +11,7 @@
   import * as Dialog from "$lib/components/admin/ui/dialog";
   import * as Collapsible from "$lib/components/admin/ui/collapsible";
   import { TRANSLATION_LANGUAGES } from "$lib/config/languages.js";
-  import * as Tooltip from "$lib/components/admin/ui/tooltip";
+  import IconButton from "$lib/components/admin/IconButton.svelte";
   import CategoryCombobox from "$lib/components/admin/CategoryCombobox.svelte";
   import { slugify, cn } from "$lib/utils.js";
   import DeleteConfirmDialog from "$lib/components/admin/DeleteConfirmDialog.svelte";
@@ -299,63 +299,38 @@
             class="flex shrink-0 items-center gap-1 pr-3 pl-4"
             onclick={(e) => e.stopPropagation()}
           >
-            <Tooltip.Provider>
-              <Tooltip.Root ignoreNonKeyboardFocus>
-                <Tooltip.Trigger
-                  type="button"
-                  class="group flex h-7 w-7 items-center justify-center rounded-md hover:bg-foreground/10"
-                  onclick={() => openCreateDialog(node.id)}
-                >
-                  <PlusIcon class="h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground" />
-                </Tooltip.Trigger>
-                <Tooltip.Content>Add child category</Tooltip.Content>
-              </Tooltip.Root>
-            </Tooltip.Provider>
+            <IconButton
+              icon={PlusIcon}
+              tooltip="Add child category"
+              size="sm"
+              onclick={() => openCreateDialog(node.id)}
+            />
             {#if hasChildren}
-              <Tooltip.Provider>
-                <Tooltip.Root ignoreNonKeyboardFocus>
-                  <Tooltip.Trigger
-                    type="button"
-                    class="group flex h-7 w-7 items-center justify-center rounded-md hover:bg-foreground/10"
-                    onclick={() => requestDelete(node)}
-                  >
-                    <Trash2
-                      class="h-3.5 w-3.5 text-muted-foreground group-hover:text-red-600 dark:group-hover:text-red-400"
-                    />
-                  </Tooltip.Trigger>
-                  <Tooltip.Content>Delete category</Tooltip.Content>
-                </Tooltip.Root>
-              </Tooltip.Provider>
+              <IconButton
+                icon={Trash2}
+                tooltip="Delete category"
+                size="sm"
+                variant="danger"
+                onclick={() => requestDelete(node)}
+              />
             {:else}
               <form method="POST" action="?/delete" use:enhance>
                 <input type="hidden" name="id" value={node.id} />
-                <Tooltip.Provider>
-                  <Tooltip.Root ignoreNonKeyboardFocus>
-                    <Tooltip.Trigger
-                      type="submit"
-                      class="group flex h-7 w-7 items-center justify-center rounded-md hover:bg-foreground/10"
-                    >
-                      <Trash2
-                        class="h-3.5 w-3.5 text-muted-foreground group-hover:text-red-600 dark:group-hover:text-red-400"
-                      />
-                    </Tooltip.Trigger>
-                    <Tooltip.Content>Delete category</Tooltip.Content>
-                  </Tooltip.Root>
-                </Tooltip.Provider>
+                <IconButton
+                  icon={Trash2}
+                  tooltip="Delete category"
+                  size="sm"
+                  variant="danger"
+                  type="submit"
+                />
               </form>
             {/if}
-            <Tooltip.Provider>
-              <Tooltip.Root ignoreNonKeyboardFocus>
-                <Tooltip.Trigger
-                  type="button"
-                  class="group flex h-7 w-7 items-center justify-center rounded-md hover:bg-foreground/10"
-                  onclick={() => openEditDialog(node)}
-                >
-                  <Pencil class="h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground" />
-                </Tooltip.Trigger>
-                <Tooltip.Content>Edit category</Tooltip.Content>
-              </Tooltip.Root>
-            </Tooltip.Provider>
+            <IconButton
+              icon={Pencil}
+              tooltip="Edit category"
+              size="sm"
+              onclick={() => openEditDialog(node)}
+            />
           </div>
         </div>
 
