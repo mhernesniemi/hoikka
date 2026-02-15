@@ -297,9 +297,10 @@ export class ProductService {
 	 * Delete a variant
 	 */
 	async deleteVariant(id: number): Promise<boolean> {
+		const now = new Date();
 		await db
 			.update(productVariants)
-			.set({ deletedAt: new Date() })
+			.set({ deletedAt: now, sku: sql`sku || '_deleted_' || ${id}` })
 			.where(eq(productVariants.id, id));
 
 		return true;

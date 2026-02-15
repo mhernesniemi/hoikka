@@ -485,7 +485,14 @@
             type="button"
             variant="outline"
             size="sm"
-            onclick={() => (createVariantDialogOpen = true)}
+            onclick={() => {
+              newVariantName = "";
+              newVariantSku = "";
+              newVariantPrice = "";
+              newVariantStock = 0;
+              newVariantTrackInventory = false;
+              createVariantDialogOpen = true;
+            }}
           >
             <Plus class="h-4 w-4" /> Add Variant
           </Button>
@@ -850,18 +857,7 @@
 />
 
 <!-- Create Variant Dialog -->
-<Dialog.Root
-  bind:open={createVariantDialogOpen}
-  onOpenChange={(open) => {
-    if (open) {
-      newVariantName = "";
-      newVariantSku = "";
-      newVariantPrice = "";
-      newVariantStock = 0;
-      newVariantTrackInventory = false;
-    }
-  }}
->
+<Dialog.Root bind:open={createVariantDialogOpen}>
   <Dialog.Content>
     <Dialog.Header>
       <Dialog.Title>New Variant</Dialog.Title>
