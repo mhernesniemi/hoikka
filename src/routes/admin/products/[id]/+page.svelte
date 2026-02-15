@@ -494,6 +494,7 @@
         <Table class="rounded-none border-0 shadow-none">
           <TableHeader>
             <TableRow class="hover:bg-transparent">
+              <TableHead class="w-12"></TableHead>
               <TableHead>SKU</TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Price</TableHead>
@@ -505,13 +506,24 @@
           <TableBody>
             {#if data.product.variants.length === 0}
               <TableRow class="hover:bg-transparent">
-                <TableCell colspan={6} class="py-8 text-center text-sm text-muted-foreground">
+                <TableCell colspan={7} class="py-8 text-center text-sm text-muted-foreground">
                   No variants yet. Add a variant to start selling this product.
                 </TableCell>
               </TableRow>
             {:else}
               {#each data.product.variants as variant}
                 <TableRow>
+                  <TableCell class="w-12 pr-0">
+                    {#if variant.imageUrl}
+                      <img
+                        src="{variant.imageUrl}?tr=w-64,h-64,fo-auto"
+                        alt={variant.name || variant.sku}
+                        class="h-8 w-8 rounded object-cover"
+                      />
+                    {:else}
+                      <div class="h-8 w-8 rounded bg-muted"></div>
+                    {/if}
+                  </TableCell>
                   <TableCell class="font-mono text-sm">{variant.sku}</TableCell>
                   <TableCell class="text-sm">
                     {variant.name}

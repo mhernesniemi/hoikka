@@ -34,7 +34,7 @@
       className: cn(
         btnSize,
         variant === "danger" && "hover:bg-red-500/10 hover:text-red-600",
-        variant === "default" && "hover:bg-foreground/10 hover:text-foreground",
+        variant === "default" && "hover:bg-foreground/7 hover:text-foreground",
         className
       )
     })

@@ -293,8 +293,6 @@
           </div>
 
           <!-- Action buttons -->
-          <!-- svelte-ignore a11y_click_events_have_key_events -->
-          <!-- svelte-ignore a11y_no_static_element_interactions -->
           <div
             class="flex shrink-0 items-center gap-1 pr-3 pl-4"
             onclick={(e) => e.stopPropagation()}
