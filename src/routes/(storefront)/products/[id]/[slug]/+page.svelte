@@ -401,9 +401,27 @@
       <h2 class="text-xl font-bold">Customer Reviews</h2>
       {#if data.rating.count > 0}
         <div class="flex items-center gap-2">
-          <div class="flex text-yellow-400">
+          <div class="flex gap-0.5">
             {#each [1, 2, 3, 4, 5] as star}
-              <span class="text-3xl">{star <= Math.round(data.rating.average) ? "★" : "☆"}</span>
+              {@const fill = Math.min(1, Math.max(0, data.rating.average - (star - 1)))}
+              <svg class="h-5 w-5 text-amber-400" viewBox="0 0 20 20">
+                <defs>
+                  <clipPath id="star-clip-{star}">
+                    <rect x="0" y="0" width={fill * 20} height="20" />
+                  </clipPath>
+                </defs>
+                <path
+                  d="M10 1l2.39 4.84L18 6.71l-4 3.9.94 5.5L10 13.47l-4.94 2.64.94-5.5-4-3.9 5.61-.87z"
+                  fill="currentColor"
+                  clip-path="url(#star-clip-{star})"
+                />
+                <path
+                  d="M10 1l2.39 4.84L18 6.71l-4 3.9.94 5.5L10 13.47l-4.94 2.64.94-5.5-4-3.9 5.61-.87z"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1"
+                />
+              </svg>
             {/each}
           </div>
           <span class="text-gray-500"
@@ -535,29 +553,29 @@
       <div class="divide-y divide-gray-100">
         {#each data.reviews as review}
           <div
-            class="grid grid-cols-[200px_1fr_auto] gap-x-6 py-5 max-sm:grid-cols-1 max-sm:gap-y-1"
+            class="grid grid-cols-[200px_1fr_auto] gap-x-6 rounded-lg bg-gray-50 p-4 py-5 max-sm:grid-cols-1 max-sm:gap-y-1"
           >
-            <!-- Left: name + status -->
+            <!-- Left -->
             <div>
               <p class="text-sm font-medium text-gray-900">{review.nickname}</p>
               {#if review.isVerifiedPurchase}
                 <p class="mt-0.5 text-xs text-green-600">Verified buyer</p>
               {/if}
-              <div class="mt-2 flex gap-0.5 text-amber-400">
+              <div class="flex gap-0.5 text-2xl text-amber-400">
                 {#each [1, 2, 3, 4, 5] as star}
-                  <span class="text-sm">{star <= review.rating ? "★" : "☆"}</span>
+                  <span>{star <= review.rating ? "★" : "☆"}</span>
                 {/each}
               </div>
             </div>
 
-            <!-- Middle: stars + comment -->
+            <!-- Middle -->
             <div>
               {#if review.comment}
                 <p class="max-w-prose leading-relaxed text-gray-600">{review.comment}</p>
               {/if}
             </div>
 
-            <!-- Right: date -->
+            <!-- Right -->
             <span class="text-sm text-gray-500 max-sm:order-first"
               >{formatDate(review.createdAt)}</span
             >
