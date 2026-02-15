@@ -105,7 +105,7 @@
                     <Check class="h-4 w-4" />
                   {/if}
                 </div>
-                <span>{"- ".repeat(category.depth)}{category.name}</span>
+                <span>{"— ".repeat(category.depth)}{category.name}</span>
               </div>
             </Command.Item>
           {/each}
