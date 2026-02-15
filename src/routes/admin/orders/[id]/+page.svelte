@@ -45,18 +45,14 @@
   <div>
     <h1 class="text-2xl font-bold">Order {data.order.code}</h1>
     <dl class="mt-2 flex flex-wrap gap-x-6 gap-y-1 text-sm">
-      <div class="flex gap-1.5">
-        <dt class="text-foreground-secondary">Order ID</dt>
-        <dd>{data.order.id}</dd>
-      </div>
       {#if data.order.orderPlacedAt}
         <div class="flex gap-1.5">
-          <dt class="text-foreground-secondary">Placed</dt>
+          <dt class="text-foreground-secondary">Placed:</dt>
           <dd>{formatDateTime(data.order.orderPlacedAt)}</dd>
         </div>
       {:else}
         <div class="flex gap-1.5">
-          <dt class="text-foreground-secondary">Created</dt>
+          <dt class="text-foreground-secondary">Created:</dt>
           <dd>{formatDateTime(data.order.createdAt)}</dd>
         </div>
       {/if}
