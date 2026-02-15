@@ -268,16 +268,15 @@
       <!-- Group Pricing -->
       <AdminCard title="Group Pricing">
         {#snippet headerActions()}
-          {#if availableGroups.length > 0}
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onclick={() => (showAddGroupPrice = true)}
-            >
-              <Plus class="h-4 w-4" /> Add
-            </Button>
-          {/if}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={availableGroups.length === 0}
+            onclick={() => (showAddGroupPrice = true)}
+          >
+            <Plus class="h-4 w-4" /> Add
+          </Button>
         {/snippet}
         {#if data.customerGroups.length === 0}
           <p class="text-sm text-muted-foreground">
@@ -523,6 +522,12 @@
           min="0"
           bind:value={newGroupPrice}
           placeholder="0.00"
+          onkeydown={(e: KeyboardEvent) => {
+            if (e.key === "Enter" && newGroupPrice) {
+              e.preventDefault();
+              addGroupPrice();
+            }
+          }}
         />
       </div>
     </div>
