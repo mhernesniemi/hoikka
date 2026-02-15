@@ -23,6 +23,7 @@
   import * as Popover from "$lib/components/admin/ui/popover";
   import * as Command from "$lib/components/admin/ui/command";
   import { Badge } from "$lib/components/admin/ui/badge";
+  import * as Tooltip from "$lib/components/admin/ui/tooltip";
   import ImagePicker from "$lib/components/admin/ImagePicker.svelte";
   import { RichTextEditor } from "$lib/components/admin/ui/rich-text-editor";
   import {
@@ -535,25 +536,42 @@
                   </TableCell>
                   <TableCell class="text-right text-sm">
                     <div class="flex items-center justify-end gap-1">
-                      <a
-                        href="/admin/products/{data.product.id}/variants/{variant.id}"
-                        class={buttonVariants({
-                          variant: "ghost",
-                          size: "icon",
-                          className: "h-8 w-8 hover:bg-foreground/5 hover:text-foreground"
-                        })}
-                      >
-                        <Pencil class="h-4 w-4" />
-                      </a>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        class="h-8 w-8 hover:bg-red-500/10 hover:text-red-500"
-                        onclick={() => (variantToDelete = { id: variant.id, sku: variant.sku })}
-                      >
-                        <Trash2 class="h-4 w-4" />
-                      </Button>
+                      <Tooltip.Provider>
+                        <Tooltip.Root ignoreNonKeyboardFocus>
+                          <Tooltip.Trigger>
+                            {#snippet child({ props })}
+                              <a
+                                {...props}
+                                href="/admin/products/{data.product.id}/variants/{variant.id}"
+                                class={buttonVariants({
+                                  variant: "ghost",
+                                  size: "icon",
+                                  className: "h-8 w-8 hover:bg-foreground/10 hover:text-foreground"
+                                })}
+                              >
+                                <Pencil class="h-4 w-4" />
+                              </a>
+                            {/snippet}
+                          </Tooltip.Trigger>
+                          <Tooltip.Content>Edit variant</Tooltip.Content>
+                        </Tooltip.Root>
+                      </Tooltip.Provider>
+                      <Tooltip.Provider>
+                        <Tooltip.Root ignoreNonKeyboardFocus>
+                          <Tooltip.Trigger
+                            type="button"
+                            class={buttonVariants({
+                              variant: "ghost",
+                              size: "icon",
+                              className: "h-8 w-8 hover:bg-red-500/10 hover:text-red-600"
+                            })}
+                            onclick={() => (variantToDelete = { id: variant.id, sku: variant.sku })}
+                          >
+                            <Trash2 class="h-4 w-4" />
+                          </Tooltip.Trigger>
+                          <Tooltip.Content>Delete variant</Tooltip.Content>
+                        </Tooltip.Root>
+                      </Tooltip.Provider>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -902,20 +920,6 @@
         </div>
         <div class="grid grid-cols-2 gap-4">
           <div>
-            <Label for="create_variant_price">Price (EUR) <span class="text-red-500">*</span></Label
-            >
-            <Input
-              type="number"
-              id="create_variant_price"
-              name="price"
-              step="0.01"
-              min="0"
-              bind:value={newVariantPrice}
-              required
-              placeholder="0.00"
-            />
-          </div>
-          <div>
             <Label for="create_variant_stock">Stock</Label>
             {#if newVariantTrackInventory}
               <Input
@@ -934,6 +938,20 @@
                 class="bg-muted text-muted-foreground placeholder:text-muted-foreground"
               />
             {/if}
+          </div>
+          <div>
+            <Label for="create_variant_price">Price (EUR) <span class="text-red-500">*</span></Label
+            >
+            <Input
+              type="number"
+              id="create_variant_price"
+              name="price"
+              step="0.01"
+              min="0"
+              bind:value={newVariantPrice}
+              required
+              placeholder="0.00"
+            />
           </div>
         </div>
         <div class="flex items-center gap-2">
