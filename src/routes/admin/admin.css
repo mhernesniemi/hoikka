@@ -20,6 +20,14 @@
 
 	--color-destructive-subtle: oklch(0.971 0.013 17.38);
 	--color-accent-subtle: oklch(0.932 0.032 255);
+
+	--color-sidebar: oklch(0.985 0.002 247);
+	--color-sidebar-border: oklch(0.929 0.006 264);
+	--color-sidebar-hover: oklch(0.955 0.006 264);
+	--color-sidebar-active: oklch(0.955 0.006 264);
+	--color-sidebar-foreground: oklch(0.446 0.011 264);
+	--color-sidebar-foreground-active: oklch(0.145 0.015 285);
+	--color-sidebar-muted: oklch(0.556 0.01 264);
 }
 
 [data-admin].dark {
@@ -41,6 +49,14 @@
 
 	--color-destructive-subtle: oklch(0.24 0.05 25);
 	--color-accent-subtle: oklch(0.24 0.03 265);
+
+	--color-sidebar: oklch(0.175 0.014 265);
+	--color-sidebar-border: oklch(0.25 0.012 265);
+	--color-sidebar-hover: oklch(0.22 0.014 265);
+	--color-sidebar-active: oklch(0.22 0.014 265);
+	--color-sidebar-foreground: oklch(0.65 0.006 265);
+	--color-sidebar-foreground-active: oklch(0.92 0.004 265);
+	--color-sidebar-muted: oklch(0.48 0.006 265);
 }
 
 /* ── Dark mode: select arrow ──────────────────────────────────────── */

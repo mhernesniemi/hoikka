@@ -32,6 +32,14 @@
 
 	--color-destructive-subtle: var(--color-destructive-subtle);
 	--color-accent-subtle: var(--color-accent-subtle);
+
+	--color-sidebar: var(--color-sidebar);
+	--color-sidebar-border: var(--color-sidebar-border);
+	--color-sidebar-hover: var(--color-sidebar-hover);
+	--color-sidebar-active: var(--color-sidebar-active);
+	--color-sidebar-foreground: var(--color-sidebar-foreground);
+	--color-sidebar-foreground-active: var(--color-sidebar-foreground-active);
+	--color-sidebar-muted: var(--color-sidebar-muted);
 }
 
 /* Cursor pointer for clickable elements */
