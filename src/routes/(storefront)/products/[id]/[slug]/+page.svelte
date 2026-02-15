@@ -396,15 +396,14 @@
   </div>
 
   <!-- Reviews Section -->
-  <div class="mt-12 border-t pt-8">
+  <div class="mt-12 border-t border-gray-200 pt-8">
     <div class="mb-6 flex items-center justify-between">
-      <h2 class="text-2xl font-bold">Customer Reviews</h2>
+      <h2 class="text-xl font-bold">Customer Reviews</h2>
       {#if data.rating.count > 0}
         <div class="flex items-center gap-2">
-          <span class="text-2xl font-bold">{data.rating.average.toFixed(1)}</span>
           <div class="flex text-yellow-400">
             {#each [1, 2, 3, 4, 5] as star}
-              <span class="text-xl">{star <= Math.round(data.rating.average) ? "★" : "☆"}</span>
+              <span class="text-3xl">{star <= Math.round(data.rating.average) ? "★" : "☆"}</span>
             {/each}
           </div>
           <span class="text-gray-500"
@@ -417,14 +416,12 @@
     <!-- Review Form -->
     {#if data.customerId}
       {#if data.customerReview}
-        <div class="mb-8 rounded-lg border border-blue-200 bg-blue-50 p-4">
-          <p class="text-sm text-blue-800">
-            You have already reviewed this product.
-            {#if data.customerReview.status === "pending"}
-              Your review is pending approval.
-            {/if}
-          </p>
-        </div>
+        <p class="mb-4 text-sm text-gray-500">
+          You have already reviewed this product.
+          {#if data.customerReview.status === "pending"}
+            Your review is pending approval.
+          {/if}
+        </p>
       {:else}
         <div class="mb-8 rounded-lg border bg-gray-50 p-6">
           <h3 class="mb-4 text-lg font-medium">Write a Review</h3>
@@ -535,28 +532,35 @@
     {#if data.reviews.length === 0}
       <p class="text-gray-500">No reviews yet. Be the first to review this product!</p>
     {:else}
-      <div class="space-y-6">
+      <div class="divide-y divide-gray-100">
         {#each data.reviews as review}
-          <div class="border-b pb-6 last:border-b-0">
-            <div class="mb-2 flex items-start justify-between">
-              <div>
-                <div class="flex items-center gap-2">
-                  <span class="font-medium">{review.nickname}</span>
-                  {#if review.isVerifiedPurchase}
-                    <Badge variant="success">Verified Purchase</Badge>
-                  {/if}
-                </div>
-                <div class="mt-1 flex text-yellow-400">
-                  {#each [1, 2, 3, 4, 5] as star}
-                    <span>{star <= review.rating ? "★" : "☆"}</span>
-                  {/each}
-                </div>
+          <div
+            class="grid grid-cols-[200px_1fr_auto] gap-x-6 py-5 max-sm:grid-cols-1 max-sm:gap-y-1"
+          >
+            <!-- Left: name + status -->
+            <div>
+              <p class="text-sm font-medium text-gray-900">{review.nickname}</p>
+              {#if review.isVerifiedPurchase}
+                <p class="mt-0.5 text-xs text-green-600">Verified buyer</p>
+              {/if}
+              <div class="mt-2 flex gap-0.5 text-amber-400">
+                {#each [1, 2, 3, 4, 5] as star}
+                  <span class="text-sm">{star <= review.rating ? "★" : "☆"}</span>
+                {/each}
               </div>
-              <span class="text-sm text-gray-500">{formatDate(review.createdAt)}</span>
             </div>
-            {#if review.comment}
-              <p class="text-gray-700">{review.comment}</p>
-            {/if}
+
+            <!-- Middle: stars + comment -->
+            <div>
+              {#if review.comment}
+                <p class="max-w-prose leading-relaxed text-gray-600">{review.comment}</p>
+              {/if}
+            </div>
+
+            <!-- Right: date -->
+            <span class="text-sm text-gray-500 max-sm:order-first"
+              >{formatDate(review.createdAt)}</span
+            >
           </div>
         {/each}
       </div>
