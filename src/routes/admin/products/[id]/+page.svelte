@@ -3,7 +3,7 @@
   import { page } from "$app/stores";
   import { onMount } from "svelte";
   import { toast } from "svelte-sonner";
-  import { Button } from "$lib/components/admin/ui/button";
+  import { Button, buttonVariants } from "$lib/components/admin/ui/button";
   import { Checkbox } from "$lib/components/admin/ui/checkbox";
   import DeleteConfirmDialog from "$lib/components/admin/DeleteConfirmDialog.svelte";
   import CreateDialog from "$lib/components/admin/CreateDialog.svelte";
@@ -52,6 +52,7 @@
   let showCancelDelete = $state(false);
   let hasSaved = $state(false);
   let createDialogOpen = $state(false);
+  let variantToDelete = $state<{ id: number; sku: string } | null>(null);
   let createVariantDialogOpen = $state(false);
   let newVariantName = $state("");
   let newVariantSku = $state("");
@@ -533,12 +534,27 @@
                     {/if}
                   </TableCell>
                   <TableCell class="text-right text-sm">
-                    <a
-                      href="/admin/products/{data.product.id}/variants/{variant.id}"
-                      class="text-blue-600 hover:underline dark:text-blue-400"
-                    >
-                      Edit
-                    </a>
+                    <div class="flex items-center justify-end gap-1">
+                      <a
+                        href="/admin/products/{data.product.id}/variants/{variant.id}"
+                        class={buttonVariants({
+                          variant: "ghost",
+                          size: "icon",
+                          className: "h-8 w-8 hover:bg-foreground/5 hover:text-foreground"
+                        })}
+                      >
+                        <Pencil class="h-4 w-4" />
+                      </a>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        class="h-8 w-8 hover:bg-red-500/10 hover:text-red-500"
+                        onclick={() => (variantToDelete = { id: variant.id, sku: variant.sku })}
+                      >
+                        <Trash2 class="h-4 w-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               {/each}
@@ -721,6 +737,20 @@
     title="Delete Product?"
     description="Are you sure you want to delete this product? This action cannot be undone."
   />
+
+  {#if variantToDelete}
+    {@const currentVariantToDelete = variantToDelete}
+    <DeleteConfirmDialog
+      open={true}
+      ondeleted={() => (variantToDelete = null)}
+      oncancelled={() => (variantToDelete = null)}
+      title="Delete Variant?"
+      description="Are you sure you want to delete variant &quot;{currentVariantToDelete.sku}&quot;? This action cannot be undone."
+      action="?/deleteVariant"
+    >
+      <input type="hidden" name="variantId" value={currentVariantToDelete.id} />
+    </DeleteConfirmDialog>
+  {/if}
 
   <!-- Image Picker Dialog -->
   <ImagePicker

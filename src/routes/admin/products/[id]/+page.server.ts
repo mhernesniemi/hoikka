@@ -270,6 +270,22 @@ export const actions: Actions = {
 		}
 	},
 
+	deleteVariant: async ({ request }) => {
+		const formData = await request.formData();
+		const variantId = Number(formData.get("variantId"));
+
+		if (isNaN(variantId)) {
+			return fail(400, { error: "Invalid variant ID" });
+		}
+
+		try {
+			await productService.deleteVariant(variantId);
+			return { variantDeleted: true };
+		} catch (err) {
+			return fail(500, { error: dbError(err, "Failed to delete variant") });
+		}
+	},
+
 	updateImageAlt: async ({ params, request }) => {
 		const productId = Number(params.id);
 		const formData = await request.formData();
