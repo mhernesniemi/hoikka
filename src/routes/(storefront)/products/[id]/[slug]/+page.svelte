@@ -553,7 +553,7 @@
       <div class="divide-y divide-gray-100">
         {#each data.reviews as review}
           <div
-            class="grid grid-cols-[200px_1fr_auto] gap-x-6 rounded-lg bg-gray-50 p-4 py-5 max-sm:grid-cols-1 max-sm:gap-y-1"
+            class="grid grid-cols-[200px_1fr_auto] gap-x-6 rounded-lg bg-gray-50 px-6 py-5 max-sm:grid-cols-1 max-sm:gap-y-1"
           >
             <!-- Left -->
             <div>
