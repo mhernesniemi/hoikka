@@ -23,7 +23,7 @@
   });
 
   let isSubmitting = $state(false);
-  let trackInventory = $state(true);
+  let trackInventory = $state(false);
   let facetComboboxOpen = $state(false);
   let variantName = $state("");
   let variantSku = $state("");
