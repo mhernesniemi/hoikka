@@ -260,7 +260,7 @@
         {#snippet headerExtra()}
           <div class="border-b border-border px-6 py-4">
             <p class="text-sm text-foreground-tertiary">
-              Add multiple values at once, separated by commas.
+              Add one or more values. Separate multiple with commas.
             </p>
             <div class="mt-3 flex gap-2">
               <input
