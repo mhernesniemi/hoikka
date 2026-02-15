@@ -171,14 +171,14 @@
         <!-- Method + Code/Title -->
         <AdminCard title="Discount Method">
           <input type="hidden" name="method" value={method} />
-          <div class="mb-4 inline-flex rounded-lg border border-border p-0.5">
+          <div class="mb-4 inline-flex rounded-lg border border-input-border p-0.5">
             <button
               type="button"
               class={cn(
                 "rounded-md px-4 py-1.5 text-sm font-medium transition-colors",
                 method === "automatic"
-                  ? "bg-gray-900 text-white"
-                  : "text-foreground-tertiary hover:text-foreground"
+                  ? "border border-input-border  text-foreground"
+                  : "border border-transparent text-foreground-tertiary hover:text-foreground"
               )}
               onclick={() => (method = "automatic")}
             >
@@ -189,8 +189,8 @@
               class={cn(
                 "rounded-md px-4 py-1.5 text-sm font-medium transition-colors",
                 method === "code"
-                  ? "bg-gray-900 text-white"
-                  : "text-foreground-tertiary hover:text-foreground"
+                  ? "border border-input-border  text-foreground"
+                  : "border border-transparent text-muted-foreground hover:text-foreground"
               )}
               onclick={() => (method = "code")}
             >
@@ -200,7 +200,7 @@
 
           {#if method === "code"}
             <div>
-              <Label for="code">Code</Label>
+              <Label for="code">Code <span class="text-red-500">*</span></Label>
               <Input
                 type="text"
                 id="code"
@@ -216,14 +216,13 @@
             </div>
           {:else}
             <div>
-              <Label for="title">Title</Label>
+              <Label for="title">Title <span class="text-muted-foreground">(optional)</span></Label>
               <Input
                 type="text"
                 id="title"
                 name="title"
                 bind:value={title}
                 placeholder="e.g., Summer Sale 20% Off"
-                required
               />
               <p class="mt-1 text-xs text-muted-foreground">
                 Customers will see this in their cart and at checkout.
@@ -244,7 +243,7 @@
                 </SelectNative>
               </div>
               <div>
-                <Label for="discountValue">Value</Label>
+                <Label for="discountValue">Value <span class="text-red-500">*</span></Label>
                 <Input
                   type="number"
                   id="discountValue"

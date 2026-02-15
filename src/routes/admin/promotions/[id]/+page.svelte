@@ -198,7 +198,7 @@
             </div>
           {:else}
             <div>
-              <Label for="title">Title</Label>
+              <Label for="title">Title <span class="text-muted-foreground">(optional)</span></Label>
               <Input type="text" id="title" name="title" bind:value={promoTitle} />
               <p class="mt-1 text-xs text-muted-foreground">
                 Customers will see this in their cart and at checkout.
@@ -219,7 +219,7 @@
                 </SelectNative>
               </div>
               <div>
-                <Label for="discountValue">Value</Label>
+                <Label for="discountValue">Value <span class="text-red-500">*</span></Label>
                 <Input
                   type="number"
                   id="discountValue"
@@ -227,6 +227,7 @@
                   bind:value={discountValue}
                   min="0"
                   step={discountType === "percentage" ? "1" : "0.01"}
+                  required
                 />
               </div>
             </div>
