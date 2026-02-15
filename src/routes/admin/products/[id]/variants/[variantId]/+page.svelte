@@ -8,6 +8,7 @@
   import DeleteConfirmDialog from "$lib/components/admin/DeleteConfirmDialog.svelte";
   import AdminCard from "$lib/components/admin/AdminCard.svelte";
   import ImagePicker from "$lib/components/admin/ImagePicker.svelte";
+  import * as Dialog from "$lib/components/admin/ui/dialog";
   import * as Popover from "$lib/components/admin/ui/popover";
   import * as Command from "$lib/components/admin/ui/command";
   import Check from "@lucide/svelte/icons/check";
@@ -51,7 +52,6 @@
     variantPrice = data.variant.price / 100;
     trackInventory = data.variant.trackInventory;
     imageUrl = data.variant.imageUrl ?? null;
-    groupPricingEnabled = data.groupPrices.length > 0;
     groupPrices = data.groupPrices.map((gp) => ({
       groupId: gp.groupId,
       price: (gp.price / 100).toFixed(2)
@@ -92,10 +92,10 @@
   }
 
   // Group pricing — all client-side, saved with main form
-  let groupPricingEnabled = $state(data.groupPrices.length > 0);
   let groupPrices = $state<{ groupId: number; price: string }[]>(
     data.groupPrices.map((gp) => ({ groupId: gp.groupId, price: (gp.price / 100).toFixed(2) }))
   );
+  let showAddGroupPrice = $state(false);
   let newGroupId = $state<number | null>(null);
   let newGroupPrice = $state("");
 
@@ -109,6 +109,7 @@
     groupPrices = [...groupPrices, { groupId, price: newGroupPrice }];
     newGroupPrice = "";
     newGroupId = null;
+    showAddGroupPrice = false;
   }
 
   function removeGroupPrice(groupId: number) {
@@ -150,7 +151,6 @@
           .map((fv) => fv.id)
           .sort()
           .join() ||
-      groupPricingEnabled !== data.groupPrices.length > 0 ||
       JSON.stringify(groupPrices) !== originalGroupPricesJson
     );
   });
@@ -266,107 +266,79 @@
 
       <!-- Group Pricing -->
       <AdminCard title="Group Pricing">
-        <div class="flex flex-col gap-4">
-          <div class="flex items-center gap-2">
-            <Checkbox id="groupPricingEnabled" bind:checked={groupPricingEnabled} />
-            <label for="groupPricingEnabled" class="text-sm text-foreground-secondary">
-              Enable customer group based pricing
-            </label>
-          </div>
-
-          {#if groupPricingEnabled}
-            {#if data.customerGroups.length === 0}
-              <p class="text-sm text-muted-foreground">
-                No customer groups exist.
-                <a
-                  href="/admin/customers/groups"
-                  class="text-blue-600 hover:underline dark:text-blue-400"
-                >
-                  Create one
-                </a>
-                to set group-specific prices.
-              </p>
-            {:else}
-              <div class="flex flex-col gap-4">
-                <!-- Column headers -->
-                <div class="grid grid-cols-2 gap-4">
-                  <span class="text-sm font-medium text-foreground-secondary">Group</span>
-                  <span class="text-sm font-medium text-foreground-secondary">Price (EUR)</span>
-                </div>
-
-                <!-- Existing group prices -->
-                {#each groupPrices as gp}
-                  {@const group = data.customerGroups.find((g) => g.id === gp.groupId)}
-                  <div class="grid grid-cols-2 gap-4">
-                    <div
-                      class="flex h-10 items-center rounded-lg border border-input-border bg-muted px-3 text-sm text-muted-foreground"
-                    >
-                      {group?.name ?? `Group #${gp.groupId}`}
-                    </div>
-                    <div class="flex gap-2">
-                      <Input
-                        id="group-price-{gp.groupId}"
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        bind:value={gp.price}
-                        class="h-10"
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        class="h-10 w-10 shrink-0"
-                        onclick={() => removeGroupPrice(gp.groupId)}
-                      >
-                        <Trash2 class="h-4 w-4 text-red-500" />
-                      </Button>
-                    </div>
-                  </div>
-                {/each}
-
-                <!-- Add row -->
-                {#if availableGroups.length > 0}
-                  <div class="grid grid-cols-2 gap-4">
-                    <SelectNative id="new-group-select" bind:value={newGroupId} class="h-10">
-                      {#each availableGroups as group}
-                        <option value={group.id}>{group.name}</option>
-                      {/each}
-                    </SelectNative>
-                    <Input
-                      id="new-group-price"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      bind:value={newGroupPrice}
-                      placeholder="0.00"
-                      class="h-10"
-                    />
-                  </div>
-                  <div>
-                    <Button type="button" variant="outline" size="sm" onclick={addGroupPrice}>
-                      Add Price
-                    </Button>
-                  </div>
-                {/if}
-              </div>
-            {/if}
+        {#snippet headerActions()}
+          {#if availableGroups.length > 0}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onclick={() => (showAddGroupPrice = true)}
+            >
+              <Plus class="h-4 w-4" /> Add
+            </Button>
           {/if}
+        {/snippet}
+        {#if data.customerGroups.length === 0}
+          <p class="text-sm text-muted-foreground">
+            No customer groups exist.
+            <a
+              href="/admin/customers/groups"
+              class="text-blue-600 hover:underline dark:text-blue-400"
+            >
+              Create one
+            </a>
+            to set group-specific prices.
+          </p>
+        {:else if groupPrices.length > 0}
+          <div class="flex flex-col gap-4">
+            <!-- Column headers -->
+            <div class="grid grid-cols-2 gap-4">
+              <span class="text-sm font-medium text-foreground-secondary">Group</span>
+              <span class="text-sm font-medium text-foreground-secondary">Price (EUR)</span>
+            </div>
 
-          <!-- Hidden inputs for main form -->
-          {#if groupPricingEnabled}
-            <input form="variant-form" type="hidden" name="groupPricingEnabled" value="on" />
             {#each groupPrices as gp}
-              <input
-                form="variant-form"
-                type="hidden"
-                name="groupPriceGroupId"
-                value={gp.groupId}
-              />
-              <input form="variant-form" type="hidden" name="groupPricePrice" value={gp.price} />
+              {@const group = data.customerGroups.find((g) => g.id === gp.groupId)}
+              <div class="grid grid-cols-2 gap-4">
+                <div
+                  class="flex h-10 items-center rounded-lg border border-input-border bg-muted px-3 text-sm text-muted-foreground"
+                >
+                  {group?.name ?? `Group #${gp.groupId}`}
+                </div>
+                <div class="flex gap-2">
+                  <Input
+                    id="group-price-{gp.groupId}"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    bind:value={gp.price}
+                    class="h-10"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    class="h-10 w-10 shrink-0"
+                    onclick={() => removeGroupPrice(gp.groupId)}
+                  >
+                    <Trash2 class="h-4 w-4 text-red-500" />
+                  </Button>
+                </div>
+              </div>
             {/each}
-          {/if}
-        </div>
+          </div>
+        {:else}
+          <p class="text-sm text-muted-foreground">No group prices set.</p>
+        {/if}
+
+        <!-- Hidden inputs for main form -->
+        {#if groupPrices.length > 0}
+          <input form="variant-form" type="hidden" name="groupPricingEnabled" value="on" />
+          {#each groupPrices as gp}
+            <input form="variant-form" type="hidden" name="groupPriceGroupId" value={gp.groupId} />
+            <input form="variant-form" type="hidden" name="groupPricePrice" value={gp.price} />
+          {/each}
+        {/if}
       </AdminCard>
       <button
         type="button"
@@ -520,6 +492,50 @@
 />
 
 <UnsavedChangesDialog isDirty={() => hasUnsavedChanges} isSaving={() => isSubmitting} />
+
+<Dialog.Root
+  bind:open={showAddGroupPrice}
+  onOpenChange={(open) => {
+    if (!open) {
+      newGroupId = null;
+      newGroupPrice = "";
+    }
+  }}
+>
+  <Dialog.Content>
+    <Dialog.Header>
+      <Dialog.Title>Add Group Price</Dialog.Title>
+      <Dialog.Description>Set a price for a specific customer group.</Dialog.Description>
+    </Dialog.Header>
+    <div class="my-4 space-y-4">
+      <div>
+        <Label for="dialog-group-select">Customer Group</Label>
+        <SelectNative id="dialog-group-select" bind:value={newGroupId}>
+          {#each availableGroups as group}
+            <option value={group.id}>{group.name}</option>
+          {/each}
+        </SelectNative>
+      </div>
+      <div>
+        <Label for="dialog-group-price">Price (EUR)</Label>
+        <Input
+          id="dialog-group-price"
+          type="number"
+          step="0.01"
+          min="0"
+          bind:value={newGroupPrice}
+          placeholder="0.00"
+        />
+      </div>
+    </div>
+    <Dialog.Footer>
+      <Button type="button" variant="outline" onclick={() => (showAddGroupPrice = false)}
+        >Cancel</Button
+      >
+      <Button type="button" disabled={!newGroupPrice} onclick={addGroupPrice}>Save</Button>
+    </Dialog.Footer>
+  </Dialog.Content>
+</Dialog.Root>
 
 <DeleteConfirmDialog
   bind:open={showDelete}
