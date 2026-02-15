@@ -362,17 +362,23 @@
           {/if}
         </div>
       </AdminCard>
+      <button
+        type="button"
+        class="text-sm text-red-600 hover:text-red-800 dark:text-red-700"
+        onclick={() => (showDelete = true)}
+      >
+        Delete this variant
+      </button>
+    </div>
 
+    <!-- Sidebar (Right) -->
+    <div class="w-full space-y-6 lg:w-80 lg:shrink-0">
       <!-- Translations -->
       <TranslationEditor
         fields={[{ name: "name", label: "Name", type: "text" }]}
         translations={translationsToMap(data.translations)}
         formId="variant-form"
       />
-    </div>
-
-    <!-- Sidebar (Right) -->
-    <div class="w-full space-y-6 lg:w-80 lg:shrink-0">
       <!-- Image Section -->
       <AdminCard title="Image" variant="sidebar">
         {#snippet headerActions()}
@@ -499,14 +505,6 @@
       </AdminCard>
     </div>
   </div>
-
-  <button
-    type="button"
-    class="mt-6 text-sm text-red-600 hover:text-red-800 dark:text-red-700"
-    onclick={() => (showDelete = true)}
-  >
-    Delete this variant
-  </button>
 </div>
 
 <ImagePicker
