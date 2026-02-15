@@ -741,8 +741,8 @@
             {/each}
           </div>
         {:else}
-          <div class="rounded-lg border border-dashed border-input-border p-6 text-center">
-            <p class="text-sm text-muted-foreground">
+          <div class="text-center">
+            <p class="py-4 text-sm text-muted-foreground">
               No filters defined. Add a filter to populate this collection.
             </p>
           </div>
