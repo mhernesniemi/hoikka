@@ -279,13 +279,7 @@
 
           {#if data.payment.state === "settled" && data.payment.transactionId}
             <form method="POST" action="?/refundPayment" class="mt-4">
-              <Button
-                type="submit"
-                variant="secondary"
-                class="w-full bg-yellow-600 text-white hover:bg-yellow-700"
-              >
-                Refund Payment
-              </Button>
+              <Button type="submit" variant="outline" class="w-full">Refund Payment</Button>
             </form>
           {/if}
         </AdminCard>
