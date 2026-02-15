@@ -179,10 +179,11 @@ export class CategoryService {
 	}
 
 	/**
-	 * Delete a category (children become orphans or get deleted based on DB constraint)
+	 * Delete a category and all its descendants
 	 */
 	async delete(id: number): Promise<void> {
-		await db.delete(categories).where(eq(categories.id, id));
+		const ids = await this.getDescendantIds(id);
+		await db.delete(categories).where(inArray(categories.id, ids));
 	}
 
 	/**
