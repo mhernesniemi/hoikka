@@ -69,6 +69,7 @@
   let editingCategory = $state<CategoryNode | null>(null);
   let createParentId = $state<number | null>(null);
   let showDeleteConfirm = $state(false);
+  let deleteConfirmed = $state(false);
 
   function countDescendants(node: CategoryNode): number {
     return node.children.reduce((sum, child) => sum + 1 + countDescendants(child), 0);
@@ -140,6 +141,13 @@
       prevIds = new Set(currentIds);
     });
   });
+  // Reopen edit dialog if delete confirmation was cancelled
+  $effect(() => {
+    if (!showDeleteConfirm && !deleteConfirmed && editingCategory && !editDialogOpen) {
+      editDialogOpen = true;
+    }
+  });
+
   function handleKeydown(e: KeyboardEvent) {
     if (e.key === "c" && !e.metaKey && !e.ctrlKey && !createDialogOpen && !editDialogOpen) {
       const tag = (e.target as HTMLElement).tagName;
@@ -157,7 +165,7 @@
 <div>
   <h1 class="text-2xl leading-[40px] font-bold">Categories</h1>
 
-  {#if data.tree.length > 0}
+  {#if data.tree.some((node) => node.children.length > 0)}
     <div class="mb-2 flex justify-end">
       <button
         type="button"
@@ -518,7 +526,11 @@
           <button
             type="button"
             class="text-sm text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
-            onclick={() => (showDeleteConfirm = true)}
+            onclick={() => {
+              editDialogOpen = false;
+              deleteConfirmed = false;
+              showDeleteConfirm = true;
+            }}
           >
             Delete this category
           </button>
@@ -533,7 +545,10 @@
     bind:open={showDeleteConfirm}
     title={`Delete "${editingCategory.name}"?`}
     description={`This will also delete ${countDescendants(editingCategory)} child ${countDescendants(editingCategory) === 1 ? "category" : "categories"}. This action cannot be undone.`}
-    ondeleted={() => (editDialogOpen = false)}
+    ondeleted={() => {
+      deleteConfirmed = true;
+      editDialogOpen = false;
+    }}
   >
     <input type="hidden" name="id" value={editingCategory.id} />
   </DeleteConfirmDialog>
