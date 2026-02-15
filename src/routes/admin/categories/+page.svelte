@@ -69,7 +69,6 @@
   let editingCategory = $state<CategoryNode | null>(null);
   let createParentId = $state<number | null>(null);
   let showDeleteConfirm = $state(false);
-  let deleteConfirmed = $state(false);
 
   function countDescendants(node: CategoryNode): number {
     return node.children.reduce((sum, child) => sum + 1 + countDescendants(child), 0);
@@ -141,12 +140,6 @@
       prevIds = new Set(currentIds);
     });
   });
-  // Reopen edit dialog if delete confirmation was cancelled
-  $effect(() => {
-    if (!showDeleteConfirm && !deleteConfirmed && editingCategory && !editDialogOpen) {
-      editDialogOpen = true;
-    }
-  });
 
   function handleKeydown(e: KeyboardEvent) {
     if (e.key === "c" && !e.metaKey && !e.ctrlKey && !createDialogOpen && !editDialogOpen) {
@@ -175,6 +168,9 @@
         {allExpanded ? "Collapse all" : "Expand all"}
       </button>
     </div>
+  {:else}
+    <!-- Spacer -->
+    <div class="mb-2 h-[20px]"></div>
   {/if}
 
   <!-- Category tree -->
@@ -528,7 +524,6 @@
             class="text-sm text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
             onclick={() => {
               editDialogOpen = false;
-              deleteConfirmed = false;
               showDeleteConfirm = true;
             }}
           >
@@ -545,10 +540,8 @@
     bind:open={showDeleteConfirm}
     title={`Delete "${editingCategory.name}"?`}
     description={`This will also delete ${countDescendants(editingCategory)} child ${countDescendants(editingCategory) === 1 ? "category" : "categories"}. This action cannot be undone.`}
-    ondeleted={() => {
-      deleteConfirmed = true;
-      editDialogOpen = false;
-    }}
+    ondeleted={() => (editDialogOpen = false)}
+    oncancelled={() => (editDialogOpen = true)}
   >
     <input type="hidden" name="id" value={editingCategory.id} />
   </DeleteConfirmDialog>

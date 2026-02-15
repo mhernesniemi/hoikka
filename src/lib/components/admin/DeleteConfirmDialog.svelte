@@ -10,6 +10,7 @@
     description = "This action cannot be undone.",
     action = "?/delete",
     ondeleted,
+    oncancelled,
     children
   }: {
     open: boolean;
@@ -17,11 +18,20 @@
     description?: string;
     action?: string;
     ondeleted?: () => void;
+    oncancelled?: () => void;
     children?: Snippet;
   } = $props();
+
+  let deleting = false;
 </script>
 
-<Dialog.Root bind:open>
+<Dialog.Root
+  bind:open
+  onOpenChange={(isOpen) => {
+    if (!isOpen && !deleting) oncancelled?.();
+    deleting = false;
+  }}
+>
   <Dialog.Content>
     <Dialog.Header>
       <Dialog.Title>{title}</Dialog.Title>
@@ -33,6 +43,7 @@
         method="POST"
         {action}
         use:enhance={() => {
+          deleting = true;
           return async ({ update }) => {
             open = false;
             ondeleted?.();
