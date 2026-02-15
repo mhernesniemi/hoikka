@@ -68,15 +68,13 @@
                     name="{field.name}_{lang.code}"
                     form={formId}
                     value={translations[lang.code]?.[field.name] ?? ""}
-                    class="shadow-sm"
                   />
                 {:else if field.type === "textarea"}
                   <Textarea
                     id="translation_{lang.code}_{field.name}"
                     name="{field.name}_{lang.code}"
                     form={formId}
-                    rows={4}
-                    class="shadow-sm">{translations[lang.code]?.[field.name] ?? ""}</Textarea
+                    rows={4}>{translations[lang.code]?.[field.name] ?? ""}</Textarea
                   >
                 {:else if field.type === "richtext"}
                   <RichTextEditor

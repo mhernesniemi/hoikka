@@ -419,25 +419,11 @@
               <div class="grid grid-cols-2 gap-4">
                 <div>
                   <Label for="name">Name <span class="text-red-500">*</span></Label>
-                  <Input
-                    type="text"
-                    id="name"
-                    name="name"
-                    bind:value={name}
-                    required
-                    class="shadow-sm"
-                  />
+                  <Input type="text" id="name" name="name" bind:value={name} required />
                 </div>
                 <div>
                   <Label for="slug">Slug <span class="text-red-500">*</span></Label>
-                  <Input
-                    type="text"
-                    id="slug"
-                    name="slug"
-                    bind:value={slug}
-                    required
-                    class="shadow-sm"
-                  />
+                  <Input type="text" id="slug" name="slug" bind:value={slug} required />
                 </div>
               </div>
               <div>
@@ -464,7 +450,6 @@
                       id="translation_{lang.code}_name"
                       name="name_{lang.code}"
                       value={translationMap[lang.code]?.name ?? ""}
-                      class="shadow-sm"
                     />
                   </div>
                   <div>
@@ -474,7 +459,6 @@
                       id="translation_{lang.code}_slug"
                       name="slug_{lang.code}"
                       value={translationMap[lang.code]?.slug ?? ""}
-                      class="shadow-sm"
                     />
                   </div>
                 </div>
@@ -677,7 +661,7 @@
                   {:else if filter.field === "price"}
                     <div class="flex items-center gap-3">
                       <SelectNative
-                        class="w-auto shadow-sm"
+                        class="w-auto"
                         value={filter.operator}
                         onchange={(e) => {
                           localFilters[index] = {
@@ -693,7 +677,7 @@
                         type="number"
                         step="0.01"
                         min="0"
-                        class="w-32 shadow-sm"
+                        class="w-32"
                         value={typeof filter.value === "number"
                           ? (filter.value / 100).toFixed(2)
                           : ""}
@@ -710,7 +694,7 @@
                   {:else if filter.field === "stock"}
                     <div class="flex items-center gap-3">
                       <SelectNative
-                        class="w-auto shadow-sm"
+                        class="w-auto"
                         value={filter.operator}
                         onchange={(e) => {
                           localFilters[index] = {
@@ -724,7 +708,7 @@
                       </SelectNative>
                       <Input
                         type="number"
-                        class="w-32 shadow-sm"
+                        class="w-32"
                         value={filter.value}
                         placeholder="Stock level"
                         onchange={(e) => {
@@ -738,7 +722,7 @@
                   {:else if filter.field === "visibility"}
                     <SelectNative
                       name="visibility"
-                      class="w-auto shadow-sm"
+                      class="w-auto"
                       value={filter.value}
                       onchange={(e) => {
                         localFilters[index] = {

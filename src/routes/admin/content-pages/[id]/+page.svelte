@@ -164,26 +164,12 @@
               <div class="grid grid-cols-2 gap-4">
                 <div>
                   <Label for="title">Title <span class="text-red-500">*</span></Label>
-                  <Input
-                    type="text"
-                    id="title"
-                    name="title"
-                    bind:value={title}
-                    required
-                    class="shadow-sm"
-                  />
+                  <Input type="text" id="title" name="title" bind:value={title} required />
                 </div>
 
                 <div>
                   <Label for="slug">Slug <span class="text-red-500">*</span></Label>
-                  <Input
-                    type="text"
-                    id="slug"
-                    name="slug"
-                    bind:value={slug}
-                    required
-                    class="shadow-sm"
-                  />
+                  <Input type="text" id="slug" name="slug" bind:value={slug} required />
                 </div>
               </div>
 
@@ -211,7 +197,6 @@
                       id="translation_{lang.code}_title"
                       name="title_{lang.code}"
                       value={translationMap[lang.code]?.title ?? ""}
-                      class="shadow-sm"
                     />
                   </div>
 
@@ -222,7 +207,6 @@
                       id="translation_{lang.code}_slug"
                       name="slug_{lang.code}"
                       value={translationMap[lang.code]?.slug ?? ""}
-                      class="shadow-sm"
                     />
                   </div>
                 </div>

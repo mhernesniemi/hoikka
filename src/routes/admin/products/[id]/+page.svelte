@@ -560,12 +560,7 @@
                   : "bg-gray-400"
             )}
           ></span>
-          <SelectNative
-            form="product-form"
-            name="visibility"
-            class="pl-7 shadow-sm"
-            bind:value={visibility}
-          >
+          <SelectNative form="product-form" name="visibility" class="pl-7" bind:value={visibility}>
             <option value="draft">Draft</option>
             <option value="public">Public</option>
             <option value="private">Private</option>
@@ -579,7 +574,7 @@
       <!-- Product Type Section (only shown when multiple types exist) -->
       {#if data.productTypes.length > 1}
         <AdminCard title="Product Type" variant="sidebar">
-          <SelectNative form="product-form" name="type" class="shadow-sm">
+          <SelectNative form="product-form" name="type">
             {#each data.productTypes as type}
               <option value={type} selected={data.product.type === type}>
                 {type.charAt(0).toUpperCase() + type.slice(1)}
