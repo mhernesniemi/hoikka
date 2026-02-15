@@ -191,10 +191,9 @@
             }
           };
         }}
-        class="rounded-lg bg-surface shadow"
       >
         <input type="hidden" name="imageUrl" value={imageUrl ?? ""} />
-        <div class="space-y-4 p-6">
+        <AdminCard title="Variant Details">
           <div class="grid grid-cols-2 gap-4">
             <div>
               <Label for="variant_name">Name</Label>
@@ -205,13 +204,12 @@
               <Input type="text" id="sku" name="sku" bind:value={variantSku} required />
             </div>
           </div>
-        </div>
+        </AdminCard>
       </form>
 
       <!-- Price and Stock -->
-      <div class="rounded-lg bg-surface shadow">
-        <div class="flex flex-col gap-6 p-6">
-          <h2 class="text-lg font-semibold">Stock and price</h2>
+      <AdminCard title="Stock and Price">
+        <div class="space-y-4">
           <div class="grid grid-cols-2 gap-4">
             <div>
               <Label for="stock">Stock</Label>
@@ -258,13 +256,11 @@
             <input type="hidden" name="trackInventory" value="on" form="variant-form" />
           {/if}
         </div>
-      </div>
+      </AdminCard>
 
       <!-- Group Pricing -->
-      <div class="rounded-lg bg-surface shadow">
-        <div class="flex flex-col gap-4 p-6">
-          <h2 class="text-lg font-semibold">Group Pricing</h2>
-
+      <AdminCard title="Group Pricing">
+        <div class="space-y-4">
           <div class="flex items-center gap-2">
             <Checkbox id="groupPricingEnabled" bind:checked={groupPricingEnabled} />
             <label for="groupPricingEnabled" class="text-sm text-foreground-secondary">
@@ -365,7 +361,7 @@
             {/each}
           {/if}
         </div>
-      </div>
+      </AdminCard>
 
       <!-- Translations -->
       <TranslationEditor
@@ -419,99 +415,88 @@
       </AdminCard>
 
       <!-- Facet Values Section -->
-      <div class="rounded-lg bg-surface shadow">
-        <div class="border-b border-border px-4 py-3">
-          <h2 class="font-semibold">Facet Values</h2>
-        </div>
-
-        <div class="p-4">
-          {#if data.facets.length === 0}
-            <p class="text-sm text-muted-foreground">No facets defined.</p>
-          {:else}
-            <!-- Combobox -->
-            <Popover.Root bind:open={facetComboboxOpen}>
-              <Popover.Trigger
-                class="flex w-full items-center justify-between rounded-lg border border-input-border bg-surface px-3 py-2 text-sm hover:bg-hover"
-                aria-expanded={facetComboboxOpen}
-                aria-controls="facet-listbox"
-                aria-haspopup="listbox"
-              >
-                <span class="text-muted-foreground">Select facet values...</span>
-                <ChevronsUpDown class="ml-2 h-4 w-4 shrink-0 opacity-50" />
-              </Popover.Trigger>
-              <Popover.Content class="w-72 p-0" align="start">
-                <Command.Root>
-                  <Command.Input placeholder="Search facet values..." />
-                  <Command.List id="facet-listbox" class="max-h-64">
-                    <Command.Empty>No facet value found.</Command.Empty>
-                    {#each data.facets as facet}
-                      {#if facet.values.length > 0}
-                        <Command.Group heading={facet.name}>
-                          {#each facet.values as value}
-                            <Command.Item
-                              value="{facet.name} {value.name}"
-                              onSelect={() => toggleFacetValue(value.id)}
-                              class="cursor-pointer"
-                            >
-                              <div class="flex w-full items-center gap-2">
-                                <div class="flex h-4 w-4 items-center justify-center">
-                                  {#if selectedFacetValues.includes(value.id)}
-                                    <Check class="h-4 w-4" />
-                                  {/if}
-                                </div>
-                                <span>{value.name}</span>
+      <AdminCard title="Facet Values" variant="sidebar">
+        {#if data.facets.length === 0}
+          <p class="text-sm text-muted-foreground">No facets defined.</p>
+        {:else}
+          <!-- Combobox -->
+          <Popover.Root bind:open={facetComboboxOpen}>
+            <Popover.Trigger
+              class="flex w-full items-center justify-between rounded-lg border border-input-border bg-surface px-3 py-2 text-sm hover:bg-hover"
+              aria-expanded={facetComboboxOpen}
+              aria-controls="facet-listbox"
+              aria-haspopup="listbox"
+            >
+              <span class="text-muted-foreground">Select facet values...</span>
+              <ChevronsUpDown class="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            </Popover.Trigger>
+            <Popover.Content class="w-72 p-0" align="start">
+              <Command.Root>
+                <Command.Input placeholder="Search facet values..." />
+                <Command.List id="facet-listbox" class="max-h-64">
+                  <Command.Empty>No facet value found.</Command.Empty>
+                  {#each data.facets as facet}
+                    {#if facet.values.length > 0}
+                      <Command.Group heading={facet.name}>
+                        {#each facet.values as value}
+                          <Command.Item
+                            value="{facet.name} {value.name}"
+                            onSelect={() => toggleFacetValue(value.id)}
+                            class="cursor-pointer"
+                          >
+                            <div class="flex w-full items-center gap-2">
+                              <div class="flex h-4 w-4 items-center justify-center">
+                                {#if selectedFacetValues.includes(value.id)}
+                                  <Check class="h-4 w-4" />
+                                {/if}
                               </div>
-                            </Command.Item>
-                          {/each}
-                        </Command.Group>
-                      {/if}
-                    {/each}
-                  </Command.List>
-                </Command.Root>
-              </Popover.Content>
-            </Popover.Root>
+                              <span>{value.name}</span>
+                            </div>
+                          </Command.Item>
+                        {/each}
+                      </Command.Group>
+                    {/if}
+                  {/each}
+                </Command.List>
+              </Command.Root>
+            </Popover.Content>
+          </Popover.Root>
 
-            <!-- Selected facet values -->
-            {#if selectedFacetValues.length > 0}
-              <div class="mt-3 flex flex-wrap gap-1.5">
-                {#each getSelectedFacetValueObjects() as fv}
-                  <Badge class="gap-1">
-                    {fv.facetName}: {fv.name}
-                    <button
-                      type="button"
-                      onclick={() => removeFacetValue(fv.id)}
-                      class="ml-0.5 rounded-full p-0.5 hover:bg-blue-200 dark:hover:bg-blue-500/20"
-                      aria-label="Remove {fv.name}"
-                    >
-                      <X class="h-3 w-3" />
-                    </button>
-                  </Badge>
-                {/each}
-              </div>
-            {/if}
-
-            <!-- Hidden inputs to submit with the variant form -->
-            {#each selectedFacetValues as fvId}
-              <input form="variant-form" type="hidden" name="facetValueIds" value={fvId} />
-            {/each}
+          <!-- Selected facet values -->
+          {#if selectedFacetValues.length > 0}
+            <div class="mt-3 flex flex-wrap gap-1.5">
+              {#each getSelectedFacetValueObjects() as fv}
+                <Badge class="gap-1">
+                  {fv.facetName}: {fv.name}
+                  <button
+                    type="button"
+                    onclick={() => removeFacetValue(fv.id)}
+                    class="ml-0.5 rounded-full p-0.5 hover:bg-blue-200 dark:hover:bg-blue-500/20"
+                    aria-label="Remove {fv.name}"
+                  >
+                    <X class="h-3 w-3" />
+                  </button>
+                </Badge>
+              {/each}
+            </div>
           {/if}
-        </div>
-      </div>
+
+          <!-- Hidden inputs to submit with the variant form -->
+          {#each selectedFacetValues as fvId}
+            <input form="variant-form" type="hidden" name="facetValueIds" value={fvId} />
+          {/each}
+        {/if}
+      </AdminCard>
 
       <!-- Parent Product -->
-      <div class="rounded-lg bg-surface shadow">
-        <div class="border-b border-border px-4 py-3">
-          <h2 class="font-semibold">Parent Product</h2>
-        </div>
-        <div class="p-4">
-          <a
-            href="/admin/products/{data.product.id}"
-            class="inline-flex items-center gap-1 text-sm text-blue-600 hover:underline dark:text-blue-400"
-          >
-            {data.product.name}
-          </a>
-        </div>
-      </div>
+      <AdminCard title="Parent Product" variant="sidebar">
+        <a
+          href="/admin/products/{data.product.id}"
+          class="inline-flex items-center gap-1 text-sm text-blue-600 hover:underline dark:text-blue-400"
+        >
+          {data.product.name}
+        </a>
+      </AdminCard>
     </div>
   </div>
 
