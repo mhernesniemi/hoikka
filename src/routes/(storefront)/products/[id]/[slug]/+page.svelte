@@ -313,26 +313,24 @@
 
       {#if selectedVariant && displayVariantPrice !== null}
         <div class="mb-8">
+          <!-- Discounted price -->
+          <p class="text-xl font-extrabold" class:text-red-600={discountedVariantPrice !== null}>
+            {formatPrice(displayVariantPrice)}
+          </p>
+
+          <!-- Original price + discount badge -->
           {#if discountedVariantPrice !== null && variantPrice !== null}
-            <div class="flex items-center gap-3">
-              <span class="text-lg text-gray-400 line-through">{formatPrice(variantPrice)}</span>
-              <span class="text-xl font-semibold text-red-600"
-                >{formatPrice(discountedVariantPrice)}</span
-              >
+            <div class="mt-2 flex items-center gap-2">
               {#if bestDiscount}
-                <span class="rounded bg-red-600 px-2 py-0.5 text-xs font-semibold text-white">
+                <span class="rounded bg-yellow-300 px-2 py-0.5 text-xs font-bold text-gray-900">
                   {bestDiscount.discountType === "percentage"
-                    ? `-${bestDiscount.discountValue}%`
+                    ? `-${bestDiscount.discountValue} %`
                     : `-${formatPrice(bestDiscount.discountValue)}`}
                 </span>
               {/if}
-            </div>
-            {#if bestDiscount?.title}
-              <p class="mt-1 text-sm text-red-600">{bestDiscount.title}</p>
-            {/if}
-          {:else}
-            <div class="text-xl font-semibold">
-              {formatPrice(displayVariantPrice)}
+              <span class="text-base text-gray-400 line-through">
+                {formatPrice(variantPrice)}
+              </span>
             </div>
           {/if}
         </div>

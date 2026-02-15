@@ -225,9 +225,6 @@
                 placeholder="e.g., Summer Sale 20% Off"
                 required
               />
-              <p class="mt-1 text-xs text-muted-foreground">
-                Customers will see this in their cart and at checkout.
-              </p>
             </div>
           {/if}
         </AdminCard>
