@@ -4,7 +4,7 @@ export const DEFAULT_LANGUAGE = "en";
 /** All supported languages */
 export const LANGUAGES = [
 	{ code: "en", name: "English" },
-	{ code: "fi", name: "Suomi" }
+	{ code: "fi", name: "Finnish" }
 ] as const;
 
 /** Languages that use translation tables (everything except default) */

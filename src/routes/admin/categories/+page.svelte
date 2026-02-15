@@ -369,9 +369,11 @@
 
     {#if data.tree.length === 0}
       <div class="border-t border-border p-6 text-center">
-        <p class="text-sm text-muted-foreground">
-          No categories yet. Use the input above to add your first category.
-        </p>
+        <div class="rounded-lg border border-dashed border-input-border p-6 text-center">
+          <p class="text-sm text-muted-foreground">
+            No categories yet. Use the input above to add your first category.
+          </p>
+        </div>
       </div>
     {:else}
       {#each data.tree as rootNode}
