@@ -2,6 +2,7 @@
   import { enhance } from "$app/forms";
   import { browser } from "$app/environment";
   import { untrack } from "svelte";
+  import { toast } from "svelte-sonner";
   import { Button } from "$lib/components/admin/ui/button";
   import { Badge } from "$lib/components/admin/ui/badge";
   import { Input } from "$lib/components/admin/ui/input";
@@ -17,9 +18,14 @@
   import ChevronRight from "@lucide/svelte/icons/chevron-right";
   import Pencil from "@lucide/svelte/icons/pencil";
   import PlusIcon from "@lucide/svelte/icons/plus";
+  import Trash2 from "@lucide/svelte/icons/trash-2";
   import type { PageData } from "./$types";
 
-  let { data }: { data: PageData } = $props();
+  let { data, form }: { data: PageData; form: any } = $props();
+
+  $effect(() => {
+    if (form?.error) toast.error(form.error);
+  });
 
   type CategoryNode = (typeof data.tree)[0];
   type FlatCategory = { id: number; name: string; depth: number };
@@ -69,9 +75,15 @@
   let editingCategory = $state<CategoryNode | null>(null);
   let createParentId = $state<number | null>(null);
   let showDeleteConfirm = $state(false);
+  let deletingCategory = $state<CategoryNode | null>(null);
 
   function countDescendants(node: CategoryNode): number {
     return node.children.reduce((sum, child) => sum + 1 + countDescendants(child), 0);
+  }
+
+  function requestDelete(node: CategoryNode) {
+    deletingCategory = node;
+    showDeleteConfirm = true;
   }
 
   // Auto-slug for create dialog
@@ -299,6 +311,39 @@
                 <Tooltip.Content>Add child category</Tooltip.Content>
               </Tooltip.Root>
             </Tooltip.Provider>
+            {#if hasChildren}
+              <Tooltip.Provider>
+                <Tooltip.Root ignoreNonKeyboardFocus>
+                  <Tooltip.Trigger
+                    type="button"
+                    class="group flex h-7 w-7 items-center justify-center rounded-md hover:bg-foreground/10"
+                    onclick={() => requestDelete(node)}
+                  >
+                    <Trash2
+                      class="h-3.5 w-3.5 text-muted-foreground group-hover:text-red-600 dark:group-hover:text-red-400"
+                    />
+                  </Tooltip.Trigger>
+                  <Tooltip.Content>Delete category</Tooltip.Content>
+                </Tooltip.Root>
+              </Tooltip.Provider>
+            {:else}
+              <form method="POST" action="?/delete" use:enhance>
+                <input type="hidden" name="id" value={node.id} />
+                <Tooltip.Provider>
+                  <Tooltip.Root ignoreNonKeyboardFocus>
+                    <Tooltip.Trigger
+                      type="submit"
+                      class="group flex h-7 w-7 items-center justify-center rounded-md hover:bg-foreground/10"
+                    >
+                      <Trash2
+                        class="h-3.5 w-3.5 text-muted-foreground group-hover:text-red-600 dark:group-hover:text-red-400"
+                      />
+                    </Tooltip.Trigger>
+                    <Tooltip.Content>Delete category</Tooltip.Content>
+                  </Tooltip.Root>
+                </Tooltip.Provider>
+              </form>
+            {/if}
             <Tooltip.Provider>
               <Tooltip.Root ignoreNonKeyboardFocus>
                 <Tooltip.Trigger
@@ -499,7 +544,20 @@
         </Dialog.Footer>
       </form>
       <div class="border-t border-border pt-4">
-        {#if editingCategory.children.length === 0}
+        {#if editingCategory.children.length > 0}
+          <button
+            type="button"
+            class="text-sm text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
+            onclick={() => {
+              if (editingCategory) {
+                editDialogOpen = false;
+                requestDelete(editingCategory);
+              }
+            }}
+          >
+            Delete this category
+          </button>
+        {:else}
           <form
             method="POST"
             action="?/delete"
@@ -518,31 +576,22 @@
               Delete this category
             </button>
           </form>
-        {:else}
-          <button
-            type="button"
-            class="text-sm text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
-            onclick={() => {
-              editDialogOpen = false;
-              showDeleteConfirm = true;
-            }}
-          >
-            Delete this category
-          </button>
         {/if}
       </div>
     {/if}
   </Dialog.Content>
 </Dialog.Root>
 
-{#if editingCategory}
+{#if deletingCategory}
   <DeleteConfirmDialog
     bind:open={showDeleteConfirm}
-    title={`Delete "${editingCategory.name}"?`}
-    description={`This will also delete ${countDescendants(editingCategory)} child ${countDescendants(editingCategory) === 1 ? "category" : "categories"}. This action cannot be undone.`}
+    title={`Delete "${deletingCategory.name}"?`}
+    description={`This will also delete ${countDescendants(deletingCategory)} child ${countDescendants(deletingCategory) === 1 ? "category" : "categories"}. This action cannot be undone.`}
     ondeleted={() => (editDialogOpen = false)}
-    oncancelled={() => (editDialogOpen = true)}
+    oncancelled={() => {
+      if (editingCategory) editDialogOpen = true;
+    }}
   >
-    <input type="hidden" name="id" value={editingCategory.id} />
+    <input type="hidden" name="id" value={deletingCategory.id} />
   </DeleteConfirmDialog>
 {/if}
