@@ -13,6 +13,7 @@
   import * as Tooltip from "$lib/components/admin/ui/tooltip";
   import CategoryCombobox from "$lib/components/admin/CategoryCombobox.svelte";
   import { slugify, cn } from "$lib/utils.js";
+  import DeleteConfirmDialog from "$lib/components/admin/DeleteConfirmDialog.svelte";
   import ChevronRight from "@lucide/svelte/icons/chevron-right";
   import Pencil from "@lucide/svelte/icons/pencil";
   import PlusIcon from "@lucide/svelte/icons/plus";
@@ -67,6 +68,11 @@
   let editDialogOpen = $state(false);
   let editingCategory = $state<CategoryNode | null>(null);
   let createParentId = $state<number | null>(null);
+  let showDeleteConfirm = $state(false);
+
+  function countDescendants(node: CategoryNode): number {
+    return node.children.reduce((sum, child) => sum + 1 + countDescendants(child), 0);
+  }
 
   // Auto-slug for create dialog
   let createName = $state("");
@@ -488,8 +494,8 @@
           <Button type="submit">Save Changes</Button>
         </Dialog.Footer>
       </form>
-      {#if editingCategory.children.length === 0}
-        <div class="border-t border-border pt-4">
+      <div class="border-t border-border pt-4">
+        {#if editingCategory.children.length === 0}
           <form
             method="POST"
             action="?/delete"
@@ -508,8 +514,27 @@
               Delete this category
             </button>
           </form>
-        </div>
-      {/if}
+        {:else}
+          <button
+            type="button"
+            class="text-sm text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
+            onclick={() => (showDeleteConfirm = true)}
+          >
+            Delete this category
+          </button>
+        {/if}
+      </div>
     {/if}
   </Dialog.Content>
 </Dialog.Root>
+
+{#if editingCategory}
+  <DeleteConfirmDialog
+    bind:open={showDeleteConfirm}
+    title={`Delete "${editingCategory.name}"?`}
+    description={`This will also delete ${countDescendants(editingCategory)} child ${countDescendants(editingCategory) === 1 ? "category" : "categories"}. This action cannot be undone.`}
+    ondeleted={() => (editDialogOpen = false)}
+  >
+    <input type="hidden" name="id" value={editingCategory.id} />
+  </DeleteConfirmDialog>
+{/if}

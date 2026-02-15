@@ -6,8 +6,6 @@ import Content from "./dropdown-menu-content.svelte";
 import Group from "./dropdown-menu-group.svelte";
 import Item from "./dropdown-menu-item.svelte";
 import Label from "./dropdown-menu-label.svelte";
-import RadioGroup from "./dropdown-menu-radio-group.svelte";
-import RadioItem from "./dropdown-menu-radio-item.svelte";
 import Separator from "./dropdown-menu-separator.svelte";
 import Shortcut from "./dropdown-menu-shortcut.svelte";
 import Trigger from "./dropdown-menu-trigger.svelte";
@@ -29,8 +27,6 @@ export {
 	Group as DropdownMenuGroup,
 	Item as DropdownMenuItem,
 	Label as DropdownMenuLabel,
-	RadioGroup as DropdownMenuRadioGroup,
-	RadioItem as DropdownMenuRadioItem,
 	Separator as DropdownMenuSeparator,
 	Shortcut as DropdownMenuShortcut,
 	Sub as DropdownMenuSub,
@@ -42,8 +38,6 @@ export {
 	GroupHeading,
 	Item,
 	Label,
-	RadioGroup,
-	RadioItem,
 	Root,
 	Separator,
 	Shortcut,
