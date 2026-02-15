@@ -6,6 +6,8 @@
   import { Label } from "$lib/components/admin/ui/label";
   import { SelectNative } from "$lib/components/admin/ui/select-native";
   import DeleteConfirmDialog from "$lib/components/admin/DeleteConfirmDialog.svelte";
+  import AdminCard from "$lib/components/admin/AdminCard.svelte";
+  import ImagePicker from "$lib/components/admin/ImagePicker.svelte";
   import * as Popover from "$lib/components/admin/ui/popover";
   import * as Command from "$lib/components/admin/ui/command";
   import Check from "@lucide/svelte/icons/check";
@@ -15,6 +17,7 @@
   import TranslationEditor from "$lib/components/admin/TranslationEditor.svelte";
   import { translationsToMap } from "$lib/config/languages.js";
   import X from "@lucide/svelte/icons/x";
+  import Plus from "@lucide/svelte/icons/plus";
   import Trash2 from "@lucide/svelte/icons/trash-2";
   import ChevronLeft from "@lucide/svelte/icons/chevron-left";
   import UnsavedChangesDialog from "$lib/components/admin/UnsavedChangesDialog.svelte";
@@ -30,10 +33,12 @@
   let trackInventory = $state(data.variant.trackInventory);
   let showDelete = $state(false);
   let facetComboboxOpen = $state(false);
+  let showImagePicker = $state(false);
   let variantName = $state("");
   let variantSku = $state("");
   let variantStock = $state(0);
   let variantPrice = $state(0);
+  let imageUrl = $state<string | null>(null);
 
   // Facet value selections - initialize from current variant data
   let selectedFacetValues = $state<number[]>([]);
@@ -44,6 +49,7 @@
     variantSku = data.variant.sku;
     variantStock = data.variant.stock;
     variantPrice = data.variant.price / 100;
+    imageUrl = data.variant.imageUrl ?? null;
   });
 
   // Flatten facet values for combobox display
@@ -109,6 +115,22 @@
     )
   );
 
+  function handleImageSelected(
+    files: {
+      url: string;
+      name: string;
+      fileId: string;
+      width: number;
+      height: number;
+      size: number;
+      alt: string;
+    }[]
+  ) {
+    if (files.length > 0) {
+      imageUrl = files[0].url;
+    }
+  }
+
   const hasUnsavedChanges = $derived.by(() => {
     return (
       variantName !== (data.variant.name ?? "") ||
@@ -116,6 +138,7 @@
       variantStock !== data.variant.stock ||
       variantPrice !== data.variant.price / 100 ||
       trackInventory !== data.variant.trackInventory ||
+      imageUrl !== (data.variant.imageUrl ?? null) ||
       [...selectedFacetValues].sort().join() !==
         data.variant.facetValues
           .map((fv) => fv.id)
@@ -170,6 +193,7 @@
         }}
         class="rounded-lg bg-surface shadow"
       >
+        <input type="hidden" name="imageUrl" value={imageUrl ?? ""} />
         <div class="space-y-4 p-6">
           <div class="grid grid-cols-2 gap-4">
             <div>
@@ -353,6 +377,47 @@
 
     <!-- Sidebar (Right) -->
     <div class="w-full space-y-6 lg:w-80 lg:shrink-0">
+      <!-- Image Section -->
+      <AdminCard title="Image" variant="sidebar">
+        {#snippet headerActions()}
+          {#if !imageUrl}
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onclick={() => (showImagePicker = true)}
+            >
+              <Plus class="h-4 w-4" />
+              Add
+            </Button>
+          {/if}
+        {/snippet}
+        {#if imageUrl}
+          <div class="group relative">
+            <img
+              src="{imageUrl}?tr=w-400,h-400,fo-auto"
+              alt={variantName || variantSku}
+              class="h-48 w-full rounded border border-border object-cover"
+            />
+            <div
+              class="absolute inset-0 flex items-center justify-center rounded bg-black/50 opacity-0 transition-opacity group-hover:opacity-100"
+            >
+              <Button
+                type="button"
+                size="sm"
+                variant="destructive"
+                class="h-7 w-7 p-0"
+                onclick={() => (imageUrl = null)}
+              >
+                <Trash2 class="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          </div>
+        {:else}
+          <p class="py-4 text-center text-sm text-muted-foreground">No image yet</p>
+        {/if}
+      </AdminCard>
+
       <!-- Facet Values Section -->
       <div class="rounded-lg bg-surface shadow">
         <div class="border-b border-border px-4 py-3">
@@ -458,6 +523,12 @@
     Delete this variant
   </button>
 </div>
+
+<ImagePicker
+  bind:open={showImagePicker}
+  onClose={() => (showImagePicker = false)}
+  onSelect={handleImageSelected}
+/>
 
 <UnsavedChangesDialog isDirty={() => hasUnsavedChanges} isSaving={() => isSubmitting} />
 

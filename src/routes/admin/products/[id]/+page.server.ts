@@ -240,6 +240,36 @@ export const actions: Actions = {
 		}
 	},
 
+	createVariant: async ({ params, request }) => {
+		const productId = Number(params.id);
+		const formData = await request.formData();
+
+		const sku = (formData.get("sku") as string)?.trim();
+		const price = Number(formData.get("price")) * 100; // Convert to cents
+		const trackInventory = formData.get("trackInventory") === "on";
+		const stock = trackInventory ? Number(formData.get("stock")) || 0 : 0;
+		const name = (formData.get("variant_name") as string)?.trim();
+
+		if (!sku || isNaN(price)) {
+			return fail(400, { error: "SKU and price are required" });
+		}
+
+		try {
+			await productService.createVariant({
+				productId,
+				sku,
+				price,
+				stock,
+				trackInventory,
+				name: name || undefined
+			});
+
+			return { variantCreated: true };
+		} catch (err) {
+			return fail(500, { error: dbError(err, "Failed to create variant") });
+		}
+	},
+
 	updateImageAlt: async ({ params, request }) => {
 		const productId = Number(params.id);
 		const formData = await request.formData();

@@ -259,7 +259,8 @@ export class ProductService {
 				sku: input.sku,
 				price: input.price,
 				stock: input.stock ?? 0,
-				trackInventory: input.trackInventory ?? true
+				trackInventory: input.trackInventory ?? true,
+				imageUrl: input.imageUrl
 			})
 			.returning();
 
@@ -280,6 +281,7 @@ export class ProductService {
 		if (input.stock !== undefined) updateData.stock = input.stock;
 		if (input.trackInventory !== undefined) updateData.trackInventory = input.trackInventory;
 		if (input.name !== undefined) updateData.name = input.name;
+		if (input.imageUrl !== undefined) updateData.imageUrl = input.imageUrl;
 
 		const [updated] = await db
 			.update(productVariants)

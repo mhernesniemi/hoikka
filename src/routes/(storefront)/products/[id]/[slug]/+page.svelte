@@ -30,7 +30,7 @@
   // Use override if set (after toggle), otherwise use server data
   const isWishlisted = $derived(wishlistOverride ?? data.isWishlisted);
 
-  const images = $derived(
+  const baseImages = $derived(
     product.assets.length > 0
       ? product.assets
       : product.featuredAsset
@@ -46,6 +46,35 @@
   });
 
   const selectedVariant = $derived(product.variants.find((v) => v.id === selectedVariantId));
+
+  // When a variant has an imageUrl, prepend it as a synthetic asset
+  const images = $derived.by(() => {
+    if (selectedVariant?.imageUrl) {
+      const variantImage = {
+        id: -1,
+        name: "variant",
+        type: "image" as const,
+        mimeType: "image/jpeg",
+        width: 0,
+        height: 0,
+        fileSize: 0,
+        source: selectedVariant.imageUrl,
+        preview: null,
+        alt: null,
+        imagekitFileId: null,
+        createdAt: new Date()
+      };
+      return [variantImage, ...baseImages];
+    }
+    return baseImages;
+  });
+
+  // Reset image index when variant changes
+  $effect(() => {
+    if (selectedVariantId) {
+      selectedImageIndex = 0;
+    }
+  });
 
   const bestDiscount = $derived(
     selectedVariant && data.activeDiscounts

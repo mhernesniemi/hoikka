@@ -99,6 +99,7 @@ export const productVariants = pgTable(
 		stock: integer("stock").default(0).notNull(),
 		trackInventory: boolean("track_inventory").default(true).notNull(),
 		featuredAssetId: integer("featured_asset_id"),
+		imageUrl: varchar("image_url", { length: 500 }),
 		deletedAt: timestamp("deleted_at"),
 		createdAt: timestamp("created_at").defaultNow().notNull(),
 		updatedAt: timestamp("updated_at")

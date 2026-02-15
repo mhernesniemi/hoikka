@@ -54,6 +54,8 @@ export const actions: Actions = {
 		const trackInventory = formData.get("trackInventory") === "on";
 		const stock = trackInventory ? Number(formData.get("stock")) || 0 : 0;
 		const name = formData.get("variant_name") as string;
+		const rawImageUrl = formData.get("imageUrl") as string;
+		const imageUrl = rawImageUrl || null;
 		const facetValueIds = formData
 			.getAll("facetValueIds")
 			.map(Number)
@@ -73,7 +75,8 @@ export const actions: Actions = {
 				price,
 				stock,
 				trackInventory,
-				name: name || undefined
+				name: name || undefined,
+				imageUrl
 			});
 
 			// Sync facet values

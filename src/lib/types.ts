@@ -390,6 +390,7 @@ export interface CreateVariantInput {
 	stock?: number;
 	trackInventory?: boolean;
 	name?: string;
+	imageUrl?: string | null;
 }
 
 export interface UpdateVariantInput {
@@ -398,6 +399,7 @@ export interface UpdateVariantInput {
 	stock?: number;
 	trackInventory?: boolean;
 	name?: string;
+	imageUrl?: string | null;
 }
 
 export interface CreateOrderInput {

@@ -3,7 +3,7 @@
   import { page } from "$app/stores";
   import { onMount } from "svelte";
   import { toast } from "svelte-sonner";
-  import { Button, buttonVariants } from "$lib/components/admin/ui/button";
+  import { Button } from "$lib/components/admin/ui/button";
   import { Checkbox } from "$lib/components/admin/ui/checkbox";
   import DeleteConfirmDialog from "$lib/components/admin/DeleteConfirmDialog.svelte";
   import CreateDialog from "$lib/components/admin/CreateDialog.svelte";
@@ -52,6 +52,13 @@
   let showCancelDelete = $state(false);
   let hasSaved = $state(false);
   let createDialogOpen = $state(false);
+  let createVariantDialogOpen = $state(false);
+  let newVariantName = $state("");
+  let newVariantSku = $state("");
+  let newVariantPrice = $state<number | string>("");
+  let newVariantStock = $state<number | string>(0);
+  let newVariantTrackInventory = $state(false);
+  let isCreatingVariant = $state(false);
 
   // Show toast from URL params (variant redirects)
   onMount(() => {
@@ -472,11 +479,14 @@
       <!-- Variants Section -->
       <AdminCard title="Variants" noPadding>
         {#snippet headerActions()}
-          <a
-            href="/admin/products/{data.product.id}/variants/new"
-            class={buttonVariants({ variant: "outline", size: "sm" })}
-            ><Plus class="h-4 w-4" /> Add Variant</a
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onclick={() => (createVariantDialogOpen = true)}
           >
+            <Plus class="h-4 w-4" /> Add Variant
+          </Button>
         {/snippet}
         <!-- Variants Table -->
         <Table class="rounded-none border-0 shadow-none">
@@ -803,3 +813,120 @@
   action="/admin/products?/create"
   placeholder="e.g., Winter Jacket"
 />
+
+<!-- Create Variant Dialog -->
+<Dialog.Root
+  bind:open={createVariantDialogOpen}
+  onOpenChange={(open) => {
+    if (open) {
+      newVariantName = "";
+      newVariantSku = "";
+      newVariantPrice = "";
+      newVariantStock = 0;
+      newVariantTrackInventory = false;
+    }
+  }}
+>
+  <Dialog.Content>
+    <Dialog.Header>
+      <Dialog.Title>New Variant</Dialog.Title>
+    </Dialog.Header>
+    <form
+      method="POST"
+      action="?/createVariant"
+      use:enhance={() => {
+        isCreatingVariant = true;
+        return async ({ result, update }) => {
+          await update({ reset: false });
+          isCreatingVariant = false;
+          if (result.type === "success") {
+            createVariantDialogOpen = false;
+            toast.success("Variant created successfully");
+          }
+        };
+      }}
+    >
+      <div class="my-4 space-y-4">
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <Label for="create_variant_name">Name</Label>
+            <Input
+              type="text"
+              id="create_variant_name"
+              name="variant_name"
+              bind:value={newVariantName}
+              placeholder="e.g., Small"
+            />
+          </div>
+          <div>
+            <Label for="create_variant_sku">SKU <span class="text-red-500">*</span></Label>
+            <Input
+              type="text"
+              id="create_variant_sku"
+              name="sku"
+              bind:value={newVariantSku}
+              required
+              placeholder="e.g., SKU-001"
+            />
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <Label for="create_variant_price">Price (EUR) <span class="text-red-500">*</span></Label
+            >
+            <Input
+              type="number"
+              id="create_variant_price"
+              name="price"
+              step="0.01"
+              min="0"
+              bind:value={newVariantPrice}
+              required
+              placeholder="0.00"
+            />
+          </div>
+          <div>
+            <Label for="create_variant_stock">Stock</Label>
+            {#if newVariantTrackInventory}
+              <Input
+                type="number"
+                id="create_variant_stock"
+                name="stock"
+                min="0"
+                bind:value={newVariantStock}
+              />
+            {:else}
+              <Input
+                type="text"
+                id="create_variant_stock"
+                disabled
+                placeholder="Unlimited"
+                class="bg-muted text-muted-foreground placeholder:text-muted-foreground"
+              />
+            {/if}
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <Checkbox id="create_variant_trackInventory" bind:checked={newVariantTrackInventory} />
+          <label for="create_variant_trackInventory" class="text-sm text-foreground-secondary">
+            Track inventory
+          </label>
+        </div>
+        {#if newVariantTrackInventory}
+          <input type="hidden" name="trackInventory" value="on" />
+        {/if}
+      </div>
+      <Dialog.Footer>
+        <Button type="button" variant="outline" onclick={() => (createVariantDialogOpen = false)}>
+          Cancel
+        </Button>
+        <Button
+          type="submit"
+          disabled={!newVariantSku.trim() || !newVariantPrice || isCreatingVariant}
+        >
+          {isCreatingVariant ? "Creating..." : "Create"}
+        </Button>
+      </Dialog.Footer>
+    </form>
+  </Dialog.Content>
+</Dialog.Root>
