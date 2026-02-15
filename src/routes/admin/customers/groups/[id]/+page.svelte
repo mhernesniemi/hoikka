@@ -1,5 +1,6 @@
 <script lang="ts">
   import { enhance } from "$app/forms";
+  import { cn } from "$lib/utils";
   import { page } from "$app/stores";
   import { onMount } from "svelte";
   import { toast } from "svelte-sonner";
@@ -215,9 +216,10 @@
                             onSelect={() => toggleCustomerSelection(customer.id)}
                           >
                             <Check
-                              class="mr-2 h-4 w-4 {selectedCustomerIds.has(customer.id)
-                                ? 'opacity-100'
-                                : 'opacity-0'}"
+                              class={cn(
+                                "mr-2 h-4 w-4",
+                                selectedCustomerIds.has(customer.id) ? "opacity-100" : "opacity-0"
+                              )}
                             />
                             <span>
                               {customer.firstName}

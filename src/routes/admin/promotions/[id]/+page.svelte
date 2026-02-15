@@ -1,6 +1,7 @@
 <script lang="ts">
   import { enhance } from "$app/forms";
   import { page } from "$app/stores";
+  import { cn } from "$lib/utils";
   import { onMount } from "svelte";
   import { Button } from "$lib/components/admin/ui/button";
   import { Checkbox } from "$lib/components/admin/ui/checkbox";
@@ -296,9 +297,12 @@
                             onSelect={() => toggleProduct(product.id)}
                           >
                             <Check
-                              class="mr-2 h-4 w-4 {selectedProductIds.includes(product.id)
-                                ? 'opacity-100'
-                                : 'opacity-0'}"
+                              class={cn(
+                                "mr-2 h-4 w-4",
+                                selectedProductIds.includes(product.id)
+                                  ? "opacity-100"
+                                  : "opacity-0"
+                              )}
                             />
                             {product.name}
                           </Command.Item>
@@ -351,9 +355,12 @@
                             onSelect={() => toggleCollection(collection.id)}
                           >
                             <Check
-                              class="mr-2 h-4 w-4 {selectedCollectionIds.includes(collection.id)
-                                ? 'opacity-100'
-                                : 'opacity-0'}"
+                              class={cn(
+                                "mr-2 h-4 w-4",
+                                selectedCollectionIds.includes(collection.id)
+                                  ? "opacity-100"
+                                  : "opacity-0"
+                              )}
                             />
                             {collection.name}
                           </Command.Item>

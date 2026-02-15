@@ -1,5 +1,6 @@
 <script lang="ts">
   import { page } from "$app/stores";
+  import { cn } from "$lib/utils";
   import { Input } from "$lib/components/storefront/ui/input";
   import { Button } from "$lib/components/storefront/ui/button";
   import ProductCard from "$lib/components/storefront/ProductCard.svelte";
@@ -89,15 +90,17 @@
                 {@const active = isFilterActive(facet.code, value.code)}
                 <a
                   href={getFilterUrl(facet.code, value.code, !active)}
-                  class="flex items-center justify-between text-sm {active
-                    ? 'font-medium text-blue-600'
-                    : 'text-gray-600 hover:text-gray-900'}"
+                  class={cn(
+                    "flex items-center justify-between text-sm",
+                    active ? "font-medium text-blue-600" : "text-gray-600 hover:text-gray-900"
+                  )}
                 >
                   <span class="flex items-center gap-2">
                     <span
-                      class="flex h-4 w-4 items-center justify-center rounded border {active
-                        ? 'border-blue-600 bg-blue-600'
-                        : 'border-gray-300'}"
+                      class={cn(
+                        "flex h-4 w-4 items-center justify-center rounded border",
+                        active ? "border-blue-600 bg-blue-600" : "border-gray-300"
+                      )}
                     >
                       {#if active}
                         <Check class="h-3 w-3 text-white" />

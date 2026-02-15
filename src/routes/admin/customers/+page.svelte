@@ -1,5 +1,6 @@
 <script lang="ts">
   import { page } from "$app/stores";
+  import { cn } from "$lib/utils";
   import { toast } from "svelte-sonner";
   import type { ColumnDef } from "@tanstack/table-core";
   import { DataTable, renderSnippet, renderComponent } from "$lib/components/admin/data-table";
@@ -164,17 +165,23 @@
     <div class="flex gap-8">
       <a
         href="/admin/customers"
-        class="border-b-2 pb-3 text-sm font-medium transition-colors {activeTab === 'customers'
-          ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-          : 'border-transparent text-muted-foreground hover:border-input-border hover:text-foreground-secondary'}"
+        class={cn(
+          "border-b-2 pb-3 text-sm font-medium transition-colors",
+          activeTab === "customers"
+            ? "border-blue-500 text-blue-600 dark:text-blue-400"
+            : "border-transparent text-muted-foreground hover:border-input-border hover:text-foreground-secondary"
+        )}
       >
         All Customers
       </a>
       <a
         href="/admin/customers?tab=groups"
-        class="border-b-2 pb-3 text-sm font-medium transition-colors {activeTab === 'groups'
-          ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-          : 'border-transparent text-muted-foreground hover:border-input-border hover:text-foreground-secondary'}"
+        class={cn(
+          "border-b-2 pb-3 text-sm font-medium transition-colors",
+          activeTab === "groups"
+            ? "border-blue-500 text-blue-600 dark:text-blue-400"
+            : "border-transparent text-muted-foreground hover:border-input-border hover:text-foreground-secondary"
+        )}
       >
         Customer Groups
       </a>

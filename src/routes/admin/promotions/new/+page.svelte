@@ -1,5 +1,6 @@
 <script lang="ts">
   import { enhance } from "$app/forms";
+  import { cn } from "$lib/utils";
   import { Button, buttonVariants } from "$lib/components/admin/ui/button";
   import { Checkbox } from "$lib/components/admin/ui/checkbox";
   import { Input } from "$lib/components/admin/ui/input";
@@ -36,7 +37,7 @@
   let startsAt = $state("");
   let endsAt = $state("");
 
-  let method = $state<"code" | "automatic">("code");
+  let method = $state<"code" | "automatic">("automatic");
   let promotionType = $state<"order" | "product" | "free_shipping">("order");
   let discountType = $state<"percentage" | "fixed_amount">("percentage");
   let appliesTo = $state<"all" | "specific_products" | "specific_collections">("all");
@@ -139,10 +140,12 @@
           <div class="grid grid-cols-3 gap-3">
             {#each typeOptions as option}
               <label
-                class="flex cursor-pointer flex-col items-center gap-2 rounded-lg border-2 p-4 text-center transition-colors {promotionType ===
-                option.value
-                  ? 'border-blue-500 bg-accent-subtle'
-                  : 'border-border hover:border-input-border'}"
+                class={cn(
+                  "flex cursor-pointer flex-col items-center gap-2 rounded-lg border-2 p-4 text-center transition-colors",
+                  promotionType === option.value
+                    ? "border-blue-500 bg-accent-subtle"
+                    : "border-border hover:border-input-border"
+                )}
               >
                 <input
                   type="radio"
@@ -152,9 +155,12 @@
                   class="sr-only"
                 />
                 <option.icon
-                  class="h-6 w-6 {promotionType === option.value
-                    ? 'text-blue-600 dark:text-blue-400'
-                    : 'text-placeholder'}"
+                  class={cn(
+                    "h-6 w-6",
+                    promotionType === option.value
+                      ? "text-blue-600 dark:text-blue-400"
+                      : "text-placeholder"
+                  )}
                 />
                 <span class="text-sm font-medium">{option.label}</span>
               </label>
@@ -168,22 +174,27 @@
           <div class="mb-4 inline-flex rounded-lg border border-border p-0.5">
             <button
               type="button"
-              class="rounded-md px-4 py-1.5 text-sm font-medium transition-colors {method === 'code'
-                ? 'bg-gray-900 text-white'
-                : 'text-foreground-tertiary hover:text-foreground'}"
-              onclick={() => (method = "code")}
-            >
-              Discount code
-            </button>
-            <button
-              type="button"
-              class="rounded-md px-4 py-1.5 text-sm font-medium transition-colors {method ===
-              'automatic'
-                ? 'bg-gray-900 text-white'
-                : 'text-foreground-tertiary hover:text-foreground'}"
+              class={cn(
+                "rounded-md px-4 py-1.5 text-sm font-medium transition-colors",
+                method === "automatic"
+                  ? "bg-gray-900 text-white"
+                  : "text-foreground-tertiary hover:text-foreground"
+              )}
               onclick={() => (method = "automatic")}
             >
               Automatic discount
+            </button>
+            <button
+              type="button"
+              class={cn(
+                "rounded-md px-4 py-1.5 text-sm font-medium transition-colors",
+                method === "code"
+                  ? "bg-gray-900 text-white"
+                  : "text-foreground-tertiary hover:text-foreground"
+              )}
+              onclick={() => (method = "code")}
+            >
+              Discount code
             </button>
           </div>
 
@@ -313,9 +324,12 @@
                             onSelect={() => toggleProduct(product.id)}
                           >
                             <Check
-                              class="mr-2 h-4 w-4 {selectedProductIds.includes(product.id)
-                                ? 'opacity-100'
-                                : 'opacity-0'}"
+                              class={cn(
+                                "mr-2 h-4 w-4",
+                                selectedProductIds.includes(product.id)
+                                  ? "opacity-100"
+                                  : "opacity-0"
+                              )}
                             />
                             {product.name}
                           </Command.Item>
@@ -368,9 +382,12 @@
                             onSelect={() => toggleCollection(collection.id)}
                           >
                             <Check
-                              class="mr-2 h-4 w-4 {selectedCollectionIds.includes(collection.id)
-                                ? 'opacity-100'
-                                : 'opacity-0'}"
+                              class={cn(
+                                "mr-2 h-4 w-4",
+                                selectedCollectionIds.includes(collection.id)
+                                  ? "opacity-100"
+                                  : "opacity-0"
+                              )}
                             />
                             {collection.name}
                           </Command.Item>

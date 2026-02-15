@@ -1,5 +1,6 @@
 <script lang="ts">
   import { page } from "$app/stores";
+  import { cn } from "$lib/utils";
   import { SignOutButton } from "svelte-clerk";
   import { buttonVariants } from "$lib/components/storefront/ui/button";
 
@@ -36,9 +37,12 @@
         {#each navItems as item}
           <a
             href={item.href}
-            class="block rounded-lg px-4 py-2 {isActive(item.href)
-              ? 'bg-blue-50 font-medium text-blue-600'
-              : 'text-gray-600 hover:bg-gray-50'}"
+            class={cn(
+              "block rounded-lg px-4 py-2",
+              isActive(item.href)
+                ? "bg-blue-50 font-medium text-blue-600"
+                : "text-gray-600 hover:bg-gray-50"
+            )}
           >
             {item.label}
           </a>

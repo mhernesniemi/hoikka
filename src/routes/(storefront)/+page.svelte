@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { PageData, ActionData } from "./$types";
+  import { cn } from "$lib/utils";
   import { Button } from "$lib/components/storefront/ui/button";
   import ProductCard from "$lib/components/storefront/ProductCard.svelte";
   import { enhance } from "$app/forms";
@@ -53,9 +54,10 @@
               <p class="pt-4 text-xs text-gray-600">
                 or
                 <span
-                  class="ml-1 inline-flex items-center overflow-hidden rounded-md border border-pink-200 transition-colors duration-300 {copied
-                    ? 'bg-pink-200'
-                    : 'bg-white'}"
+                  class={cn(
+                    "ml-1 inline-flex items-center overflow-hidden rounded-md border border-pink-200 transition-colors duration-300",
+                    copied ? "bg-pink-200" : "bg-white"
+                  )}
                 >
                   <code
                     class="inline-flex items-center px-1.5 py-0.5 font-mono font-medium text-pink-700"

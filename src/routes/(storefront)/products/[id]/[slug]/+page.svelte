@@ -1,5 +1,6 @@
 <script lang="ts">
   import { enhance } from "$app/forms";
+  import { cn } from "$lib/utils";
   import { addToCart } from "$lib/remote/cart.remote";
   import { toggleWishlist } from "$lib/remote/wishlist.remote";
   import { invalidateAll } from "$app/navigation";
@@ -274,10 +275,12 @@
             <button
               type="button"
               onclick={() => (selectedImageIndex = index)}
-              class="h-16 w-16 shrink-0 overflow-hidden rounded-lg border-2 transition-colors {selectedImageIndex ===
-              index
-                ? 'border-blue-500'
-                : 'border-transparent hover:border-gray-300'}"
+              class={cn(
+                "h-16 w-16 shrink-0 overflow-hidden rounded-lg border-2 transition-colors",
+                selectedImageIndex === index
+                  ? "border-blue-500"
+                  : "border-transparent hover:border-gray-300"
+              )}
             >
               <img
                 src="{image.source}?tr=w-100,h-100,fo-auto"
@@ -298,9 +301,10 @@
           type="button"
           onclick={handleToggleWishlist}
           disabled={isTogglingWishlist}
-          class="rounded-full p-2 transition-colors disabled:opacity-50 {isWishlisted
-            ? 'text-red-500 hover:text-red-600'
-            : 'text-gray-400 hover:text-red-500'}"
+          class={cn(
+            "rounded-full p-2 transition-colors disabled:opacity-50",
+            isWishlisted ? "text-red-500 hover:text-red-600" : "text-gray-400 hover:text-red-500"
+          )}
           aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
         >
           <Heart class="h-6 w-6" fill={isWishlisted ? "currentColor" : "none"} />
@@ -349,10 +353,12 @@
               <button
                 type="button"
                 onclick={() => (selectedVariantId = variant.id)}
-                class="rounded-lg border px-3 py-1 text-sm transition-colors {selectedVariantId ===
-                variant.id
-                  ? 'border-blue-600 bg-blue-50 text-blue-600'
-                  : 'border-gray-300 hover:border-gray-400'}"
+                class={cn(
+                  "rounded-lg border px-3 py-1 text-sm transition-colors",
+                  selectedVariantId === variant.id
+                    ? "border-blue-600 bg-blue-50 text-blue-600"
+                    : "border-gray-300 hover:border-gray-400"
+                )}
               >
                 {getVariantName(variant)}
               </button>
@@ -482,9 +488,10 @@
                       onclick={() => (reviewRating = star)}
                       onmouseenter={() => (hoverRating = star)}
                       onmouseleave={() => (hoverRating = 0)}
-                      class="text-3xl transition-colors {star <= (hoverRating || reviewRating)
-                        ? 'text-yellow-400'
-                        : 'text-gray-300'}"
+                      class={cn(
+                        "text-3xl transition-colors",
+                        star <= (hoverRating || reviewRating) ? "text-yellow-400" : "text-gray-300"
+                      )}
                     >
                       ★
                     </button>

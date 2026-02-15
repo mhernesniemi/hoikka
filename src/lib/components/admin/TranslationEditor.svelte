@@ -41,9 +41,12 @@
         {#each TRANSLATION_LANGUAGES as lang}
           <button
             type="button"
-            class="px-4 py-2 text-sm font-medium {activeTab === lang.code
-              ? 'border-b-2 border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400'
-              : 'text-muted-foreground hover:text-foreground'}"
+            class={cn(
+              "px-4 py-2 text-sm font-medium",
+              activeTab === lang.code
+                ? "border-b-2 border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400"
+                : "text-muted-foreground hover:text-foreground"
+            )}
             onclick={() => (activeTab = lang.code)}
           >
             {lang.name}

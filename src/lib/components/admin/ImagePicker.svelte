@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { cn } from "$lib/utils";
   import * as Dialog from "$lib/components/admin/ui/dialog";
   import { Button } from "$lib/components/admin/ui/button";
   import { Input } from "$lib/components/admin/ui/input";
@@ -246,9 +247,12 @@
           aria-selected={activeTab === "upload"}
           onclick={() => handleTabChange("upload")}
           onkeydown={(e) => e.key === "Enter" && handleTabChange("upload")}
-          class="cursor-pointer px-4 py-2 text-sm font-medium {activeTab === 'upload'
-            ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400'
-            : 'text-muted-foreground hover:text-foreground-secondary'}"
+          class={cn(
+            "cursor-pointer px-4 py-2 text-sm font-medium",
+            activeTab === "upload"
+              ? "border-b-2 border-blue-500 text-blue-600 dark:text-blue-400"
+              : "text-muted-foreground hover:text-foreground-secondary"
+          )}
         >
           <Upload class="mr-1.5 inline-block h-4 w-4" />
           Upload New
@@ -259,9 +263,12 @@
           aria-selected={activeTab === "existing"}
           onclick={() => handleTabChange("existing")}
           onkeydown={(e) => e.key === "Enter" && handleTabChange("existing")}
-          class="cursor-pointer px-4 py-2 text-sm font-medium {activeTab === 'existing'
-            ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400'
-            : 'text-muted-foreground hover:text-foreground-secondary'}"
+          class={cn(
+            "cursor-pointer px-4 py-2 text-sm font-medium",
+            activeTab === "existing"
+              ? "border-b-2 border-blue-500 text-blue-600 dark:text-blue-400"
+              : "text-muted-foreground hover:text-foreground-secondary"
+          )}
         >
           <ImageIcon class="mr-1.5 inline-block h-4 w-4" />
           Select Existing
@@ -320,11 +327,12 @@
                   aria-checked={selectedImages.has(image.fileId)}
                   onclick={() => toggleImageSelection(image.fileId)}
                   onkeydown={(e) => e.key === "Enter" && toggleImageSelection(image.fileId)}
-                  class="group relative aspect-square cursor-pointer overflow-hidden rounded-lg border-2 transition-all {selectedImages.has(
-                    image.fileId
-                  )
-                    ? 'border-blue-500 ring-2 ring-blue-200'
-                    : 'border-border hover:border-input-border'}"
+                  class={cn(
+                    "group relative aspect-square cursor-pointer overflow-hidden rounded-lg border-2 transition-all",
+                    selectedImages.has(image.fileId)
+                      ? "border-blue-500 ring-2 ring-blue-200"
+                      : "border-border hover:border-input-border"
+                  )}
                 >
                   <img
                     src="{image.url}?tr=w-150,h-150,fo-auto"
