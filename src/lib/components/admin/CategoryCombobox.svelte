@@ -65,7 +65,7 @@
       triggerClass
     )}
   >
-    <span class="truncate">{triggerLabel}</span>
+    <span class="truncate text-muted-foreground">{triggerLabel}</span>
     <ChevronsUpDown class="ml-2 h-4 w-4 shrink-0 opacity-50" />
   </Popover.Trigger>
   <Popover.Content class="w-[var(--bits-popover-trigger-width)] p-0" align="start">
