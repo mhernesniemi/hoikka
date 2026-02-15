@@ -2,6 +2,11 @@ import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vitest/config";
 import { sveltekit } from "@sveltejs/kit/vite";
 
+// Workaround: Cursor CLI uses eval which breaks on SvelteKit paths
+// with special characters like (storefront) and [id].
+// Point launch-editor at a wrapper that quotes arguments properly.
+process.env.LAUNCH_EDITOR ??= "./scripts/open-in-cursor.sh";
+
 export default defineConfig({
 	plugins: [tailwindcss(), sveltekit()],
 
