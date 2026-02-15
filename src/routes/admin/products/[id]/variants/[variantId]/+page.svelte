@@ -15,6 +15,7 @@
   import ChevronsUpDown from "@lucide/svelte/icons/chevrons-up-down";
   import { Checkbox } from "$lib/components/admin/ui/checkbox";
   import { Badge } from "$lib/components/admin/ui/badge";
+  import IconButton from "$lib/components/admin/IconButton.svelte";
   import TranslationEditor from "$lib/components/admin/TranslationEditor.svelte";
   import { translationsToMap } from "$lib/config/languages.js";
   import X from "@lucide/svelte/icons/x";
@@ -305,7 +306,7 @@
                 >
                   {group?.name ?? `Group #${gp.groupId}`}
                 </div>
-                <div class="flex gap-2">
+                <div class="flex items-center gap-2">
                   <Input
                     id="group-price-{gp.groupId}"
                     type="number"
@@ -314,15 +315,12 @@
                     bind:value={gp.price}
                     class="h-10"
                   />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    class="h-10 w-10 shrink-0"
+                  <IconButton
+                    icon={Trash2}
+                    tooltip="Remove group price"
+                    variant="danger"
                     onclick={() => removeGroupPrice(gp.groupId)}
-                  >
-                    <Trash2 class="h-4 w-4 text-red-500" />
-                  </Button>
+                  />
                 </div>
               </div>
             {/each}
