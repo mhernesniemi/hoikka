@@ -3,7 +3,6 @@
   import * as Command from "$lib/components/admin/ui/command";
   import ChevronsUpDown from "@lucide/svelte/icons/chevrons-up-down";
   import Check from "@lucide/svelte/icons/check";
-  import ImageIcon from "@lucide/svelte/icons/image";
 
   type CatalogProduct = {
     id: number;
@@ -59,19 +58,6 @@
                     <Check class="h-4 w-4" />
                   {/if}
                 </div>
-                {#if product.image}
-                  <img
-                    src="{product.image}?tr=w-64,h-64,fo-auto"
-                    alt={product.name}
-                    class="h-6 w-6 rounded object-cover"
-                  />
-                {:else}
-                  <div
-                    class="flex h-6 w-6 items-center justify-center rounded bg-muted text-muted-foreground"
-                  >
-                    <ImageIcon class="h-3 w-3" />
-                  </div>
-                {/if}
                 <span>{product.name}</span>
               </div>
             </Command.Item>
