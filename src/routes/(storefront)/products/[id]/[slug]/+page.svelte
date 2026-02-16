@@ -571,7 +571,7 @@
             <!-- Middle -->
             <div>
               {#if review.comment}
-                <p class="max-w-prose leading-relaxed text-gray-600">{review.comment}</p>
+                <p class="max-w-prose">{review.comment}</p>
               {/if}
             </div>
 
