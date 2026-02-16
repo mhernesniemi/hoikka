@@ -42,6 +42,7 @@
   import ExternalLink from "@lucide/svelte/icons/external-link";
   import { cn } from "$lib/utils";
   import CategoryCombobox from "$lib/components/admin/CategoryCombobox.svelte";
+  import ProductPicker from "$lib/components/admin/ProductPicker.svelte";
   import UnsavedChangesDialog from "$lib/components/admin/UnsavedChangesDialog.svelte";
   import type { ActionData, PageData } from "./$types";
 
@@ -179,6 +180,34 @@
     selectedCategories = selectedCategories.filter((c) => c !== id);
   }
 
+  let selectedRelatedIds = $state<number[]>([]);
+
+  // Initialize related product IDs when data changes
+  $effect(() => {
+    selectedRelatedIds = data.relatedProducts.map((p) => p.id);
+  });
+
+  // Products available for the picker (exclude current product)
+  const pickerProducts = $derived(data.allProducts.filter((p) => p.id !== data.product.id));
+
+  function toggleRelatedProduct(product: { id: number; name: string; image: string | null }) {
+    if (selectedRelatedIds.includes(product.id)) {
+      selectedRelatedIds = selectedRelatedIds.filter((id) => id !== product.id);
+    } else {
+      selectedRelatedIds = [...selectedRelatedIds, product.id];
+    }
+  }
+
+  function removeRelatedProduct(id: number) {
+    selectedRelatedIds = selectedRelatedIds.filter((rid) => rid !== id);
+  }
+
+  function getSelectedRelatedProducts() {
+    return selectedRelatedIds
+      .map((id) => data.allProducts.find((p) => p.id === id))
+      .filter((p) => p !== undefined);
+  }
+
   let productName = $state("");
   let productSlug = $state("");
   let productDescription = $state("");
@@ -205,6 +234,11 @@
       [...selectedCategories].sort().join() !==
         data.productCategories
           .map((c) => c.id)
+          .sort()
+          .join() ||
+      [...selectedRelatedIds].sort().join() !==
+        data.relatedProducts
+          .map((p) => p.id)
           .sort()
           .join()
     );
@@ -741,6 +775,39 @@
           </div>
         </AdminCard>
       {/if}
+
+      <!-- Related Products Section -->
+      <AdminCard title="Related Products" variant="sidebar">
+        <ProductPicker
+          products={pickerProducts}
+          selected={selectedRelatedIds}
+          onToggle={toggleRelatedProduct}
+        />
+
+        {#if selectedRelatedIds.length > 0}
+          <div class="mt-3 flex flex-wrap gap-1.5">
+            {#each getSelectedRelatedProducts() as relProduct}
+              <Badge class="gap-1">
+                {relProduct.name}
+                <button
+                  type="button"
+                  onclick={() => removeRelatedProduct(relProduct.id)}
+                  class="ml-0.5 rounded-full p-0.5 hover:bg-blue-200 dark:hover:bg-blue-500/20"
+                  aria-label="Remove {relProduct.name}"
+                >
+                  <X class="h-3 w-3" />
+                </button>
+              </Badge>
+              <input
+                form="product-form"
+                type="hidden"
+                name="relatedProductIds"
+                value={relProduct.id}
+              />
+            {/each}
+          </div>
+        {/if}
+      </AdminCard>
     </div>
   </div>
 

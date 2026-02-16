@@ -17,3 +17,4 @@ export { categoryService, CategoryService } from "./categories.js";
 export type { Category, CategoryTreeNode, CategoryBreadcrumb } from "./categories.js";
 export { contentPageService, ContentPageService } from "./content-pages.js";
 export { translationService, TranslationService } from "./translations.js";
+export { relatedProductService, RelatedProductService } from "./related-products.js";

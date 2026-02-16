@@ -4,6 +4,7 @@ import { assetService } from "$lib/server/services/assets.js";
 import { categoryService } from "$lib/server/services/categories.js";
 import { collectionService } from "$lib/server/services/collections.js";
 import { translationService } from "$lib/server/services/translations.js";
+import { relatedProductService } from "$lib/server/services/related-products.js";
 import { TRANSLATION_LANGUAGES } from "$lib/config/languages.js";
 import { PRODUCT_TYPES } from "$lib/config/products.js";
 import { dbError } from "$lib/server/db-error.js";
@@ -23,14 +24,31 @@ export const load: PageServerLoad = async ({ params }) => {
 		throw error(404, "Product not found");
 	}
 
-	const [facets, categoryTree, productCategories, productCollections, translations] =
-		await Promise.all([
-			facetService.list(),
-			categoryService.getTree(),
-			categoryService.getProductCategories(id),
-			collectionService.getCollectionsForProduct(id),
-			translationService.getProductTranslations(id)
-		]);
+	const [
+		facets,
+		categoryTree,
+		productCategories,
+		productCollections,
+		translations,
+		manualRelations
+	] = await Promise.all([
+		facetService.list(),
+		categoryService.getTree(),
+		categoryService.getProductCategories(id),
+		collectionService.getCollectionsForProduct(id),
+		translationService.getProductTranslations(id),
+		relatedProductService.getManualRelations(id)
+	]);
+
+	// Load full product data for manual relations + lightweight catalog for picker
+	const [relatedProductsList, allProducts] = await Promise.all([
+		manualRelations.length > 0
+			? Promise.all(
+					manualRelations.map((r) => productService.getById(r.relatedProductId))
+				).then((results) => results.filter((p) => p !== null))
+			: Promise.resolve([]),
+		productService.getSearchCatalog()
+	]);
 
 	return {
 		product,
@@ -39,6 +57,8 @@ export const load: PageServerLoad = async ({ params }) => {
 		productCategories,
 		productCollections,
 		translations,
+		relatedProducts: relatedProductsList,
+		allProducts,
 		productTypes: PRODUCT_TYPES
 	};
 };
@@ -54,13 +74,17 @@ export const actions: Actions = {
 		const type = formData.get("type") as "physical" | "digital" | null;
 		const visibility = formData.get("visibility") as "public" | "private" | "draft";
 
-		// Facet values and categories
+		// Facet values, categories, and related products
 		const facetValueIds = formData
 			.getAll("facetValueIds")
 			.map(Number)
 			.filter((id) => !isNaN(id));
 		const categoryIds = formData
 			.getAll("categoryIds")
+			.map(Number)
+			.filter((id) => !isNaN(id));
+		const relatedProductIds = formData
+			.getAll("relatedProductIds")
 			.map(Number)
 			.filter((id) => !isNaN(id));
 
@@ -96,6 +120,9 @@ export const actions: Actions = {
 
 			// Update categories
 			await categoryService.setProductCategories(id, categoryIds);
+
+			// Update related products
+			await relatedProductService.setManualRelations(id, relatedProductIds);
 
 			// Save translations
 			for (const lang of TRANSLATION_LANGUAGES) {

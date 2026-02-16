@@ -3,6 +3,7 @@ import { wishlistService } from "$lib/server/services/wishlist.js";
 import { reviewService } from "$lib/server/services/reviews.js";
 import { categoryService } from "$lib/server/services/categories.js";
 import { taxService } from "$lib/server/services/tax.js";
+import { relatedProductService } from "$lib/server/services/related-products.js";
 import { error, fail, redirect } from "@sveltejs/kit";
 import type { PageServerLoad, Actions } from "./$types";
 
@@ -54,7 +55,9 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 			? await categoryService.getBreadcrumbs(productCategories[0].id)
 			: [];
 
-	await stampGroupPrices([product], locals.customer?.id ?? null);
+	const relatedProducts = await relatedProductService.getRelatedProducts(product.id, 8);
+
+	await stampGroupPrices([product, ...relatedProducts], locals.customer?.id ?? null);
 
 	return {
 		product,
@@ -65,7 +68,8 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 		customerReview,
 		customerId: locals.customer?.id ?? null,
 		isAdmin: !!locals.adminUser,
-		breadcrumbs
+		breadcrumbs,
+		relatedProducts
 	};
 };
 

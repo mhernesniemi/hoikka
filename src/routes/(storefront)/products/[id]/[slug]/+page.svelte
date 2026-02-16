@@ -8,6 +8,7 @@
   import { wishlistStore } from "$lib/stores/wishlist.svelte";
   import { formatPrice, stripHtml } from "$lib/utils";
   import { findBestDiscount, getDiscountedPrice } from "$lib/promotion-utils";
+  import ProductCard from "$lib/components/storefront/ProductCard.svelte";
   import { Button, buttonVariants } from "$lib/components/storefront/ui/button";
   import { Alert } from "$lib/components/storefront/ui/alert";
   import { Badge } from "$lib/components/storefront/ui/badge";
@@ -584,4 +585,16 @@
       </div>
     {/if}
   </div>
+
+  <!-- Related Products -->
+  {#if data.relatedProducts.length > 0}
+    <section class="mt-12 border-t border-gray-200 pt-8">
+      <h2 class="mb-6 text-xl font-bold">You May Also Like</h2>
+      <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+        {#each data.relatedProducts as relatedProduct}
+          <ProductCard product={relatedProduct} activeDiscounts={data.activeDiscounts} />
+        {/each}
+      </div>
+    </section>
+  {/if}
 </div>

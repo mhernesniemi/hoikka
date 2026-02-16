@@ -851,6 +851,29 @@ export const productCategories = pgTable(
 );
 
 // ============================================================================
+// RELATED PRODUCTS
+// ============================================================================
+
+export const relatedProducts = pgTable(
+	"related_products",
+	{
+		productId: integer("product_id")
+			.references(() => products.id, { onDelete: "cascade" })
+			.notNull(),
+		relatedProductId: integer("related_product_id")
+			.references(() => products.id, { onDelete: "cascade" })
+			.notNull(),
+		position: integer("position").default(0).notNull(),
+		createdAt: timestamp("created_at").defaultNow().notNull()
+	},
+	(table) => [
+		primaryKey({ columns: [table.productId, table.relatedProductId] }),
+		index("related_products_product_idx").on(table.productId),
+		index("related_products_related_idx").on(table.relatedProductId)
+	]
+);
+
+// ============================================================================
 // REVIEWS
 // ============================================================================
 
@@ -931,6 +954,10 @@ export const wishlistItems = pgTable(
 
 // ============================================================================
 // RELATIONS
+// These define the relationship graph for Drizzle's relational query API
+// (db.query.*.findFirst/findMany with `with: { ... }`). They have no effect
+// on the database or on standard select/insert/update/delete queries.
+// Currently only productCategoriesRelations is actively used (with: { category }).
 // ============================================================================
 
 export const productsRelations = relations(products, ({ one, many }) => ({
