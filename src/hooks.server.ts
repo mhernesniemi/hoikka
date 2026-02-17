@@ -19,27 +19,26 @@ const WISHLIST_COOKIE_MAX_AGE = 60 * 60 * 24 * 365; // 1 year
 
 // Session handler — validates session via Neon Auth API and syncs customer record
 const sessionHandler: Handle = async ({ event, resolve }) => {
-	const cookie = event.request.headers.get("cookie") ?? "";
+	event.locals.user = null;
 
-	// Validate session by forwarding cookies to Neon Auth
-	if (cookie) {
-		try {
-			const sessionRes = await fetch(`${env.NEON_AUTH_BASE_URL}/api/auth/get-session`, {
-				headers: { cookie }
-			});
-
-			if (sessionRes.ok) {
-				const data = await sessionRes.json();
-				event.locals.user = data?.user ?? null;
-			} else {
-				event.locals.user = null;
-			}
-		} catch (error) {
-			console.error("[hooks] Failed to validate session:", error);
-			event.locals.user = null;
-		}
+	const neonAuthUrl = env.NEON_AUTH_BASE_URL;
+	if (!neonAuthUrl) {
+		console.error("[hooks] NEON_AUTH_BASE_URL is not set — auth is disabled");
 	} else {
-		event.locals.user = null;
+		const cookie = event.request.headers.get("cookie") ?? "";
+		if (cookie) {
+			try {
+				const sessionRes = await event.fetch(`${neonAuthUrl}/api/auth/get-session`, {
+					headers: { cookie }
+				});
+				if (sessionRes.ok) {
+					const data = await sessionRes.json();
+					event.locals.user = data?.user ?? null;
+				}
+			} catch (error) {
+				console.error("[hooks] Failed to validate session:", error);
+			}
+		}
 	}
 
 	// Sync to customer record (for non-admin users)
