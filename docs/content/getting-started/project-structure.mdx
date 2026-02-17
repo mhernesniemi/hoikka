@@ -1,4 +1,3 @@
-
 # Project Structure
 
 ```
@@ -21,10 +20,8 @@ src/
 │   │   │   ├── payments/    # Payment provider pattern
 │   │   │   └── shipping/    # Shipping provider pattern
 │   │   └── integrations/    # External system utilities
-│   │       ├── queue.ts     # PostgreSQL job queue
-│   │       ├── events.ts    # Event system
 │   │       ├── sync.ts      # Sync runner
-│   │       ├── webhooks.ts  # Webhook handlers
+│   │       ├── webhooks.ts  # Webhook signature verification
 │   │       └── retry.ts     # Retry utility
 │   ├── components/          # Shared UI components
 │   │   └── admin/
@@ -59,7 +56,7 @@ Business logic as singleton services. Each service handles one domain (products,
 
 ### `/src/lib/server/integrations`
 
-Utilities for external system integration - job queue, events, sync patterns.
+Utilities for external system integration - sync runner, webhooks, retry. Durable workflows live in `/workflows`.
 
 ### `/src/routes/(storefront)`
 

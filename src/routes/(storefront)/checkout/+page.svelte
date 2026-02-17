@@ -4,8 +4,10 @@
   import { Input } from "$lib/components/storefront/ui/input";
   import { Label } from "$lib/components/storefront/ui/label";
   import { Alert } from "$lib/components/storefront/ui/alert";
+  import StripePayment from "$lib/components/storefront/StripePayment.svelte";
   import { formatPrice, cn } from "$lib/utils.js";
   import ShoppingCart from "@lucide/svelte/icons/shopping-cart";
+  import type { Stripe, StripeElements } from "@stripe/stripe-js";
   import type { PageData } from "./$types.js";
 
   let { data, form }: { data: PageData; form: any } = $props();
@@ -15,6 +17,11 @@
   let isProcessingPayment = $state(false);
   let isCompletingOrder = $state(false);
   let promoCode = $state("");
+  let stripeRef = $state<Stripe | null>(null);
+  let elementsRef = $state<StripeElements | null>(null);
+  let stripeError = $state<string | null>(null);
+  let stripeConfirmed = $state(false);
+  let completeOrderForm = $state<HTMLFormElement | null>(null);
 
   // Combine form and data for reactive state
   const currentOrderShipping = $derived(form?.orderShipping ?? data.orderShipping);
@@ -594,6 +601,16 @@
                   {isProcessingPayment ? "Processing..." : "Create Payment"}
                 </Button>
               </form>
+            {:else if currentPaymentInfo?.methodCode === "stripe" && currentPaymentInfo?.clientSecret}
+              <div class="mt-4">
+                <StripePayment
+                  clientSecret={currentPaymentInfo.clientSecret}
+                  onready={(stripe, elements) => {
+                    stripeRef = stripe;
+                    elementsRef = elements;
+                  }}
+                />
+              </div>
             {:else}
               <Alert variant="success" class="mt-4">
                 <p class="text-sm font-medium">Payment created successfully</p>
@@ -631,13 +648,55 @@
                 </p>
               </Alert>
             {/if}
+            {#if stripeError}
+              <Alert variant="destructive" class="mb-4">
+                <p class="text-sm">{stripeError}</p>
+              </Alert>
+            {/if}
             <form
               method="POST"
               action="?/completeOrder"
-              use:enhance={() => {
+              bind:this={completeOrderForm}
+              use:enhance={({ cancel }) => {
                 isCompletingOrder = true;
+                stripeError = null;
+
+                // For Stripe payments, confirm on client side first (skip if already confirmed)
+                if (
+                  currentPaymentInfo?.methodCode === "stripe" &&
+                  stripeRef &&
+                  elementsRef &&
+                  !stripeConfirmed
+                ) {
+                  cancel();
+
+                  stripeRef
+                    .confirmPayment({
+                      elements: elementsRef,
+                      redirect: "if_required"
+                    })
+                    .then(({ error }) => {
+                      if (error) {
+                        stripeError = error.message ?? "Payment failed";
+                        isCompletingOrder = false;
+                      } else {
+                        // Stripe succeeded, resubmit to let server complete the order
+                        stripeConfirmed = true;
+                        completeOrderForm?.requestSubmit();
+                      }
+                    })
+                    .catch((e: unknown) => {
+                      stripeError = e instanceof Error ? e.message : "Payment failed";
+                      isCompletingOrder = false;
+                    });
+
+                  return;
+                }
+
+                // For mock/other providers (or Stripe already confirmed), submit directly
                 return async ({ update }) => {
                   isCompletingOrder = false;
+                  stripeConfirmed = false;
                   await update();
                 };
               }}

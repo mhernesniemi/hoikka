@@ -1,48 +1,29 @@
-
 # Integrations Overview
 
-Hoikka includes PostgreSQL-native utilities for integrating external systems (ERP, PIM, etc.) without Redis or other external dependencies.
-
-## Why PostgreSQL?
-
-| Aspect         | Redis/BullMQ       | PostgreSQL       |
-| -------------- | ------------------ | ---------------- |
-| Persistence    | Requires config    | Built-in         |
-| Transactions   | Separate from DB   | Same transaction |
-| Infrastructure | Additional service | Already have it  |
-| Throughput     | ~10,000 jobs/sec   | ~1,000 jobs/sec  |
-| Complexity     | More moving parts  | Single database  |
-
-For most e-commerce workloads, PostgreSQL handles job queues easily.
+Hoikka includes lightweight utilities for integrating external systems (ERP, PIM, etc.) alongside Vercel Workflow for durable, scheduled tasks.
 
 ## Available Utilities
 
-### Job Queue
+### Vercel Workflow
 
-PostgreSQL-backed job queue with automatic retry:
+Durable workflows with scheduling, retry, and observability:
 
-```typescript
-import { enqueue, registerHandler, startWorker } from "$lib/server/integrations";
+```typescript filename="workflows/inventory-sync.ts"
+import { sleep } from "workflow";
 
-registerHandler("email.send", async (payload) => {
-	await sendEmail(payload.to, payload.subject);
-});
+export async function inventorySync() {
+	"use workflow";
+	while (true) {
+		await syncInventory();
+		await sleep("1h");
+	}
+}
 
-await enqueue("email.send", { to: "user@example.com", subject: "Hello" });
-```
-
-### Events
-
-Two modes - in-memory (immediate) or persistent (via queue):
-
-```typescript
-import { events, onPersistent, emitPersistent } from '$lib/server/integrations';
-
-// In-memory (non-critical)
-events.on('order.paid', async ({ orderId }) => { ... });
-
-// Persistent (critical, with retry)
-onPersistent('order.paid', async ({ orderId }) => { ... });
+async function syncInventory() {
+	"use step";
+	const { runSync } = await import("$lib/server/integrations");
+	await runSync(inventoryJob);
+}
 ```
 
 ### Sync Runner
@@ -50,29 +31,38 @@ onPersistent('order.paid', async ({ orderId }) => { ... });
 Reusable pattern for syncing external data:
 
 ```typescript
-import { runSync, registerSyncJob, scheduleSyncJob } from "$lib/server/integrations";
+import { runSync, type SyncJob } from "$lib/server/integrations";
 
-const inventorySync = {
+const inventorySync: SyncJob<ErpItem, LocalVariant> = {
 	name: "erp-inventory",
 	fetchExternal: () => erpClient.getInventory()
 	// ...
 };
 
-await scheduleSyncJob("erp-inventory", syncIntervals.hours(1));
+const results = await runSync(inventorySync);
 ```
 
 ### Webhooks
 
-Handle incoming webhooks with signature verification:
+Verify incoming webhook signatures:
 
-```typescript
-import { createWebhookHandler, signatureVerifiers } from '$lib/server/integrations';
+```typescript filename="src/routes/api/webhooks/erp/+server.ts"
+import { json } from "@sveltejs/kit";
+import { verifyHmacSha256 } from "$lib/server/integrations";
+import { env } from "$env/dynamic/private";
 
-export const POST = createWebhookHandler({
-  secret: process.env.WEBHOOK_SECRET,
-  verifySignature: signatureVerifiers.hmacHeader('x-signature'),
-  handlers: { ... }
-});
+export async function POST({ request }) {
+	const body = await request.text();
+	const signature = request.headers.get("x-signature")!;
+
+	if (!verifyHmacSha256(body, signature, env.ERP_WEBHOOK_SECRET!)) {
+		return json({ error: "Invalid signature" }, { status: 401 });
+	}
+
+	const payload = JSON.parse(body);
+	// handle webhook...
+	return json({ received: true });
+}
 ```
 
 ### Retry

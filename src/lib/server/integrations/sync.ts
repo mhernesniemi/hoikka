@@ -2,11 +2,8 @@
  * Sync Runner
  *
  * Reusable pattern for synchronizing data from external systems (ERP, PIM, etc.)
- * Can run immediately or be scheduled via the job queue.
+ * Can run immediately or be called from a Vercel Workflow step.
  */
-
-import { registerHandler, enqueue, scheduleRecurring } from "./queue.js";
-import { emitPersistent } from "./events.js";
 
 export interface SyncResults {
 	name: string;
@@ -116,14 +113,6 @@ export async function runSync<TExternal, TLocal>(
 		);
 
 		await job.onComplete?.(results);
-
-		// Emit completion event
-		await emitPersistent("sync.completed", {
-			syncName: job.name,
-			created: results.created,
-			updated: results.updated,
-			errors: results.errors.length
-		});
 	} catch (e) {
 		console.error(`[Sync:${job.name}] Fatal error:`, e);
 		results.errors.push({
@@ -158,58 +147,3 @@ export async function syncSingleItem<TExternal, TLocal>(
 		return { action: "created", externalId };
 	}
 }
-
-// Registry of sync jobs for queue-based execution
-const syncJobs = new Map<string, SyncJob<unknown, unknown>>();
-
-/**
- * Register a sync job for queue-based execution
- */
-export function registerSyncJob<TExternal, TLocal>(job: SyncJob<TExternal, TLocal>): void {
-	syncJobs.set(job.name, job as SyncJob<unknown, unknown>);
-
-	// Register queue handler
-	registerHandler(`sync.${job.name}`, async () => {
-		await runSync(job);
-	});
-}
-
-/**
- * Trigger a registered sync job via queue
- */
-export async function triggerSync(name: string): Promise<number> {
-	if (!syncJobs.has(name)) {
-		throw new Error(`Sync job not registered: ${name}`);
-	}
-	return enqueue(`sync.${name}`, {});
-}
-
-/**
- * Schedule a sync job to run at regular intervals
- */
-export async function scheduleSyncJob(name: string, intervalMs: number): Promise<void> {
-	if (!syncJobs.has(name)) {
-		throw new Error(`Sync job not registered: ${name}`);
-	}
-
-	// Register a handler that re-schedules after completion
-	const originalHandler = syncJobs.get(name)!;
-	registerHandler(`sync.${name}.recurring`, async () => {
-		await runSync(originalHandler);
-
-		// Schedule next run
-		await scheduleRecurring(`sync.${name}.recurring`, {}, intervalMs);
-	});
-
-	// Start the recurring schedule
-	await scheduleRecurring(`sync.${name}.recurring`, {}, intervalMs);
-}
-
-/**
- * Common sync intervals
- */
-export const syncIntervals = {
-	minutes: (n: number) => n * 60 * 1000,
-	hours: (n: number) => n * 60 * 60 * 1000,
-	days: (n: number) => n * 24 * 60 * 60 * 1000
-};

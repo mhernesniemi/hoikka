@@ -1,4 +1,3 @@
-
 # ERP Integration Example
 
 Complete example showing how to integrate an external ERP system.
@@ -35,18 +34,61 @@ export class ErpClient {
 export const erpClient = new ErpClient();
 ```
 
-## Inventory Sync
+## Order Push (Inline with Retry)
 
-```typescript filename="src/lib/server/integrations/erp/inventory-sync.ts"
-import {
-	registerSyncJob,
-	scheduleSyncJob,
-	syncIntervals,
-	type SyncJob
-} from "$lib/server/integrations";
+Push orders to ERP inline after payment using `withRetry`:
+
+```typescript filename="src/lib/server/integrations/erp/order-push.ts"
+import { withRetry } from "$lib/server/integrations";
 import { erpClient } from "./client";
 
-const inventorySync: SyncJob<ErpInventoryItem, typeof productVariants.$inferSelect> = {
+export async function pushOrderToErp(order: OrderWithRelations) {
+	await withRetry(
+		() =>
+			erpClient.createOrder({
+				reference: order.code,
+				customerEmail: order.customer?.email,
+				items: order.lines.map((line) => ({
+					sku: line.variant.sku,
+					quantity: line.quantity,
+					unitPrice: line.unitPrice
+				})),
+				total: order.total
+			}),
+		{ maxAttempts: 5, delayMs: 2000, backoff: true }
+	);
+}
+```
+
+## Inventory Sync (Workflow)
+
+Use a Vercel Workflow for scheduled inventory synchronization:
+
+```typescript filename="workflows/erp-sync.ts"
+import { sleep } from "workflow";
+
+export async function erpInventorySync() {
+	"use workflow";
+	while (true) {
+		await syncInventory();
+		await sleep("1h");
+	}
+}
+
+async function syncInventory() {
+	"use step";
+	const { runSync } = await import("$lib/server/integrations");
+	const { inventorySync } = await import("$lib/server/integrations/erp/inventory-sync.js");
+	const results = await runSync(inventorySync);
+	return results;
+}
+```
+
+```typescript filename="src/lib/server/integrations/erp/inventory-sync.ts"
+import { type SyncJob } from "$lib/server/integrations";
+import { erpClient } from "./client";
+
+export const inventorySync: SyncJob<ErpInventoryItem, typeof productVariants.$inferSelect> = {
 	name: "erp-inventory",
 
 	fetchExternal: () => erpClient.getInventory(),
@@ -72,86 +114,42 @@ const inventorySync: SyncJob<ErpInventoryItem, typeof productVariants.$inferSele
 			.where(eq(productVariants.id, local.id));
 	}
 };
-
-registerSyncJob(inventorySync);
-
-export async function initInventorySync() {
-	await scheduleSyncJob("erp-inventory", syncIntervals.hours(1));
-}
-```
-
-## Order Push
-
-```typescript filename="src/lib/server/integrations/erp/order-push.ts"
-import { onPersistent, withRetry } from "$lib/server/integrations";
-import { erpClient } from "./client";
-
-onPersistent("order.paid", async ({ orderId }) => {
-	const order = await orderService.getById(orderId);
-	if (!order) return;
-
-	await withRetry(
-		() =>
-			erpClient.createOrder({
-				reference: order.code,
-				customerEmail: order.customer?.email,
-				items: order.lines.map((line) => ({
-					sku: line.variant.sku,
-					quantity: line.quantity,
-					unitPrice: line.unitPrice
-				})),
-				total: order.total
-			}),
-		{ maxAttempts: 5, delayMs: 2000, backoff: true }
-	);
-});
 ```
 
 ## Webhook Handler
 
+Standard SvelteKit endpoint with signature verification:
+
 ```typescript filename="src/routes/api/webhooks/erp/+server.ts"
-import { createWebhookHandler, signatureVerifiers } from "$lib/server/integrations";
+import { json } from "@sveltejs/kit";
+import { verifyHmacSha256, syncSingleItem } from "$lib/server/integrations";
+import { env } from "$env/dynamic/private";
+import { inventorySync } from "$lib/server/integrations/erp/inventory-sync";
 
-export const POST = createWebhookHandler({
-	secret: process.env.ERP_WEBHOOK_SECRET,
-	verifySignature: signatureVerifiers.hmacHeader("x-erp-signature"),
+export async function POST({ request }) {
+	const body = await request.text();
+	const signature = request.headers.get("x-erp-signature");
 
-	handlers: {
-		"inventory.updated": async (payload: { sku: string; quantity: number }) => {
-			// Look up variant by SKU and update stock
-			const [variant] = await db
-				.select()
-				.from(productVariants)
-				.where(eq(productVariants.sku, payload.sku));
-			if (variant) {
-				await db
-					.update(productVariants)
-					.set({ stock: payload.quantity })
-					.where(eq(productVariants.id, variant.id));
-			}
-		},
+	if (!signature || !verifyHmacSha256(body, signature, env.ERP_WEBHOOK_SECRET!)) {
+		return json({ error: "Invalid signature" }, { status: 401 });
+	}
 
-		"order.shipped": async (payload: { reference: string; trackingNumber: string }) => {
+	const payload = JSON.parse(body);
+
+	switch (payload.event) {
+		case "inventory.updated":
+			await syncSingleItem(inventorySync, payload.data);
+			break;
+		case "order.shipped":
 			const order = await orderService.getByCode(payload.reference);
 			if (order) {
 				await orderService.transitionState(order.id, "shipped");
 			}
-		}
-	},
+			break;
+	}
 
-	persistent: true
-});
-```
-
-## Initialize on Server Start
-
-```typescript filename="src/hooks.server.ts"
-import { startWorker } from "$lib/server/integrations";
-import { initInventorySync } from "$lib/server/integrations/erp/inventory-sync";
-import "./lib/server/integrations/erp/order-push";
-
-startWorker();
-initInventorySync();
+	return json({ received: true });
+}
 ```
 
 ## Environment Variables

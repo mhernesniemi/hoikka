@@ -1,4 +1,3 @@
-
 # Sync Runner
 
 Reusable pattern for synchronizing data from external systems (ERP, PIM, etc.).
@@ -59,30 +58,24 @@ const results = await runSync(inventorySync);
 // }
 ```
 
-### Via Queue
+### Via Workflow (Scheduled)
 
-```typescript
-import { registerSyncJob, triggerSync } from "$lib/server/integrations";
+```typescript filename="workflows/erp-sync.ts"
+import { sleep } from "workflow";
 
-// Register for queue execution
-registerSyncJob(inventorySync);
+export async function erpInventorySync() {
+	"use workflow";
+	while (true) {
+		await syncStep();
+		await sleep("1h");
+	}
+}
 
-// Trigger manually
-await triggerSync("erp-inventory");
-```
-
-### Scheduled
-
-```typescript
-import { scheduleSyncJob, syncIntervals } from "$lib/server/integrations";
-
-// Run every hour
-await scheduleSyncJob("erp-inventory", syncIntervals.hours(1));
-
-// Other intervals
-syncIntervals.minutes(30);
-syncIntervals.hours(6);
-syncIntervals.days(1);
+async function syncStep() {
+	"use step";
+	const { runSync } = await import("$lib/server/integrations");
+	await runSync(inventorySync);
+}
 ```
 
 ## Single Item Sync

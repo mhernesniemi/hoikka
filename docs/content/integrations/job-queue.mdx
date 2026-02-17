@@ -1,94 +1,82 @@
+# Vercel Workflow
 
-# Job Queue
+Hoikka uses [Vercel Workflow](https://vercel.com/docs/workflow) for durable, scheduled tasks. Workflows handle retries, scheduling, and observability natively.
 
-PostgreSQL-backed job queue with automatic retry and exponential backoff.
+## Setup
 
-## Basic Usage
+The Workflow plugin is configured in `vite.config.ts`:
 
-```typescript
-import { enqueue, registerHandler, startWorker } from "$lib/server/integrations";
+```typescript filename="vite.config.ts"
+import { workflowPlugin } from "workflow/sveltekit";
 
-// Register a handler
-registerHandler("email.send", async (payload) => {
-	await sendEmail(payload.to, payload.subject, payload.body);
-});
-
-// Enqueue a job
-await enqueue("email.send", {
-	to: "user@example.com",
-	subject: "Order Confirmed",
-	body: "Your order has been confirmed."
-});
-
-// Start worker (in hooks.server.ts)
-startWorker({ queue: "default", pollInterval: 1000 });
-```
-
-## Job Options
-
-```typescript
-await enqueue("my-job", payload, {
-	queue: "high-priority", // Queue name (default: 'default')
-	runAt: new Date(Date.now() + 60000), // Delay execution
-	maxAttempts: 5 // Retry attempts (default: 3)
+export default defineConfig({
+	plugins: [tailwindcss(), sveltekit(), workflowPlugin()]
 });
 ```
 
-## Transactional Jobs
+Workflow files live in the `workflows/` directory.
 
-Jobs created atomically with business logic (transactional outbox pattern):
+## Writing Workflows
+
+### Basic Workflow
+
+```typescript filename="workflows/cleanup.ts"
+import { sleep } from "workflow";
+
+export async function reservationCleanup() {
+	"use workflow";
+	while (true) {
+		await cleanupExpiredReservations();
+		await sleep("15m");
+	}
+}
+
+async function cleanupExpiredReservations() {
+	"use step";
+	const { reservationService } = await import("$lib/server/services/reservations.js");
+	const count = await reservationService.cleanupExpired();
+	return { cleaned: count };
+}
+```
+
+### Key Concepts
+
+- **`"use workflow"`** — marks a function as a durable workflow entry point
+- **`"use step"`** — marks a function as an individual step (retried independently)
+- **`sleep(duration)`** — durable sleep that survives restarts (`"15m"`, `"1h"`, `"1d"`)
+- Steps have full access to Node.js APIs and npm packages
+
+## Scheduling Patterns
+
+### Recurring
 
 ```typescript
-import { db } from "$lib/server/db";
-import { enqueueInTransaction } from "$lib/server/integrations";
-
-await db.transaction(async (tx) => {
-	// Update order
-	await tx.update(orders).set({ state: "paid" }).where(eq(orders.id, orderId));
-
-	// Job only created if transaction commits
-	await enqueueInTransaction(tx, "erp.push-order", { orderId });
-});
+export async function dailySync() {
+	"use workflow";
+	while (true) {
+		await syncProducts();
+		await sleep("1d");
+	}
+}
 ```
 
-## Queue Management
+### One-off
 
 ```typescript
-import { getQueueStats, getFailedJobs, retryJob, cleanupOldJobs } from "$lib/server/integrations";
+import { start } from "workflow";
 
-// Get statistics
-const stats = await getQueueStats();
-// { pending: 5, processing: 1, completed: 100, failed: 2 }
-
-// View failed jobs
-const failed = await getFailedJobs("default", 10);
-
-// Retry a failed job
-await retryJob(jobId);
-
-// Cleanup old completed jobs
-const deleted = await cleanupOldJobs(7); // older than 7 days
+// Start a workflow programmatically
+await start(orderFollowup, [orderId]);
 ```
 
-## Retry Behavior
+## Local Development
 
-Failed jobs are retried with exponential backoff:
+Run the workflow dashboard locally:
 
-```
-Attempt 1: immediate
-Attempt 2: 4 minutes
-Attempt 3: 16 minutes
-Attempt 4: 64 minutes
+```bash
+npx workflow web
 ```
 
-After `maxAttempts`, the job is marked as failed.
+## Deployment
 
-## Multiple Queues
-
-```typescript
-// High priority queue
-await enqueue("urgent-task", payload, { queue: "high-priority" });
-
-// Start dedicated worker
-startWorker({ queue: "high-priority", pollInterval: 100 });
-```
+Workflows deploy automatically with your Vercel project. Available on all Vercel plans.

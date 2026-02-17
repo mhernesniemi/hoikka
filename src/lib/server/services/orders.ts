@@ -885,6 +885,54 @@ export class OrderService {
 								eq(orderPromotions.promotionId, promo.id)
 							)
 						);
+				} else {
+					// Recalculate discount amount for the current subtotal
+					let newAmount = 0;
+					if (promo.promotionType === "product") {
+						const qualifyingProductIds = await promotionService.getQualifyingProductIds(
+							promo.id
+						);
+						const linesWithProducts = await db
+							.select({
+								lineTotal: orderLines.lineTotal,
+								productId: products.id
+							})
+							.from(orderLines)
+							.innerJoin(
+								productVariants,
+								eq(orderLines.variantId, productVariants.id)
+							)
+							.innerJoin(products, eq(productVariants.productId, products.id))
+							.where(eq(orderLines.orderId, orderId));
+
+						const qualifyingLineTotal = linesWithProducts
+							.filter(
+								(l) =>
+									qualifyingProductIds === null ||
+									qualifyingProductIds.includes(l.productId)
+							)
+							.reduce((sum, l) => sum + l.lineTotal, 0);
+
+						newAmount = calculateProductDiscount(promo, qualifyingLineTotal);
+					} else if (promo.promotionType !== "free_shipping") {
+						newAmount = calculateDiscount(promo, subtotal);
+					}
+
+					// Update if the amount changed (skip shipping — handled in recalculateTotals)
+					if (
+						promo.promotionType !== "free_shipping" &&
+						newAmount !== ap.discountAmount
+					) {
+						await db
+							.update(orderPromotions)
+							.set({ discountAmount: newAmount })
+							.where(
+								and(
+									eq(orderPromotions.orderId, orderId),
+									eq(orderPromotions.promotionId, promo.id)
+								)
+							);
+					}
 				}
 			}
 		}
@@ -1056,6 +1104,58 @@ export class OrderService {
 			.select()
 			.from(orderPromotions)
 			.where(eq(orderPromotions.orderId, orderId));
+
+		// Recalculate code-based promotion amounts (automatic promos are handled in applyAutomaticPromotions)
+		for (const ap of appliedPromotions) {
+			if (ap.type === "shipping") continue;
+
+			const [promo] = await db
+				.select()
+				.from(promotions)
+				.where(eq(promotions.id, ap.promotionId));
+			if (!promo || promo.method !== "code") continue;
+
+			let newAmount = 0;
+			if (promo.promotionType === "product") {
+				const qualifyingProductIds = await promotionService.getQualifyingProductIds(
+					promo.id
+				);
+				const linesWithProducts = await db
+					.select({
+						lineTotal: orderLines.lineTotal,
+						productId: products.id
+					})
+					.from(orderLines)
+					.innerJoin(productVariants, eq(orderLines.variantId, productVariants.id))
+					.innerJoin(products, eq(productVariants.productId, products.id))
+					.where(eq(orderLines.orderId, orderId));
+
+				const qualifyingLineTotal = linesWithProducts
+					.filter(
+						(l) =>
+							qualifyingProductIds === null ||
+							qualifyingProductIds.includes(l.productId)
+					)
+					.reduce((sum, l) => sum + l.lineTotal, 0);
+
+				newAmount = calculateProductDiscount(promo, qualifyingLineTotal);
+			} else {
+				newAmount = calculateDiscount(promo, subtotal);
+			}
+
+			if (newAmount !== ap.discountAmount) {
+				await db
+					.update(orderPromotions)
+					.set({ discountAmount: newAmount })
+					.where(
+						and(
+							eq(orderPromotions.orderId, orderId),
+							eq(orderPromotions.promotionId, promo.id)
+						)
+					);
+				ap.discountAmount = newAmount;
+			}
+		}
 
 		// Split discounts: order/product vs shipping
 		const orderProductDiscount = appliedPromotions

@@ -68,9 +68,11 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const existingPayment = orderPayments[0] || null;
 	let paymentInfo = null;
 	if (existingPayment && existingPayment.metadata) {
+		const method = await paymentService.getMethodById(existingPayment.paymentMethodId);
 		paymentInfo = {
 			providerTransactionId: existingPayment.transactionId || "",
 			clientSecret: (existingPayment.metadata as any)?.clientSecret,
+			methodCode: method?.code ?? "",
 			metadata: existingPayment.metadata as Record<string, unknown>
 		};
 	}
@@ -421,18 +423,12 @@ export const actions: Actions = {
 				// Payment already exists, return it
 				payment = existingPayments[0];
 				const method = await paymentService.getMethodById(payment.paymentMethodId);
-				if (method && payment.metadata) {
-					paymentInfo = {
-						providerTransactionId: payment.transactionId || "",
-						clientSecret: (payment.metadata as any)?.clientSecret,
-						metadata: payment.metadata as Record<string, unknown>
-					};
-				} else {
-					paymentInfo = {
-						providerTransactionId: payment.transactionId || "",
-						metadata: payment.metadata as Record<string, unknown>
-					};
-				}
+				paymentInfo = {
+					providerTransactionId: payment.transactionId || "",
+					clientSecret: (payment.metadata as any)?.clientSecret,
+					methodCode: method?.code ?? "",
+					metadata: payment.metadata as Record<string, unknown>
+				};
 			} else {
 				// Load full order relations for payment
 				const order = await orderService.getById(cart.id);
@@ -441,9 +437,13 @@ export const actions: Actions = {
 				}
 
 				// Create payment via provider
+				const method = await paymentService.getMethodById(parseInt(paymentMethodId));
 				const result = await paymentService.createPayment(order, parseInt(paymentMethodId));
 				payment = result.payment;
-				paymentInfo = result.paymentInfo;
+				paymentInfo = {
+					...result.paymentInfo,
+					methodCode: method?.code ?? ""
+				};
 
 				console.log("[checkout] payment_created", {
 					orderId: cart.id,

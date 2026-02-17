@@ -1,6 +1,7 @@
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vitest/config";
 import { sveltekit } from "@sveltejs/kit/vite";
+import { workflowPlugin } from "workflow/sveltekit";
 
 // Workaround: Cursor CLI uses eval which breaks on SvelteKit paths
 // with special characters like (storefront) and [id].
@@ -8,7 +9,7 @@ import { sveltekit } from "@sveltejs/kit/vite";
 process.env.LAUNCH_EDITOR ??= "./scripts/open-in-cursor.sh";
 
 export default defineConfig({
-	plugins: [tailwindcss(), sveltekit()],
+	plugins: [tailwindcss(), sveltekit(), workflowPlugin()],
 
 	test: {
 		expect: { requireAssertions: true },

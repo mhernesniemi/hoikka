@@ -1,41 +1,65 @@
-
 # Payments
 
-Hoikka uses a provider pattern for payments, with Stripe as the default.
+Hoikka uses a provider pattern for payments. Stripe is integrated with real Stripe Elements for secure card collection.
 
 ## Payment Flow
 
 ```
 1. Customer reaches checkout
-2. Create payment via provider
-3. Customer completes payment (redirect or inline)
-4. Webhook confirms payment
-5. Order is confirmed
+2. Select payment method (Stripe, mock, etc.)
+3. Create payment → Stripe PaymentIntent created
+4. Stripe Elements renders card form on frontend
+5. Client-side confirmation via stripe.confirmPayment()
+6. Server confirms payment status
+7. Order is completed
 ```
 
 ## Stripe Integration
 
-### Creating Payment
+### Environment Variables
+
+```bash
+STRIPE_SECRET_KEY="sk_test_..."
+PUBLIC_STRIPE_PUBLISHABLE_KEY="pk_test_..."
+```
+
+### Server-Side (PaymentIntent)
 
 ```typescript
-const payment = await paymentService.createPayment(orderId, stripeMethodId);
-// Returns: { clientSecret: 'pi_xxx_secret_xxx' }
+const { payment, paymentInfo } = await paymentService.createPayment(order, stripeMethodId);
+// paymentInfo.clientSecret → used by Stripe Elements
+// paymentInfo.providerTransactionId → Stripe PaymentIntent ID
 ```
 
 ### Frontend (Stripe Elements)
 
-```svelte
-<script>
-	import { loadStripe } from "@stripe/stripe-js";
+The `StripePayment` component handles loading Stripe.js, mounting the Payment Element, and exposing refs for confirmation:
 
-	const stripe = await loadStripe(PUBLIC_STRIPE_KEY);
-	const elements = stripe.elements({ clientSecret });
+```svelte
+<script lang="ts">
+	import StripePayment from "$lib/components/storefront/StripePayment.svelte";
+
+	let stripeRef, elementsRef;
 </script>
 
-<form on:submit={handleSubmit}>
-	<div bind:this={paymentElement}></div>
-	<button>Pay {formatPrice(order.total)}</button>
-</form>
+{#if paymentInfo?.methodCode === "stripe" && paymentInfo?.clientSecret}
+	<StripePayment
+		clientSecret={paymentInfo.clientSecret}
+		onready={(stripe, elements) => {
+			stripeRef = stripe;
+			elementsRef = elements;
+		}}
+	/>
+{/if}
+```
+
+On form submission, confirm the payment client-side before the server action:
+
+```typescript
+const { error } = await stripeRef.confirmPayment({
+	elements: elementsRef,
+	redirect: "if_required"
+});
 ```
 
 ### Webhook Handler
@@ -72,19 +96,37 @@ export const POST = async ({ request }) => {
 // Full refund
 await paymentService.refundPayment(paymentId);
 
-// Partial refund
-await paymentService.refundPayment(paymentId, 1500); // 15.00
+// Partial refund (amount in cents)
+await paymentService.refundPayment(paymentId, 1500);
 ```
 
-## Adding Payment Methods
+## Adding Payment Providers
 
-Configure in admin or database:
+Implement the `PaymentProvider` interface:
 
 ```typescript
-// payment_methods table
-{
-  code: 'stripe',
-  name: 'Credit Card',
-  enabled: true
+import type { PaymentProvider } from "$lib/server/services/payments/types";
+
+class MyProvider implements PaymentProvider {
+	code = "my-provider";
+
+	async createPayment(order) {
+		// Create payment with external provider
+	}
+	async confirmPayment(transactionId) {
+		// Check payment status
+	}
+	async refundPayment(transactionId, amount?) {
+		// Process refund
+	}
 }
+```
+
+Register in `src/lib/server/services/payments/index.ts`:
+
+```typescript
+const PROVIDERS = new Map([
+	["stripe", new StripeProvider()],
+	["my-provider", new MyProvider()]
+]);
 ```

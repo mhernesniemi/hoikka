@@ -76,7 +76,7 @@ export class PaymentService {
 		// Create payment via provider
 		const paymentInfo = await provider.createPayment(order);
 
-		// Save payment record
+		// Save payment record (include clientSecret in metadata for page reload)
 		const [payment] = await db
 			.insert(payments)
 			.values({
@@ -86,7 +86,10 @@ export class PaymentService {
 				amount: order.total,
 				state: "pending",
 				transactionId: paymentInfo.providerTransactionId,
-				metadata: paymentInfo.metadata ?? null
+				metadata: {
+					...paymentInfo.metadata,
+					clientSecret: paymentInfo.clientSecret
+				}
 			})
 			.returning();
 

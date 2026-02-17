@@ -1383,36 +1383,6 @@ export const userSessionsRelations = relations(userSessions, ({ one }) => ({
 }));
 
 // ============================================================================
-// JOB QUEUE
-// ============================================================================
-
-export const jobs = pgTable(
-	"jobs",
-	{
-		id: serial("id").primaryKey(),
-		queue: varchar("queue", { length: 100 }).notNull().default("default"),
-		type: varchar("type", { length: 100 }).notNull(),
-		payload: jsonb("payload").notNull(),
-		status: text("status", {
-			enum: ["pending", "processing", "completed", "failed"]
-		})
-			.notNull()
-			.default("pending"),
-		attempts: integer("attempts").notNull().default(0),
-		maxAttempts: integer("max_attempts").notNull().default(3),
-		lastError: text("last_error"),
-		runAt: timestamp("run_at").notNull().defaultNow(),
-		startedAt: timestamp("started_at"),
-		completedAt: timestamp("completed_at"),
-		createdAt: timestamp("created_at").notNull().defaultNow()
-	},
-	(table) => [
-		index("jobs_queue_run_at_idx").on(table.queue, table.runAt),
-		index("jobs_status_idx").on(table.status)
-	]
-);
-
-// ============================================================================
 // CONTENT PAGES
 // ============================================================================
 
