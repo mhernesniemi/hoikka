@@ -9,11 +9,12 @@ import { env } from "$env/dynamic/private";
 
 let stripeInstance: Stripe | null = null;
 
-function getStripe(): Stripe {
+function getStripe(): Stripe | null {
 	if (!stripeInstance) {
 		const secretKey = env.STRIPE_SECRET_KEY;
 		if (!secretKey) {
-			throw new Error("STRIPE_SECRET_KEY environment variable is not set");
+			console.error("[stripe] STRIPE_SECRET_KEY is not set — payments are disabled");
+			return null;
 		}
 		stripeInstance = new Stripe(secretKey);
 	}
@@ -29,6 +30,9 @@ export class StripeProvider implements PaymentProvider {
 	 */
 	async createPayment(order: OrderWithRelations): Promise<PaymentInfo> {
 		const stripe = getStripe();
+		if (!stripe) {
+			throw new Error("Stripe is not configured");
+		}
 
 		const paymentIntent = await stripe.paymentIntents.create({
 			amount: order.total,
@@ -57,6 +61,10 @@ export class StripeProvider implements PaymentProvider {
 	 */
 	async confirmPayment(transactionId: string): Promise<PaymentStatus> {
 		const stripe = getStripe();
+		if (!stripe) {
+			throw new Error("Stripe is not configured");
+		}
+
 		const paymentIntent = await stripe.paymentIntents.retrieve(transactionId);
 
 		if (paymentIntent.status === "succeeded") {
@@ -75,6 +83,9 @@ export class StripeProvider implements PaymentProvider {
 	 */
 	async refundPayment(transactionId: string, amount?: number): Promise<RefundInfo> {
 		const stripe = getStripe();
+		if (!stripe) {
+			throw new Error("Stripe is not configured");
+		}
 
 		const refund = await stripe.refunds.create({
 			payment_intent: transactionId,

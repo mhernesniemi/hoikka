@@ -7,7 +7,13 @@ import type { RequestHandler } from "./$types";
 
 async function proxy({ request, params }: Parameters<RequestHandler>[0]) {
 	const baseUrl = env.NEON_AUTH_BASE_URL;
-	if (!baseUrl) throw new Error("NEON_AUTH_BASE_URL is not set");
+	if (!baseUrl) {
+		console.error("[auth] NEON_AUTH_BASE_URL is not set — auth is disabled");
+		return new Response(JSON.stringify({ error: "Auth is not configured" }), {
+			status: 503,
+			headers: { "Content-Type": "application/json" }
+		});
+	}
 
 	const url = new URL(`/api/auth/${params.path}`, baseUrl);
 

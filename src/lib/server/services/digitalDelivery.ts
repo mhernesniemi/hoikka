@@ -15,18 +15,30 @@ import {
 import { env } from "$env/dynamic/private";
 
 export class DigitalDeliveryService {
-	private resend: Resend;
-	private fromEmail: string;
+	private resend: Resend | null = null;
+	private fromEmail: string = "noreply@example.com";
 
-	constructor() {
-		this.resend = new Resend(env.RESEND_API_KEY);
-		this.fromEmail = env.RESEND_FROM_EMAIL || "noreply@example.com";
+	private getResend(): Resend | null {
+		if (!this.resend) {
+			if (!env.RESEND_API_KEY) {
+				return null;
+			}
+			this.resend = new Resend(env.RESEND_API_KEY);
+			this.fromEmail = env.RESEND_FROM_EMAIL || "noreply@example.com";
+		}
+		return this.resend;
 	}
 
 	/**
 	 * Deliver all digital products for an order
 	 */
 	async deliverOrder(orderId: number): Promise<{ sent: number; errors: string[] }> {
+		const resend = this.getResend();
+		if (!resend) {
+			console.error("[digital-delivery] RESEND_API_KEY is not set — skipping email delivery");
+			return { sent: 0, errors: ["Email delivery is not configured"] };
+		}
+
 		const errors: string[] = [];
 		let sent = 0;
 
@@ -74,7 +86,7 @@ export class DigitalDeliveryService {
 
 			// Send email
 			try {
-				await this.resend.emails.send({
+				await resend.emails.send({
 					from: this.fromEmail,
 					to: order.customerEmail,
 					subject: `Your order ${order.code} - ${productName}`,

@@ -1,12 +1,18 @@
-import { createAuthClient } from "@neondatabase/neon-js/auth";
+import { createAuthClient, type VanillaBetterAuthClient } from "@neondatabase/neon-js/auth";
 
-let _client: ReturnType<typeof createAuthClient> | null = null;
+let _client: VanillaBetterAuthClient | null = null;
 
-export const authClient = new Proxy({} as ReturnType<typeof createAuthClient>, {
+function getClient(): VanillaBetterAuthClient {
+	if (!_client) {
+		_client = createAuthClient(
+			`${window.location.origin}/api/auth`
+		) as unknown as VanillaBetterAuthClient;
+	}
+	return _client;
+}
+
+export const authClient = new Proxy({} as VanillaBetterAuthClient, {
 	get(_, prop) {
-		if (!_client) {
-			_client = createAuthClient(`${window.location.origin}/api/auth`);
-		}
-		return (_client as any)[prop];
+		return (getClient() as any)[prop];
 	}
 });
