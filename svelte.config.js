@@ -8,8 +8,7 @@ const config = {
 	kit: {
 		adapter: adapter({
 			runtime: "bun1.x",
-			regions: ["fra1"],
-			split: true
+			regions: ["fra1"]
 		}),
 		experimental: {
 			remoteFunctions: true
