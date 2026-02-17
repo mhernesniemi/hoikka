@@ -27,6 +27,9 @@ vite.config.ts.timestamp-*
 claude/settings.local.json
 .claude/settings.local.json
 
+# Docs (separate repo)
+docs/
+
 # Playwright
 /test-results/
 /playwright-report/
