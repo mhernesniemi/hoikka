@@ -10,7 +10,7 @@
 	"homepage": "https://hoikka.dev",
 	"scripts": {
 		"dev": "bun --bun vite dev",
-		"build": "bunx drizzle-kit push --force && vite build",
+		"build": "bunx drizzle-kit migrate && vite build",
 		"preview": "vite preview",
 		"prepare": "svelte-kit sync || echo ''",
 		"prepack": "svelte-kit sync && svelte-package && publint",
