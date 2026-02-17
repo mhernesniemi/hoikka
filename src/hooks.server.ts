@@ -28,7 +28,7 @@ const sessionHandler: Handle = async ({ event, resolve }) => {
 		const cookie = event.request.headers.get("cookie") ?? "";
 		if (cookie) {
 			try {
-				const sessionRes = await event.fetch(`${neonAuthUrl}/api/auth/get-session`, {
+				const sessionRes = await event.fetch(`${neonAuthUrl}/get-session`, {
 					headers: { cookie }
 				});
 				if (sessionRes.ok) {

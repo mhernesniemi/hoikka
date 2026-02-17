@@ -15,11 +15,20 @@ async function proxy({ request, params }: Parameters<RequestHandler>[0]) {
 		});
 	}
 
-	const url = new URL(`/api/auth/${params.path}`, baseUrl);
+	const url = `${baseUrl}/${params.path}`;
+
+	// Build headers for the upstream request — forward content type and cookies
+	// but replace Host/Origin so Neon Auth doesn't reject the request
+	const headers = new Headers();
+	const contentType = request.headers.get("content-type");
+	if (contentType) headers.set("content-type", contentType);
+	const cookie = request.headers.get("cookie");
+	if (cookie) headers.set("cookie", cookie);
+	headers.set("origin", baseUrl);
 
 	const res = await fetch(url, {
 		method: request.method,
-		headers: request.headers,
+		headers,
 		body: request.method !== "GET" ? await request.text() : undefined
 	});
 

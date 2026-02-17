@@ -167,14 +167,18 @@
                 class="mt-4 w-full"
                 onclick={async () => {
                   demoError = null;
-                  const { error } = await authClient.signIn.email({
-                    email: "admin@example.com",
-                    password: "admin538"
-                  });
-                  if (error) {
-                    demoError = error.message ?? "Login failed";
-                  } else {
-                    goto("/admin");
+                  try {
+                    const result = await authClient.signIn.email({
+                      email: "admin@example.com",
+                      password: "admin538"
+                    });
+                    if (result.error) {
+                      demoError = result.error.message ?? "Login failed";
+                    } else {
+                      goto("/admin");
+                    }
+                  } catch (e) {
+                    demoError = e instanceof Error ? e.message : "Login failed";
                   }
                 }}
               >

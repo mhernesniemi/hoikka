@@ -34,19 +34,27 @@ if (!email || !password || !name) {
 
 try {
 	// Create user via Neon Auth sign-up endpoint
-	const signUpRes = await fetch(`${NEON_AUTH_BASE_URL}/api/auth/sign-up/email`, {
+	const signUpUrl = `${NEON_AUTH_BASE_URL}/sign-up/email`;
+	const signUpRes = await fetch(signUpUrl, {
 		method: "POST",
-		headers: { "Content-Type": "application/json" },
+		headers: {
+			"Content-Type": "application/json",
+			Origin: NEON_AUTH_BASE_URL
+		},
 		body: JSON.stringify({ email: email.toLowerCase(), password, name })
 	});
 
+	const responseText = await signUpRes.text();
+
 	if (!signUpRes.ok) {
-		const err = await signUpRes.text();
-		console.error(`\nFailed to create user: ${err}`);
+		console.error(`\nFailed to create user`);
+		console.error(`  Status: ${signUpRes.status} ${signUpRes.statusText}`);
+		console.error(`  URL: ${signUpUrl}`);
+		console.error(`  Response: ${responseText || "(empty)"}`);
 		process.exit(1);
 	}
 
-	const data = await signUpRes.json();
+	const data = JSON.parse(responseText);
 	const userId = data.user?.id;
 
 	if (!userId) {
