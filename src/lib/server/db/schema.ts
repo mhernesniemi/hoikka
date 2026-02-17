@@ -272,10 +272,8 @@ export const assets = pgTable("assets", {
 	width: integer("width").default(0),
 	height: integer("height").default(0),
 	fileSize: integer("file_size").default(0),
-	source: varchar("source", { length: 500 }).notNull(), // File path or URL
-	preview: varchar("preview", { length: 500 }), // Thumbnail path
+	source: varchar("source", { length: 500 }).notNull(), // Vercel Blob URL
 	alt: text("alt"), // Alt text for accessibility
-	imagekitFileId: varchar("imagekit_file_id", { length: 100 }), // ImageKit file ID for syncing
 	createdAt: timestamp("created_at").defaultNow().notNull()
 });
 
@@ -361,7 +359,7 @@ export const customers = pgTable(
 	"customers",
 	{
 		id: serial("id").primaryKey(),
-		clerkUserId: varchar("clerk_user_id", { length: 255 }).unique(),
+		authUserId: varchar("auth_user_id", { length: 255 }).unique(),
 		email: varchar("email", { length: 255 }).notNull(),
 		firstName: varchar("first_name", { length: 100 }).notNull(),
 		lastName: varchar("last_name", { length: 100 }).notNull(),
@@ -377,7 +375,7 @@ export const customers = pgTable(
 	},
 	(table) => [
 		uniqueIndex("customers_email_idx").on(table.email),
-		uniqueIndex("customers_clerk_user_id_idx").on(table.clerkUserId),
+		uniqueIndex("customers_auth_user_id_idx").on(table.authUserId),
 		index("customers_name_idx").on(table.firstName, table.lastName)
 	]
 );
@@ -1331,56 +1329,7 @@ export const wishlistItemsRelations = relations(wishlistItems, ({ one }) => ({
 	})
 }));
 
-// ============================================================================
-// ADMIN USERS
-// ============================================================================
-
-export const users = pgTable(
-	"users",
-	{
-		id: serial("id").primaryKey(),
-		email: varchar("email", { length: 255 }).notNull().unique(),
-		passwordHash: varchar("password_hash", { length: 255 }).notNull(),
-		name: varchar("name", { length: 255 }).notNull(),
-		role: text("role", { enum: ["admin", "staff"] })
-			.default("staff")
-			.notNull(),
-		lastLoginAt: timestamp("last_login_at"),
-		createdAt: timestamp("created_at").defaultNow().notNull(),
-		updatedAt: timestamp("updated_at")
-			.defaultNow()
-			.$onUpdate(() => new Date())
-			.notNull()
-	},
-	(table) => [uniqueIndex("users_email_idx").on(table.email)]
-);
-
-export const userSessions = pgTable(
-	"user_sessions",
-	{
-		id: varchar("id", { length: 64 }).primaryKey(),
-		userId: integer("user_id")
-			.references(() => users.id, { onDelete: "cascade" })
-			.notNull(),
-		expiresAt: timestamp("expires_at").notNull(),
-		createdAt: timestamp("created_at").defaultNow().notNull()
-	},
-	(table) => [
-		index("user_sessions_user_idx").on(table.userId),
-		index("user_sessions_expires_idx").on(table.expiresAt)
-	]
-);
-
-export const usersRelations = relations(users, ({ many }) => ({
-	sessions: many(userSessions)
-}));
-
-export const userSessionsRelations = relations(userSessions, ({ one }) => ({
-	user: one(users, {
-		fields: [userSessions.userId],
-		references: [users.id]
-	})
-}));
+// Admin users and sessions are now managed by Neon Auth (neon_auth schema)
 
 // ============================================================================
 // CONTENT PAGES

@@ -24,6 +24,7 @@
     TRANSLATION_LANGUAGES
   } from "$lib/config/languages.js";
   import { cn, BASE_CURRENCY } from "$lib/utils";
+  import { imageUrl } from "$lib/image";
   import UnsavedChangesDialog from "$lib/components/admin/UnsavedChangesDialog.svelte";
   import * as Dialog from "$lib/components/admin/ui/dialog";
   import * as Popover from "$lib/components/admin/ui/popover";
@@ -150,7 +151,6 @@
     files: {
       url: string;
       name: string;
-      fileId: string;
       width: number;
       height: number;
       size: number;
@@ -164,7 +164,6 @@
         const saveForm = new FormData();
         saveForm.append("url", file.url);
         saveForm.append("name", file.name);
-        saveForm.append("fileId", file.fileId);
         saveForm.append("width", file.width.toString());
         saveForm.append("height", file.height.toString());
         saveForm.append("fileSize", file.size.toString());
@@ -285,7 +284,7 @@
         renderSnippet(productCell, {
           name: getPreviewProductName(row.original),
           id: row.original.id,
-          image: row.original.featuredAsset?.preview ?? row.original.featuredAsset?.source ?? null
+          image: row.original.featuredAsset?.source ?? null
         })
     },
     {
@@ -807,7 +806,7 @@
           {@const asset = data.collection.featuredAsset}
           <div class="group relative">
             <img
-              src="{asset.source}?tr=w-400,h-400,fo-auto"
+              src={imageUrl(asset.source, 400)}
               alt={asset.alt || asset.name}
               class="h-48 w-full rounded border border-border object-cover"
             />
@@ -880,7 +879,7 @@
         <div class="space-y-4 py-2">
           {#if data.collection.featuredAsset}
             <img
-              src="{data.collection.featuredAsset.source}?tr=w-400,h-400,fo-auto"
+              src={imageUrl(data.collection.featuredAsset.source, 400)}
               alt={currentEditingImage.alt || data.collection.featuredAsset.name}
               class="mx-auto max-h-96 rounded-lg object-contain"
             />

@@ -11,36 +11,30 @@ Hoikka uses environment variables for configuration. No XML, YAML, or admin pane
 DATABASE_URL="postgresql://user:password@localhost:5432/hoikka"
 ```
 
-### Authentication (Clerk)
+### Authentication (Neon Auth)
 
 ```bash
-PUBLIC_CLERK_PUBLISHABLE_KEY="pk_test_..."
-CLERK_SECRET_KEY="sk_test_..."
+NEON_AUTH_BASE_URL=
+NEON_AUTH_COOKIE_SECRET=
 ```
 
-Get these from your [Clerk Dashboard](https://dashboard.clerk.com).
+Enable Auth in your [Neon Console](https://console.neon.tech) to get these credentials.
 
 ### Payments (Stripe) - Optional
 
 ```bash
 STRIPE_SECRET_KEY="sk_test_..."
-STRIPE_WEBHOOK_SECRET="whsec_..."
 ```
 
 Stripe is optional for getting started. A mock payment provider is available for development and testing. When ready for production, get credentials from your [Stripe Dashboard](https://dashboard.stripe.com).
 
-### Images (ImageKit)
+### Images (Vercel Blob)
 
 ```bash
-IMAGEKIT_PUBLIC_KEY="public_..."
-IMAGEKIT_PRIVATE_KEY="private_..."
-IMAGEKIT_URL_ENDPOINT="https://ik.imagekit.io/your_id"
+BLOB_READ_WRITE_TOKEN=
 ```
 
-Get these from your [ImageKit Dashboard](https://imagekit.io/dashboard):
-
-1. Go to Developer Options
-2. Copy Public Key, Private Key, and URL Endpoint
+Auto-provisioned when connecting a Blob store in your [Vercel Dashboard](https://vercel.com/dashboard).
 
 ## Optional Variables
 

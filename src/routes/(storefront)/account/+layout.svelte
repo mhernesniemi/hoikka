@@ -1,7 +1,8 @@
 <script lang="ts">
   import { page } from "$app/stores";
+  import { goto } from "$app/navigation";
   import { cn } from "$lib/utils";
-  import { SignOutButton } from "svelte-clerk";
+  import { authClient } from "$lib/auth-client";
   import { buttonVariants } from "$lib/components/storefront/ui/button";
 
   let { children } = $props();
@@ -19,6 +20,11 @@
     }
     return path.startsWith(href);
   }
+
+  async function handleSignOut() {
+    await authClient.signOut();
+    goto("/");
+  }
 </script>
 
 <div class="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
@@ -27,7 +33,7 @@
       <h1 class="text-2xl font-bold">My Account</h1>
       <p class="mt-1 text-gray-600">Manage your account settings and view your orders</p>
     </div>
-    <SignOutButton class={buttonVariants({ variant: "outline" })}>Sign out</SignOutButton>
+    <button onclick={handleSignOut} class={buttonVariants({ variant: "outline" })}>Sign out</button>
   </div>
 
   <div class="grid grid-cols-1 gap-8 md:grid-cols-4">

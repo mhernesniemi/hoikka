@@ -23,6 +23,7 @@
   import Trash2 from "@lucide/svelte/icons/trash-2";
   import ChevronLeft from "@lucide/svelte/icons/chevron-left";
   import UnsavedChangesDialog from "$lib/components/admin/UnsavedChangesDialog.svelte";
+  import { imageUrl as imgUrl } from "$lib/image";
   import type { ActionData, PageData } from "./$types";
 
   let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -127,7 +128,6 @@
     files: {
       url: string;
       name: string;
-      fileId: string;
       width: number;
       height: number;
       size: number;
@@ -372,7 +372,7 @@
         {#if imageUrl}
           <div class="group relative">
             <img
-              src="{imageUrl}?tr=w-400,h-400,fo-auto"
+              src={imgUrl(imageUrl, 400)}
               alt={variantName || variantSku}
               class="h-48 w-full rounded border border-border object-cover"
             />

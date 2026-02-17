@@ -41,6 +41,7 @@
   import ChevronLeft from "@lucide/svelte/icons/chevron-left";
   import ExternalLink from "@lucide/svelte/icons/external-link";
   import { cn } from "$lib/utils";
+  import { imageUrl } from "$lib/image";
   import CategoryCombobox from "$lib/components/admin/CategoryCombobox.svelte";
   import ProductPicker from "$lib/components/admin/ProductPicker.svelte";
   import UnsavedChangesDialog from "$lib/components/admin/UnsavedChangesDialog.svelte";
@@ -248,7 +249,6 @@
     files: {
       url: string;
       name: string;
-      fileId: string;
       width: number;
       height: number;
       size: number;
@@ -262,7 +262,6 @@
         const saveForm = new FormData();
         saveForm.append("url", file.url);
         saveForm.append("name", file.name);
-        saveForm.append("fileId", file.fileId);
         saveForm.append("width", file.width.toString());
         saveForm.append("height", file.height.toString());
         saveForm.append("fileSize", file.size.toString());
@@ -456,7 +455,7 @@
             {#each data.product.assets as asset}
               <div class="group relative">
                 <img
-                  src="{asset.source}?tr=w-200,h-200,fo-auto"
+                  src={imageUrl(asset.source, 200)}
                   alt={asset.alt || asset.name}
                   class={cn(
                     "h-36 w-full rounded-lg border border-border object-cover",
@@ -557,7 +556,7 @@
                   <TableCell class="w-12 pr-0">
                     {#if variant.imageUrl}
                       <img
-                        src="{variant.imageUrl}?tr=w-64,h-64,fo-auto"
+                        src={imageUrl(variant.imageUrl, 64)}
                         alt={variant.name || variant.sku}
                         class="h-8 w-8 rounded object-cover"
                       />
@@ -853,7 +852,7 @@
         <div class="space-y-4 py-2">
           {#if editingAsset}
             <img
-              src="{editingAsset.source}?tr=w-400,h-400,fo-auto"
+              src={imageUrl(editingAsset.source, 400)}
               alt={currentEditingImage.alt || editingAsset.name}
               class="mx-auto max-h-96 rounded-lg object-contain"
             />

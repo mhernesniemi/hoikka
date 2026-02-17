@@ -9,12 +9,6 @@ node_modules
 /build
 /dist
 
-# Docs (generated at build time)
-/static/docs
-/docs/.docusaurus
-/docs/build
-/docs/node_modules
-
 # OS
 .DS_Store
 Thumbs.db

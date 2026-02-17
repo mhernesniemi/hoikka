@@ -1,6 +1,7 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
   import { formatPrice } from "$lib/utils";
+  import { imageUrl } from "$lib/image";
   import * as Command from "$lib/components/storefront/ui/command/index.js";
 
   interface SearchProduct {
@@ -64,7 +65,7 @@
             >
               {#if product.image}
                 <img
-                  src="{product.image}?tr=w-100,h-100,fo-auto"
+                  src={imageUrl(product.image, 100)}
                   alt=""
                   class="h-10 w-10 rounded object-cover"
                 />

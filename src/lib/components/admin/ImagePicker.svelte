@@ -1,5 +1,6 @@
 <script lang="ts">
   import { cn } from "$lib/utils";
+  import { imageUrl } from "$lib/image";
   import * as Dialog from "$lib/components/admin/ui/dialog";
   import { Button } from "$lib/components/admin/ui/button";
   import { Input } from "$lib/components/admin/ui/input";
@@ -10,20 +11,16 @@
   import Loader2 from "@lucide/svelte/icons/loader-2";
   import ArrowLeft from "@lucide/svelte/icons/arrow-left";
 
-  interface ImageKitFile {
-    fileId: string;
-    name: string;
+  interface BlobFile {
     url: string;
-    thumbnail: string;
-    width: number;
-    height: number;
+    name: string;
     size: number;
+    uploadedAt: string;
   }
 
   interface SelectedImage {
     url: string;
     name: string;
-    fileId: string;
     width: number;
     height: number;
     size: number;
@@ -37,10 +34,10 @@
     folder?: string;
   }
 
-  let { open = $bindable(), onClose, onSelect, folder = "/products" }: Props = $props();
+  let { open = $bindable(), onClose, onSelect, folder = "products" }: Props = $props();
 
   let activeTab = $state<"upload" | "existing">("upload");
-  let existingImages = $state<ImageKitFile[]>([]);
+  let existingImages = $state<BlobFile[]>([]);
   let selectedImages = $state<Set<string>>(new Set());
   let isLoadingImages = $state(false);
   let isUploading = $state(false);
@@ -73,31 +70,46 @@
     }
   }
 
-  function toggleImageSelection(fileId: string) {
+  function toggleImageSelection(url: string) {
     const newSet = new Set(selectedImages);
-    if (newSet.has(fileId)) {
-      newSet.delete(fileId);
+    if (newSet.has(url)) {
+      newSet.delete(url);
     } else {
-      newSet.add(fileId);
+      newSet.add(url);
     }
     selectedImages = newSet;
   }
 
   function handleSelectExisting() {
     const selected = existingImages
-      .filter((img) => selectedImages.has(img.fileId))
+      .filter((img) => selectedImages.has(img.url))
       .map((img) => ({
         url: img.url,
         name: img.name,
-        fileId: img.fileId,
-        width: img.width,
-        height: img.height,
+        width: 0,
+        height: 0,
         size: img.size,
         alt: ""
       }));
 
     // Move to review stage
     stagedImages = selected;
+  }
+
+  /** Read image dimensions from the browser before uploading */
+  function getImageDimensions(file: File): Promise<{ width: number; height: number }> {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        resolve({ width: img.naturalWidth, height: img.naturalHeight });
+        URL.revokeObjectURL(img.src);
+      };
+      img.onerror = () => {
+        resolve({ width: 0, height: 0 });
+        URL.revokeObjectURL(img.src);
+      };
+      img.src = URL.createObjectURL(file);
+    });
   }
 
   async function handleFileUpload(event: Event) {
@@ -109,24 +121,19 @@
     uploadError = null;
 
     try {
-      // Get auth params from server
-      const authResponse = await fetch("/api/assets/auth");
-      const auth = await authResponse.json();
-
       const uploadedFiles: SelectedImage[] = [];
 
-      // Upload each file to ImageKit
       for (const file of files) {
+        // Get dimensions client-side
+        const dims = await getImageDimensions(file);
+
         const formData = new FormData();
         formData.append("file", file);
-        formData.append("publicKey", auth.publicKey);
-        formData.append("signature", auth.signature);
-        formData.append("expire", auth.expire.toString());
-        formData.append("token", auth.token);
-        formData.append("fileName", file.name);
         formData.append("folder", folder);
+        formData.append("width", dims.width.toString());
+        formData.append("height", dims.height.toString());
 
-        const uploadResponse = await fetch("https://upload.imagekit.io/api/v1/files/upload", {
+        const uploadResponse = await fetch("/api/assets/upload", {
           method: "POST",
           body: formData
         });
@@ -139,7 +146,6 @@
         uploadedFiles.push({
           url: result.url,
           name: result.name,
-          fileId: result.fileId,
           width: result.width ?? 0,
           height: result.height ?? 0,
           size: result.size ?? 0,
@@ -209,7 +215,7 @@
         {#each stagedImages as image, index}
           <div class="flex gap-4 rounded-lg border border-border p-3">
             <img
-              src="{image.url}?tr=w-100,h-100,fo-auto"
+              src={imageUrl(image.url, 100)}
               alt={image.name}
               class="h-20 w-20 shrink-0 rounded object-cover"
             />
@@ -324,22 +330,22 @@
                 <div
                   role="checkbox"
                   tabindex="0"
-                  aria-checked={selectedImages.has(image.fileId)}
-                  onclick={() => toggleImageSelection(image.fileId)}
-                  onkeydown={(e) => e.key === "Enter" && toggleImageSelection(image.fileId)}
+                  aria-checked={selectedImages.has(image.url)}
+                  onclick={() => toggleImageSelection(image.url)}
+                  onkeydown={(e) => e.key === "Enter" && toggleImageSelection(image.url)}
                   class={cn(
                     "group relative aspect-square cursor-pointer overflow-hidden rounded-lg border-2 transition-all",
-                    selectedImages.has(image.fileId)
+                    selectedImages.has(image.url)
                       ? "border-blue-500 ring-2 ring-blue-200"
                       : "border-border hover:border-input-border"
                   )}
                 >
                   <img
-                    src="{image.url}?tr=w-150,h-150,fo-auto"
+                    src={imageUrl(image.url, 150)}
                     alt={image.name}
                     class="h-full w-full object-cover"
                   />
-                  {#if selectedImages.has(image.fileId)}
+                  {#if selectedImages.has(image.url)}
                     <div class="absolute inset-0 flex items-center justify-center bg-blue-500/20">
                       <div class="rounded-full bg-blue-500 p-1">
                         <Check class="h-4 w-4 text-white" />

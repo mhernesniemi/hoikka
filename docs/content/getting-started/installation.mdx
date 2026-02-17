@@ -4,9 +4,8 @@
 ## Prerequisites
 
 - [Bun](https://bun.sh) runtime (v1.0+)
-- PostgreSQL 15+
-- ImageKit account (for image hosting)
-- Clerk account (optional - for customer authentication)
+- PostgreSQL 15+ (Neon recommended)
+- Vercel account (for Blob storage and deployment)
 - Stripe account (optional - for payments)
 
 ## Setup
@@ -31,21 +30,18 @@ Edit `.env` with your configuration:
 # Database
 DATABASE_URL="postgresql://user:pass@localhost:5432/hoikka"
 
-# Clerk Auth
-PUBLIC_CLERK_PUBLISHABLE_KEY="pk_..."
-CLERK_SECRET_KEY="sk_..."
+# Neon Auth
+NEON_AUTH_BASE_URL=
+NEON_AUTH_COOKIE_SECRET=
+
+# Vercel Blob (auto-provisioned)
+BLOB_READ_WRITE_TOKEN=
 
 # Stripe Payments (optional - use mock provider for development)
 # STRIPE_SECRET_KEY="sk_..."
-# STRIPE_WEBHOOK_SECRET="whsec_..."
-
-# ImageKit (image hosting)
-IMAGEKIT_PUBLIC_KEY="public_..."
-IMAGEKIT_PRIVATE_KEY="private_..."
-IMAGEKIT_URL_ENDPOINT="https://ik.imagekit.io/your_id"
 ```
 
-Get ImageKit credentials from your [ImageKit Dashboard](https://imagekit.io/dashboard).
+Enable Neon Auth in your [Neon Console](https://console.neon.tech) to get auth credentials.
 
 ## Database Setup
 

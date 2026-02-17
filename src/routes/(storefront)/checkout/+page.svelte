@@ -6,6 +6,7 @@
   import { Alert } from "$lib/components/storefront/ui/alert";
   import StripePayment from "$lib/components/storefront/StripePayment.svelte";
   import { formatPrice, cn } from "$lib/utils.js";
+  import { imageUrl } from "$lib/image";
   import ShoppingCart from "@lucide/svelte/icons/shopping-cart";
   import type { Stripe, StripeElements } from "@stripe/stripe-js";
   import type { PageData } from "./$types.js";
@@ -729,7 +730,7 @@
                   <div class="h-16 w-16 overflow-hidden rounded-lg border border-gray-200 bg-white">
                     {#if line.imageUrl}
                       <img
-                        src="{line.imageUrl}?tr=w-128,h-128,fo-auto"
+                        src={imageUrl(line.imageUrl, 128)}
                         alt={line.productName}
                         class="h-full w-full object-cover"
                       />

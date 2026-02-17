@@ -1,6 +1,7 @@
 <script lang="ts">
   import { invalidateAll } from "$app/navigation";
   import { updateCartLineQuantity, removeCartLine } from "$lib/remote/cart.remote";
+  import { imageUrl } from "$lib/image";
   import { cartStore } from "$lib/stores/cart.svelte";
   import {
     Sheet,
@@ -120,7 +121,7 @@
               <div class="h-20 w-20 shrink-0 overflow-hidden rounded-md bg-gray-100">
                 {#if line.imageUrl}
                   <img
-                    src="{line.imageUrl}?tr=w-100,h-100,fo-auto"
+                    src={imageUrl(line.imageUrl, 100)}
                     alt={line.productName}
                     class="h-full w-full object-cover"
                   />

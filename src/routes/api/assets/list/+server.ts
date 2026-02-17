@@ -1,17 +1,28 @@
 /**
- * List images from ImageKit products folder
+ * List images from Vercel Blob storage
  */
-import { json } from "@sveltejs/kit";
+import { json, error } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
-import { assetService } from "$lib/server/services/assets.js";
+import { list } from "@vercel/blob";
 
-export const GET: RequestHandler = async ({ url }) => {
-	const folder = url.searchParams.get("folder") || "/products";
+export const GET: RequestHandler = async ({ url, locals }) => {
+	// Only admins can list blob files
+	if (!locals.user || !["admin", "staff"].includes(locals.user.role ?? "")) {
+		throw error(401, "Unauthorized");
+	}
+
+	const prefix = url.searchParams.get("folder")?.replace(/^\//, "") || "products";
 
 	try {
-		const files = await assetService.listFromImageKit(folder);
+		const result = await list({ prefix: `${prefix}/` });
+		const files = result.blobs.map((blob) => ({
+			url: blob.url,
+			name: blob.pathname.split("/").pop() ?? blob.pathname,
+			size: blob.size,
+			uploadedAt: blob.uploadedAt
+		}));
 		return json(files);
-	} catch (error) {
+	} catch {
 		return json({ error: "Failed to list files" }, { status: 500 });
 	}
 };

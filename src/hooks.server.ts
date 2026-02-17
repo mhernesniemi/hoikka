@@ -1,70 +1,81 @@
 /**
  * Server hooks for authentication, customer sync, and cart handling
- * Uses Clerk for authentication via svelte-clerk
+ * Uses Neon Auth for authentication
  */
-import { withClerkHandler } from "svelte-clerk/server";
 import { sequence } from "@sveltejs/kit/hooks";
 import type { Handle, HandleServerError } from "@sveltejs/kit";
 import { db } from "$lib/server/db/index.js";
 import { customers } from "$lib/server/db/schema.js";
 import { eq } from "drizzle-orm";
-import { CLERK_SECRET_KEY } from "$env/static/private";
+import { env } from "$env/dynamic/private";
 import { orderService } from "$lib/server/services/orders.js";
 import { shippingService, paymentService, wishlistService } from "$lib/server/services/index.js";
-import { authService } from "$lib/server/services/auth.js";
+
 const CART_COOKIE_NAME = "cart_token";
 const CART_COOKIE_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
 
 const WISHLIST_COOKIE_NAME = "wishlist_token";
 const WISHLIST_COOKIE_MAX_AGE = 60 * 60 * 24 * 365; // 1 year
 
-const ADMIN_SESSION_COOKIE = "admin_session";
+// Session handler — validates session via Neon Auth API and syncs customer record
+const sessionHandler: Handle = async ({ event, resolve }) => {
+	const cookie = event.request.headers.get("cookie") ?? "";
 
-// Clerk authentication handler
-const clerkHandler = withClerkHandler();
+	// Validate session by forwarding cookies to Neon Auth
+	if (cookie) {
+		try {
+			const sessionRes = await fetch(`${env.NEON_AUTH_BASE_URL}/api/auth/get-session`, {
+				headers: { cookie }
+			});
 
-// Customer sync handler - links Clerk users to local customer records
-const customerSync: Handle = async ({ event, resolve }) => {
-	// Get auth from Clerk (set by clerkHandler) - auth is a function!
-	const auth = event.locals.auth?.();
-	const userId = auth?.userId;
+			if (sessionRes.ok) {
+				const data = await sessionRes.json();
+				event.locals.user = data?.user ?? null;
+			} else {
+				event.locals.user = null;
+			}
+		} catch (error) {
+			console.error("[hooks] Failed to validate session:", error);
+			event.locals.user = null;
+		}
+	} else {
+		event.locals.user = null;
+	}
 
-	if (userId) {
-		// Find customer record linked to this Clerk user
-		let customer = await db.query.customers.findFirst({
-			where: eq(customers.clerkUserId, userId)
-		});
+	// Sync to customer record (for non-admin users)
+	if (event.locals.user) {
+		const isAdmin = event.locals.user.role === "admin" || event.locals.user.role === "staff";
 
-		if (!customer) {
-			// First login - create customer record from Clerk user data
-			try {
-				const response = await fetch(`https://api.clerk.com/v1/users/${userId}`, {
-					headers: {
-						Authorization: `Bearer ${CLERK_SECRET_KEY}`
-					}
-				});
+		if (!isAdmin) {
+			let customer = await db.query.customers.findFirst({
+				where: eq(customers.authUserId, event.locals.user.id)
+			});
 
-				if (response.ok) {
-					const clerkUser = await response.json();
+			if (!customer) {
+				try {
 					[customer] = await db
 						.insert(customers)
 						.values({
-							clerkUserId: userId,
-							email: clerkUser.email_addresses?.[0]?.email_address ?? "",
-							firstName: clerkUser.first_name ?? "",
-							lastName: clerkUser.last_name ?? ""
+							authUserId: event.locals.user.id,
+							email: event.locals.user.email,
+							firstName: event.locals.user.name?.split(" ")[0] ?? "",
+							lastName: event.locals.user.name?.split(" ").slice(1).join(" ") ?? ""
 						})
 						.returning();
+				} catch (error) {
+					console.error("[hooks] Failed to sync user to customer:", error);
 				}
-			} catch (error) {
-				console.error("[hooks] Failed to sync Clerk user:", error);
 			}
-		}
 
-		event.locals.customer = customer ?? null;
+			event.locals.customer = customer ?? null;
+		} else {
+			event.locals.customer = null;
+		}
 	} else {
 		event.locals.customer = null;
 	}
+
+	event.locals.adminDark = event.cookies.get("admin-dark") === "1";
 
 	return resolve(event);
 };
@@ -165,31 +176,13 @@ const paymentInit: Handle = async ({ event, resolve }) => {
 	return resolve(event);
 };
 
-// Admin auth handler - validates admin session cookie
-const adminAuth: Handle = async ({ event, resolve }) => {
-	const sessionId = event.cookies.get(ADMIN_SESSION_COOKIE) ?? null;
-	event.locals.adminSessionId = sessionId;
-	event.locals.adminUser = null;
-
-	if (sessionId) {
-		const user = await authService.validateSession(sessionId);
-		event.locals.adminUser = user;
-	}
-
-	event.locals.adminDark = event.cookies.get("admin-dark") === "1";
-
-	return resolve(event);
-};
-
 // Combine handlers in sequence
 export const handle = sequence(
-	clerkHandler,
-	customerSync,
+	sessionHandler,
 	cartHandler,
 	wishlistHandler,
 	shippingInit,
-	paymentInit,
-	adminAuth
+	paymentInit
 );
 
 // Handle uncaught server errors

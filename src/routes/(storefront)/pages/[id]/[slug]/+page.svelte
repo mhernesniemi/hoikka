@@ -1,5 +1,6 @@
 <script lang="ts">
   import { stripHtml } from "$lib/utils";
+  import { imageUrl } from "$lib/image";
 
   let { data } = $props();
 </script>
@@ -17,14 +18,14 @@
   />
   <meta property="og:type" content="article" />
   {#if data.page.imageUrl}
-    <meta property="og:image" content="{data.page.imageUrl}?tr=w-1200,h-630,fo-auto" />
+    <meta property="og:image" content={imageUrl(data.page.imageUrl, 1200)} />
   {/if}
 </svelte:head>
 
 <div class="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
   {#if data.page.imageUrl}
     <img
-      src="{data.page.imageUrl}?tr=w-768,h-400,fo-auto"
+      src={imageUrl(data.page.imageUrl, 768)}
       alt={data.page.title}
       class="mb-8 h-auto w-full rounded-lg object-cover"
     />

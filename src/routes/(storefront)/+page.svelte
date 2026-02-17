@@ -1,14 +1,16 @@
 <script lang="ts">
-  import type { PageData, ActionData } from "./$types";
+  import type { PageData } from "./$types";
   import { cn } from "$lib/utils";
   import { Button } from "$lib/components/storefront/ui/button";
   import ProductCard from "$lib/components/storefront/ProductCard.svelte";
-  import { enhance } from "$app/forms";
+  import { goto } from "$app/navigation";
+  import { authClient } from "$lib/auth-client";
   import ArrowRightIcon from "@lucide/svelte/icons/arrow-right";
   import CopyIcon from "@lucide/svelte/icons/copy";
   import CheckIcon from "@lucide/svelte/icons/check";
 
-  let { data, form }: { data: PageData; form: ActionData } = $props();
+  let { data }: { data: PageData } = $props();
+  let demoError = $state<string | null>(null);
   const commandText = "bunx create-hoikka-app";
   let copied = $state(false);
 
@@ -128,13 +130,13 @@
               Log in to explore the admin dashboard. The credentials have been filled in for you.
             </p>
 
-            {#if form?.error}
+            {#if demoError}
               <div class="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-600">
-                {form.error}
+                {demoError}
               </div>
             {/if}
 
-            <form method="POST" action="?/adminLogin" use:enhance class="space-y-4">
+            <div class="space-y-4">
               <div>
                 <label for="email" class="mb-1 block text-sm font-medium text-gray-700">
                   Email
@@ -142,7 +144,6 @@
                 <input
                   type="email"
                   id="email"
-                  name="email"
                   readonly
                   value="admin@example.com"
                   class="w-full cursor-not-allowed rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-gray-500"
@@ -156,15 +157,30 @@
                 <input
                   type="password"
                   id="password"
-                  name="password"
                   readonly
                   value="admin538"
                   class="w-full cursor-not-allowed rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-gray-500"
                 />
               </div>
 
-              <Button type="submit" class="mt-4 w-full">Log in</Button>
-            </form>
+              <Button
+                class="mt-4 w-full"
+                onclick={async () => {
+                  demoError = null;
+                  const { error } = await authClient.signIn.email({
+                    email: "admin@example.com",
+                    password: "admin538"
+                  });
+                  if (error) {
+                    demoError = error.message ?? "Login failed";
+                  } else {
+                    goto("/admin");
+                  }
+                }}
+              >
+                Log in
+              </Button>
+            </div>
           </div>
         </div>
       </div>

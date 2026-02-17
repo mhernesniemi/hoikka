@@ -1,5 +1,7 @@
 # Hoikka
 
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fmhernesniemi%2Fhoikka&env=NEON_AUTH_BASE_URL,NEON_AUTH_COOKIE_SECRET,RESEND_API_KEY,RESEND_FROM_EMAIL,STRIPE_SECRET_KEY,PUBLIC_STRIPE_PUBLISHABLE_KEY&envDescription=See%20.env.example%20for%20details&envLink=https%3A%2F%2Fgithub.com%2Fmhernesniemi%2Fhoikka%2Fblob%2Fmain%2F.env.example&project-name=hoikka&repository-name=hoikka&stores=%5B%7B%22type%22%3A%22blob%22%7D%5D&products=%5B%7B%22type%22%3A%22integration%22%2C%22protocol%22%3A%22storage%22%2C%22productSlug%22%3A%22neon%22%2C%22integrationSlug%22%3A%22neon%22%7D%5D&skippable-integrations=1)
+
 **Opinionated Commerce** - Lightweight but powerful e-commerce gear for SvelteKit that is truly 100% customizable and owned by you.
 
 ## Philosophy: Code Over Configuration

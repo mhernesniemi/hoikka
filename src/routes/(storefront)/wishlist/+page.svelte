@@ -3,6 +3,7 @@
   import { Button } from "$lib/components/storefront/ui/button";
   import { Alert } from "$lib/components/storefront/ui/alert";
   import { cn } from "$lib/utils";
+  import { imageUrl } from "$lib/image";
   import { cartStore } from "$lib/stores/cart.svelte";
   import type { PageData, ActionData } from "./$types";
   import Heart from "@lucide/svelte/icons/heart";
@@ -95,7 +96,7 @@
           <a href="/products/{productId}/{slug}" class="shrink-0">
             {#if image}
               <img
-                src="{image}?tr=w-100,h-100,fo-auto"
+                src={imageUrl(image, 100)}
                 alt={name}
                 class="h-20 w-20 rounded-lg object-cover"
               />

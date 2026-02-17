@@ -1,62 +1,21 @@
 /**
  * Asset Service
- * Handles image storage with ImageKit.io
+ * Handles image storage with Vercel Blob
  */
 import { db } from "$lib/server/db/index.js";
 import { assets, productAssets, products, collections } from "$lib/server/db/schema.js";
 import { eq, asc } from "drizzle-orm";
-import { env } from "$env/dynamic/private";
-import crypto from "crypto";
-
-export interface UploadAuthParams {
-	token: string;
-	expire: number;
-	signature: string;
-}
+import { del } from "@vercel/blob";
 
 export interface CreateAssetInput {
 	name: string;
 	url: string;
-	fileId: string;
 	width?: number;
 	height?: number;
 	fileSize?: number;
 }
 
 class AssetService {
-	/**
-	 * Generate ImageKit upload authentication parameters
-	 */
-	getUploadAuth(): UploadAuthParams {
-		const privateKey = env.IMAGEKIT_PRIVATE_KEY;
-		if (!privateKey) {
-			throw new Error("IMAGEKIT_PRIVATE_KEY not configured");
-		}
-
-		const token = crypto.randomUUID();
-		const expire = Math.floor(Date.now() / 1000) + 60 * 30; // 30 minutes
-		const signature = crypto
-			.createHmac("sha1", privateKey)
-			.update(token + expire)
-			.digest("hex");
-
-		return { token, expire, signature };
-	}
-
-	/**
-	 * Get ImageKit public config for client-side upload
-	 */
-	getPublicConfig() {
-		const publicKey = env.IMAGEKIT_PUBLIC_KEY;
-		const urlEndpoint = env.IMAGEKIT_URL_ENDPOINT;
-
-		if (!publicKey || !urlEndpoint) {
-			throw new Error("ImageKit not configured");
-		}
-
-		return { publicKey, urlEndpoint };
-	}
-
 	/**
 	 * Create asset record after successful upload
 	 */
@@ -66,18 +25,13 @@ class AssetService {
 			.values({
 				name: input.name,
 				type: "image",
-				mimeType: "image/jpeg", // ImageKit handles conversion
+				mimeType: "image/jpeg",
 				source: input.url,
-				preview: input.url + "?tr=w-100,h-100,fo-auto",
 				width: input.width ?? 0,
 				height: input.height ?? 0,
-				fileSize: input.fileSize ?? 0,
-				imagekitFileId: input.fileId
+				fileSize: input.fileSize ?? 0
 			})
 			.returning();
-
-		// Pre-warm cache for common transformations
-		this.warmCache(input.url);
 
 		return asset;
 	}
@@ -93,31 +47,6 @@ class AssetService {
 			.returning();
 
 		return asset;
-	}
-
-	/**
-	 * Pre-warm ImageKit cache by requesting common transformations
-	 * Runs in background - doesn't block the upload response
-	 *
-	 * Sizes used across the site:
-	 * - 100x100: thumbnails (cart, orders, wishlist, product page, admin)
-	 * - 400x400: product grid listings (products, category, collections, front page)
-	 * - 600x600: product detail main image
-	 */
-	private warmCache(baseUrl: string) {
-		const transformations = [
-			"tr=w-100,h-100,fo-auto",
-			"tr=w-400,h-400,fo-auto",
-			"tr=w-600,h-600,fo-auto"
-		];
-
-		Promise.all(
-			transformations.map((tr) =>
-				fetch(`${baseUrl}?${tr}`)
-					.then((res) => res.ok)
-					.catch(() => false)
-			)
-		);
 	}
 
 	/**
@@ -207,52 +136,23 @@ class AssetService {
 	}
 
 	/**
-	 * Delete asset
+	 * Delete asset (removes from Vercel Blob and database)
 	 */
 	async delete(assetId: number) {
+		const asset = await db.query.assets.findFirst({
+			where: eq(assets.id, assetId)
+		});
+
+		if (asset?.source) {
+			try {
+				await del(asset.source);
+			} catch {
+				// Blob may already be deleted — continue with DB cleanup
+			}
+		}
+
 		await db.delete(assets).where(eq(assets.id, assetId));
 	}
-
-	/**
-	 * List files from ImageKit folder
-	 */
-	async listFromImageKit(folder: string = "/products"): Promise<ImageKitFile[]> {
-		const privateKey = env.IMAGEKIT_PRIVATE_KEY;
-		if (!privateKey) {
-			throw new Error("IMAGEKIT_PRIVATE_KEY not configured");
-		}
-
-		const params = new URLSearchParams({
-			path: folder,
-			type: "file",
-			limit: "100",
-			sort: "DESC_CREATED"
-		});
-
-		const response = await fetch(`https://api.imagekit.io/v1/files?${params}`, {
-			headers: {
-				Authorization: `Basic ${Buffer.from(privateKey + ":").toString("base64")}`
-			}
-		});
-
-		if (!response.ok) {
-			throw new Error("Failed to list ImageKit files");
-		}
-
-		return response.json();
-	}
-}
-
-export interface ImageKitFile {
-	fileId: string;
-	name: string;
-	url: string;
-	thumbnail: string;
-	width: number;
-	height: number;
-	size: number;
-	filePath: string;
-	fileType: string;
 }
 
 export const assetService = new AssetService();

@@ -10,7 +10,10 @@ export const load: PageServerLoad = async ({ params, url, locals }) => {
 		throw error(404, "Collection not found");
 	}
 
-	const isPreview = url.searchParams.has("preview") && !!locals.adminUser;
+	const isPreview =
+		url.searchParams.has("preview") &&
+		!!locals.user &&
+		["admin", "staff"].includes(locals.user.role ?? "");
 	const page = parseInt(url.searchParams.get("page") ?? "1");
 	const limit = 12;
 	const offset = (page - 1) * limit;

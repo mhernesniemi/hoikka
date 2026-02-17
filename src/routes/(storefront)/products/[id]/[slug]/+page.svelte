@@ -1,6 +1,7 @@
 <script lang="ts">
   import { enhance } from "$app/forms";
   import { cn } from "$lib/utils";
+  import { imageUrl } from "$lib/image";
   import { addToCart } from "$lib/remote/cart.remote";
   import { toggleWishlist } from "$lib/remote/wishlist.remote";
   import { invalidateAll } from "$app/navigation";
@@ -61,9 +62,7 @@
         height: 0,
         fileSize: 0,
         source: selectedVariant.imageUrl,
-        preview: null,
         alt: null,
-        imagekitFileId: null,
         createdAt: new Date()
       };
       return [variantImage, ...baseImages];
@@ -258,7 +257,7 @@
       <div class="aspect-square overflow-hidden rounded-lg bg-gray-100">
         {#if images.length > 0}
           <img
-            src="{images[selectedImageIndex].source}?tr=w-600,h-600,fo-auto"
+            src={imageUrl(images[selectedImageIndex].source, 600)}
             alt={product.name}
             class="h-full w-full object-cover"
           />
@@ -283,11 +282,7 @@
                   : "border-transparent hover:border-gray-300"
               )}
             >
-              <img
-                src="{image.source}?tr=w-100,h-100,fo-auto"
-                alt=""
-                class="h-full w-full object-cover"
-              />
+              <img src={imageUrl(image.source, 100)} alt="" class="h-full w-full object-cover" />
             </button>
           {/each}
         </div>

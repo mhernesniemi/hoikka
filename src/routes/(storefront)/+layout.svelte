@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { SignedIn, SignedOut, SignInButton, useClerkContext } from "svelte-clerk";
   import { invalidateAll, onNavigate } from "$app/navigation";
   import { page } from "$app/stores";
   import { cn } from "$lib/utils";
@@ -27,12 +26,11 @@
 
   let { children, data }: { children: any; data: LayoutData } = $props();
 
-  const clerkContext = useClerkContext();
   let previousUserId: string | null | undefined = undefined;
 
   // Invalidate data when auth state changes (sign in/out)
   $effect(() => {
-    const currentUserId = clerkContext.auth.userId ?? null;
+    const currentUserId = data.user?.id ?? null;
     if (previousUserId !== undefined && previousUserId !== currentUserId) {
       invalidateAll();
     }
@@ -84,14 +82,11 @@
             </a>
 
             <!-- Auth UI -->
-            <SignedIn>
+            {#if data.user}
               <a href="/account"><UserIcon class="h-6 w-6" /></a>
-            </SignedIn>
-            <SignedOut>
-              <SignInButton mode="modal">
-                <UserIcon class="h-6 w-6" />
-              </SignInButton>
-            </SignedOut>
+            {:else}
+              <a href="/sign-in"><UserIcon class="h-6 w-6" /></a>
+            {/if}
 
             <CartSheet />
           </nav>

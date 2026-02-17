@@ -45,9 +45,7 @@ export interface CollectionWithCount extends Collection {
 		height: number | null;
 		fileSize: number | null;
 		source: string;
-		preview: string | null;
 		alt: string | null;
-		imagekitFileId: string | null;
 		createdAt: Date;
 	} | null;
 }

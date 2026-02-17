@@ -1,12 +1,33 @@
 <script lang="ts">
-  import { enhance } from "$app/forms";
+  import { goto } from "$app/navigation";
   import { Button } from "$lib/components/admin/ui/button";
   import { Input } from "$lib/components/admin/ui/input";
   import { Label } from "$lib/components/admin/ui/label";
-  import type { ActionData } from "./$types";
+  import { authClient } from "$lib/auth-client";
 
-  let { form }: { form: ActionData } = $props();
+  let email = $state("");
+  let password = $state("");
+  let error = $state<string | null>(null);
   let isLoading = $state(false);
+
+  async function handleSubmit(e: Event) {
+    e.preventDefault();
+    error = null;
+    isLoading = true;
+
+    try {
+      const result = await authClient.signIn.email({ email, password });
+      if (result.error) {
+        error = result.error.message ?? "Invalid email or password";
+      } else {
+        goto("/admin");
+      }
+    } catch {
+      error = "Invalid email or password";
+    } finally {
+      isLoading = false;
+    }
+  }
 </script>
 
 <svelte:head><title>Login | Admin</title></svelte:head>
@@ -17,25 +38,16 @@
       <h1 class="mb-2 text-2xl font-bold text-gray-900">Hoikka Admin</h1>
       <p class="mb-6 text-sm text-gray-600">Sign in to your account</p>
 
-      {#if form?.error}
+      {#if error}
         <div class="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-600">
-          {form.error}
+          {error}
         </div>
       {/if}
 
-      <form
-        method="POST"
-        use:enhance={() => {
-          isLoading = true;
-          return async ({ update }) => {
-            await update();
-            isLoading = false;
-          };
-        }}
-      >
+      <form onsubmit={handleSubmit}>
         <div class="mb-4">
           <Label for="email">Email</Label>
-          <Input type="email" id="email" name="email" required autocomplete="email" />
+          <Input type="email" id="email" bind:value={email} required autocomplete="email" />
         </div>
 
         <div class="mb-6">
@@ -43,7 +55,7 @@
           <Input
             type="password"
             id="password"
-            name="password"
+            bind:value={password}
             required
             autocomplete="current-password"
           />

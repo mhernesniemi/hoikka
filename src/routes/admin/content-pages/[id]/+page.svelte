@@ -16,6 +16,7 @@
     TRANSLATION_LANGUAGES
   } from "$lib/config/languages.js";
   import { cn } from "$lib/utils";
+  import { imageUrl as imgUrl } from "$lib/image";
   import UnsavedChangesDialog from "$lib/components/admin/UnsavedChangesDialog.svelte";
   import { onMount } from "svelte";
   import ImagePicker from "$lib/components/admin/ImagePicker.svelte";
@@ -72,7 +73,6 @@
     files: {
       url: string;
       name: string;
-      fileId: string;
       width: number;
       height: number;
       size: number;
@@ -272,7 +272,7 @@
         {#if imageUrl}
           <div class="group relative">
             <img
-              src="{imageUrl}?tr=w-400,h-400,fo-auto"
+              src={imgUrl(imageUrl, 400)}
               alt={title}
               class="h-48 w-full rounded border border-border object-cover"
             />

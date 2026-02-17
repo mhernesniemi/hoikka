@@ -14,7 +14,10 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 		throw error(404, "Product not found");
 	}
 
-	const isPreview = url.searchParams.has("preview") && !!locals.adminUser;
+	const isPreview =
+		url.searchParams.has("preview") &&
+		!!locals.user &&
+		["admin", "staff"].includes(locals.user.role ?? "");
 	const product = await productService.getById(id);
 
 	if (!product || (!isPreview && product.visibility === "draft")) {
@@ -67,7 +70,7 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 		reviewsPagination: reviewsResult.pagination,
 		customerReview,
 		customerId: locals.customer?.id ?? null,
-		isAdmin: !!locals.adminUser,
+		isAdmin: !!locals.user && ["admin", "staff"].includes(locals.user.role ?? ""),
 		breadcrumbs,
 		relatedProducts
 	};

@@ -68,8 +68,8 @@ const order = await orderService.getByCode("ORD-2024-001");
 ```typescript
 import { customerService } from "$lib/server/services/customers";
 
-// Create from Clerk auth
-const customer = await customerService.getOrCreateFromClerk(clerkUser);
+// Create from auth user
+const customer = await customerService.getOrCreateFromAuth(authUser);
 
 // Query
 const customer = await customerService.getByEmail("user@example.com");

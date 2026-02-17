@@ -1,4 +1,9 @@
 {
+	"images": {
+		"sizes": [64, 100, 128, 150, 200, 400, 600, 768, 1200],
+		"domains": [],
+		"remotePatterns": [{ "hostname": "*.public.blob.vercel-storage.com" }]
+	},
 	"headers": [
 		{
 			"source": "/api/(.*)",

@@ -414,7 +414,7 @@ export interface AddOrderLineInput {
 }
 
 export interface CreateCustomerInput {
-	clerkUserId?: string;
+	authUserId?: string;
 	email: string;
 	firstName: string;
 	lastName: string;

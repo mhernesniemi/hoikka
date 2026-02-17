@@ -9,7 +9,10 @@ export const load: PageServerLoad = async ({ params, url, locals }) => {
 		throw error(404, "Page not found");
 	}
 
-	const isPreview = url.searchParams.has("preview") && !!locals.adminUser;
+	const isPreview =
+		url.searchParams.has("preview") &&
+		!!locals.user &&
+		["admin", "staff"].includes(locals.user.role ?? "");
 	const page = isPreview
 		? await contentPageService.getById(id)
 		: await contentPageService.getPublishedById(id);

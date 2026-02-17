@@ -3,7 +3,8 @@
   import { onMount } from "svelte";
   import { page } from "$app/stores";
   import { beforeNavigate } from "$app/navigation";
-  import { enhance } from "$app/forms";
+  import { goto } from "$app/navigation";
+  import { authClient } from "$lib/auth-client";
   import { Toaster } from "$lib/components/admin/ui/sonner";
   import * as DropdownMenu from "$lib/components/admin/ui/dropdown-menu";
   import {
@@ -178,7 +179,9 @@
                 : "text-gray-600 hover:bg-gray-200/60 hover:text-gray-900"
             )}
           >
-            <span class="truncate text-sm">{data.adminUser?.email ?? "Admin"}</span>
+            <span class="truncate text-sm"
+              >{data.adminUser?.email ?? data.adminUser?.name ?? "Admin"}</span
+            >
             <ChevronsUpDown class="h-5 w-5 shrink-0 text-gray-400" strokeWidth={1.6} />
           </DropdownMenu.Trigger>
           <DropdownMenu.Content side="right" align="end" class="w-48">
@@ -213,9 +216,9 @@
             </DropdownMenu.Sub>
             <DropdownMenu.Separator />
             <DropdownMenu.Item
-              onclick={() => {
-                const form = document.getElementById("logout-form") as HTMLFormElement;
-                form?.requestSubmit();
+              onclick={async () => {
+                await authClient.signOut();
+                goto("/admin/login");
               }}
             >
               <LogOut class="h-4 w-4" strokeWidth={1.6} />
@@ -223,13 +226,6 @@
             </DropdownMenu.Item>
           </DropdownMenu.Content>
         </DropdownMenu.Root>
-        <form
-          id="logout-form"
-          method="POST"
-          action="/admin/logout"
-          use:enhance
-          class="hidden"
-        ></form>
       </div>
     </div>
   </aside>

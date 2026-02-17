@@ -1,5 +1,6 @@
 <script lang="ts">
   import { cn } from "$lib/utils";
+  import { imageUrl } from "$lib/image";
   import type { PageData } from "./$types";
   import ArrowLeft from "@lucide/svelte/icons/arrow-left";
   import Package from "@lucide/svelte/icons/package";
@@ -73,7 +74,7 @@
         <div class="flex items-start gap-4">
           {#if line.imageUrl}
             <img
-              src="{line.imageUrl}?tr=w-100,h-100,fo-auto"
+              src={imageUrl(line.imageUrl, 100)}
               alt={line.productName}
               class="h-16 w-16 rounded-lg object-cover"
             />

@@ -122,7 +122,6 @@ export const actions: Actions = {
 
 		const url = formData.get("url") as string;
 		const name = formData.get("name") as string;
-		const fileId = formData.get("fileId") as string;
 		const width = Number(formData.get("width")) || 0;
 		const height = Number(formData.get("height")) || 0;
 		const fileSize = Number(formData.get("fileSize")) || 0;
@@ -133,7 +132,7 @@ export const actions: Actions = {
 		}
 
 		try {
-			const asset = await assetService.create({ name, url, fileId, width, height, fileSize });
+			const asset = await assetService.create({ name, url, width, height, fileSize });
 			if (alt) {
 				await assetService.updateAlt(asset.id, alt);
 			}

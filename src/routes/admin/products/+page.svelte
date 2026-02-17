@@ -54,7 +54,7 @@
         renderSnippet(productCell, {
           name: row.original.name,
           id: row.original.id,
-          image: row.original.featuredAsset?.preview ?? row.original.featuredAsset?.source ?? null
+          image: row.original.featuredAsset?.source ?? null
         })
     },
     {
