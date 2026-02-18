@@ -1,24 +1,13 @@
 <script lang="ts">
   import type { PageData } from "./$types";
-  import { cn } from "$lib/utils";
   import { Button } from "$lib/components/storefront/ui/button";
   import ProductCard from "$lib/components/storefront/ProductCard.svelte";
   import { goto } from "$app/navigation";
   import { authClient } from "$lib/auth-client";
   import ArrowRightIcon from "@lucide/svelte/icons/arrow-right";
-  import CopyIcon from "@lucide/svelte/icons/copy";
-  import CheckIcon from "@lucide/svelte/icons/check";
 
   let { data }: { data: PageData } = $props();
   let demoError = $state<string | null>(null);
-  const commandText = "bunx create-hoikka-app";
-  let copied = $state(false);
-
-  const copyCommand = () => {
-    navigator.clipboard?.writeText(commandText);
-    copied = true;
-    setTimeout(() => (copied = false), 100);
-  };
 </script>
 
 <svelte:head>
@@ -55,26 +44,28 @@
               </a>
               <p class="pt-4 text-xs text-gray-600">
                 or
-                <span
-                  class={cn(
-                    "ml-1 inline-flex items-center overflow-hidden rounded-md border border-pink-200 transition-colors duration-300",
-                    copied ? "bg-pink-200" : "bg-white"
-                  )}
+                <a
+                  href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fmhernesniemi%2Fsvelte-ecomm&project-name=hoikka&repository-name=hoikka&stores=%5B%7B%22type%22%3A%22integration%22%2C%22productSlug%22%3A%22neon%22%2C%22integrationSlug%22%3A%22neon%22%7D%2C%7B%22type%22%3A%22blob%22%7D%5D&skippable-integrations=1"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="group ml-1 inline-flex items-center overflow-hidden rounded-md border border-pink-300 bg-pink-50/50 transition-colors duration-300 hover:border-black hover:bg-white"
                 >
                   <code
-                    class="inline-flex items-center px-1.5 py-0.5 font-mono font-medium text-pink-700"
-                    >{commandText}</code
+                    class="inline-flex items-center px-1.5 py-0.5 font-mono text-xs font-medium text-pink-700 group-hover:text-black"
+                    >deploy to vercel</code
                   >
-                  <button
-                    type="button"
-                    class="group inline-flex items-center justify-center border-l border-pink-200 px-1.5 py-0.5 text-pink-600"
-                    title="Copy command"
-                    aria-label="Copy command"
-                    onclick={copyCommand}
+                  <span
+                    class="inline-flex shrink-0 items-center justify-center border-l border-pink-300 px-1.5 py-0.5 group-hover:border-black/30"
                   >
-                    <CopyIcon class="h-3.5 w-3.5 group-hover:text-pink-700" />
-                  </button>
-                </span>
+                    <svg
+                      viewBox="0 3.2 24 20.8"
+                      fill="currentColor"
+                      class="h-3.5 w-3.5 shrink-0 text-pink-700 group-hover:text-black"
+                    >
+                      <path d="M12 3.2 L0 24 L24 24 Z" />
+                    </svg>
+                  </span>
+                </a>
               </p>
             </div>
           </div>
