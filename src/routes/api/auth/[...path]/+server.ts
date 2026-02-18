@@ -35,6 +35,7 @@ async function proxy({ request, params }: Parameters<RequestHandler>[0]) {
 		referer?.split("/").slice(0, 3).join("/") ||
 		new URL(request.url).origin;
 	headers.set("origin", origin);
+	headers.set("x-neon-auth-middleware", "true");
 
 	const res = await fetch(url, {
 		method: request.method,

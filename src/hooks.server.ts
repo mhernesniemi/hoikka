@@ -18,6 +18,15 @@ const CART_COOKIE_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
 const WISHLIST_COOKIE_NAME = "wishlist_token";
 const WISHLIST_COOKIE_MAX_AGE = 60 * 60 * 24 * 365; // 1 year
 
+// Extract only Neon Auth cookies (prefixed __Secure-neon-auth) from a cookie header
+function extractNeonAuthCookies(cookieHeader: string): string {
+	return cookieHeader
+		.split(";")
+		.map((c) => c.trim())
+		.filter((c) => c.startsWith("__Secure-neon-auth"))
+		.join("; ");
+}
+
 // OAuth verifier handler — exchanges neon_auth_session_verifier for a session cookie
 // After Google OAuth, Neon Auth redirects here with ?neon_auth_session_verifier=xxx
 const oauthVerifierHandler: Handle = async ({ event, resolve }) => {
@@ -27,10 +36,22 @@ const oauthVerifierHandler: Handle = async ({ event, resolve }) => {
 	const neonAuthUrl = env.NEON_AUTH_BASE_URL;
 	if (!neonAuthUrl) return resolve(event);
 
+	const cookieHeader = event.request.headers.get("cookie") ?? "";
+	const neonCookies = extractNeonAuthCookies(cookieHeader);
+	if (!neonCookies) return resolve(event);
+
 	try {
-		const cookie = event.request.headers.get("cookie") ?? "";
-		const sessionRes = await fetch(`${neonAuthUrl}/get-session`, {
-			headers: { cookie }
+		// Pass the verifier as a query param to get-session (matches the official SDK)
+		const upstreamUrl = new URL(`${neonAuthUrl}/get-session`);
+		upstreamUrl.searchParams.set("neon_auth_session_verifier", verifier);
+
+		const sessionRes = await fetch(upstreamUrl.toString(), {
+			method: "GET",
+			headers: {
+				cookie: neonCookies,
+				origin: event.url.origin,
+				"x-neon-auth-middleware": "true"
+			}
 		});
 
 		const redirectUrl = new URL(event.url);
