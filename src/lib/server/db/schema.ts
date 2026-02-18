@@ -277,6 +277,21 @@ export const assets = pgTable("assets", {
 	createdAt: timestamp("created_at").defaultNow().notNull()
 });
 
+export const assetTranslations = pgTable(
+	"asset_translations",
+	{
+		id: serial("id").primaryKey(),
+		assetId: integer("asset_id")
+			.references(() => assets.id, { onDelete: "cascade" })
+			.notNull(),
+		languageCode: varchar("language_code", { length: 10 }).notNull(),
+		alt: text("alt")
+	},
+	(table) => [
+		uniqueIndex("asset_translations_asset_lang_idx").on(table.assetId, table.languageCode)
+	]
+);
+
 export const productAssets = pgTable(
 	"product_assets",
 	{
@@ -1071,8 +1086,16 @@ export const variantFacetValuesRelations = relations(variantFacetValues, ({ one 
 }));
 
 export const assetsRelations = relations(assets, ({ many }) => ({
+	translations: many(assetTranslations),
 	productAssets: many(productAssets),
 	variantAssets: many(productVariantAssets)
+}));
+
+export const assetTranslationsRelations = relations(assetTranslations, ({ one }) => ({
+	asset: one(assets, {
+		fields: [assetTranslations.assetId],
+		references: [assets.id]
+	})
 }));
 
 export const productAssetsRelations = relations(productAssets, ({ one }) => ({

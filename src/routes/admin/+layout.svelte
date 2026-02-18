@@ -25,6 +25,7 @@
   import Tag from "@lucide/svelte/icons/tag";
   import FileText from "@lucide/svelte/icons/file-text";
   import { Percent as PercentIcon } from "@lucide/svelte";
+  import ImageIcon from "@lucide/svelte/icons/image";
   import ExternalLink from "@lucide/svelte/icons/external-link";
   import ChevronsUpDown from "@lucide/svelte/icons/chevrons-up-down";
   import LogOut from "@lucide/svelte/icons/log-out";
@@ -75,6 +76,7 @@
     { href: "/admin/customers", label: "Customers", icon: "users" },
     { href: "/admin/reviews", label: "Reviews", icon: "star" },
     { href: "/admin/promotions", label: "Promotions", icon: "percent" },
+    { href: "/admin/assets", label: "Assets", icon: "image" },
     { href: "/admin/content-pages", label: "Pages", icon: "file-text" }
   ];
 
@@ -136,6 +138,8 @@
               <Star class="h-5 w-5" strokeWidth={1.6} />
             {:else if item.icon === "percent"}
               <PercentIcon class="h-5 w-5" strokeWidth={1.6} />
+            {:else if item.icon === "image"}
+              <ImageIcon class="h-5 w-5" strokeWidth={1.6} />
             {:else if item.icon === "file-text"}
               <FileText class="h-5 w-5" strokeWidth={1.6} />
             {/if}

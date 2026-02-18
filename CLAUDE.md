@@ -12,7 +12,7 @@
 
 - Run `./scripts/svelte-check.sh --threshold error` for type checking. This wrapper prevents the Vite dev server from crashing by preserving `.svelte-kit/generated/` timestamps that `svelte-check` would otherwise overwrite.
 - After modifying files, run `bunx prettier --write <files>` on the changed files to format them.
-- Run Drizzle Kit non-interactively, for example: `bunx drizzle-kit push --force` (the `--force` flag skips the interactive confirmation prompt).
+- When making changes to the DB schema, generate a migration with `bun run db:generate` and apply it locally with `bun run db:migrate`. Migrations also run automatically on deploy via the build script. Do **not** use `drizzle-kit push`.
 
 ## UI Guidelines
 

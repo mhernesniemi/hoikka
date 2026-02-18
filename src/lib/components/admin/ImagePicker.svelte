@@ -92,8 +92,9 @@
         alt: ""
       }));
 
-    // Move to review stage
-    stagedImages = selected;
+    // Skip alt text review — existing images have alt text in the DB
+    onSelect(selected);
+    resetAndClose();
   }
 
   /** Read image dimensions from the browser before uploading */
@@ -362,7 +363,9 @@
       <Dialog.Footer>
         <Button variant="outline" onclick={onClose}>Cancel</Button>
         {#if activeTab === "existing" && selectedImages.size > 0}
-          <Button onclick={handleSelectExisting}>Next: Add Alt Text</Button>
+          <Button onclick={handleSelectExisting}>
+            Add {selectedImages.size} Image{selectedImages.size > 1 ? "s" : ""}
+          </Button>
         {/if}
       </Dialog.Footer>
     {/if}

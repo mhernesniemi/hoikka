@@ -156,6 +156,17 @@ export function slugify(text: string): string {
 }
 
 /**
+ * Format bytes into a human-readable file size (e.g. 1.2 MB)
+ */
+export function formatFileSize(bytes: number): string {
+	if (bytes === 0) return "0 B";
+	const units = ["B", "KB", "MB", "GB"];
+	const i = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+	const size = bytes / Math.pow(1024, i);
+	return `${i === 0 ? size : size.toFixed(1)} ${units[i]}`;
+}
+
+/**
  * Strip HTML tags from a string (for meta descriptions, etc.)
  */
 export function stripHtml(html: string | null | undefined): string {

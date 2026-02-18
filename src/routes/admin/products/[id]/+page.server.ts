@@ -40,6 +40,10 @@ export const load: PageServerLoad = async ({ params }) => {
 		relatedProductService.getManualRelations(id)
 	]);
 
+	// Load asset translations for all product assets
+	const assetIds = product.assets.map((a) => a.id);
+	const assetTranslationsMap = await translationService.getAllAssetTranslations(assetIds);
+
 	// Load full product data for manual relations + lightweight catalog for picker
 	const [relatedProductsList, allProducts] = await Promise.all([
 		manualRelations.length > 0
@@ -57,6 +61,7 @@ export const load: PageServerLoad = async ({ params }) => {
 		productCategories,
 		productCollections,
 		translations,
+		assetTranslationsMap,
 		relatedProducts: relatedProductsList,
 		allProducts,
 		productTypes: PRODUCT_TYPES
@@ -325,6 +330,14 @@ export const actions: Actions = {
 
 		try {
 			await assetService.updateAlt(assetId, alt || "");
+
+			// Save translation alt texts
+			for (const lang of TRANSLATION_LANGUAGES) {
+				const tAlt = formData.get(`alt_${lang.code}`) as string;
+				await translationService.upsertAssetTranslation(assetId, lang.code, {
+					alt: tAlt || null
+				});
+			}
 
 			if (setFeatured) {
 				await assetService.setFeaturedAsset(productId, assetId);

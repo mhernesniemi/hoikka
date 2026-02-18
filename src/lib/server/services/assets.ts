@@ -4,7 +4,7 @@
  */
 import { db } from "$lib/server/db/index.js";
 import { assets, productAssets, products, collections } from "$lib/server/db/schema.js";
-import { eq, asc } from "drizzle-orm";
+import { eq, asc, desc } from "drizzle-orm";
 import { del } from "@vercel/blob";
 
 export interface CreateAssetInput {
@@ -16,6 +16,31 @@ export interface CreateAssetInput {
 }
 
 class AssetService {
+	/**
+	 * List all assets ordered by creation date (newest first)
+	 */
+	async list() {
+		return db.select().from(assets).orderBy(desc(assets.createdAt));
+	}
+
+	/**
+	 * Get a single asset by ID
+	 */
+	async getById(id: number) {
+		return db.query.assets.findFirst({
+			where: eq(assets.id, id)
+		});
+	}
+
+	/**
+	 * Update asset name and/or alt text
+	 */
+	async update(id: number, data: { name?: string; alt?: string }) {
+		const [asset] = await db.update(assets).set(data).where(eq(assets.id, id)).returning();
+
+		return asset;
+	}
+
 	/**
 	 * Create asset record after successful upload
 	 */

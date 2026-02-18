@@ -10,7 +10,7 @@
 	"homepage": "https://hoikka.dev",
 	"scripts": {
 		"dev": "bun --bun vite dev",
-		"build": "bunx drizzle-kit migrate && vite build",
+		"build": "bun --bun drizzle-kit migrate && vite build",
 		"preview": "vite preview",
 		"prepare": "svelte-kit sync || echo ''",
 		"prepack": "svelte-kit sync && svelte-package && publint",
@@ -22,10 +22,10 @@
 		"test:e2e": "playwright test",
 		"test": "bun run test:unit -- --run",
 		"db:start": "docker compose up",
-		"db:push": "drizzle-kit push",
-		"db:generate": "drizzle-kit generate",
-		"db:migrate": "drizzle-kit migrate",
-		"db:studio": "drizzle-kit studio",
+		"db:push": "bun --bun drizzle-kit push",
+		"db:generate": "bun --bun drizzle-kit generate",
+		"db:migrate": "bun --bun drizzle-kit migrate",
+		"db:studio": "bun --bun drizzle-kit studio",
 		"create:admin": "bun scripts/create-admin.ts"
 	},
 	"files": [

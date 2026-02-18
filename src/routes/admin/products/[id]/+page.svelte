@@ -890,6 +890,20 @@
                 </p>
               </div>
 
+              {#each TRANSLATION_LANGUAGES as lang}
+                {@const assetTrans = data.assetTranslationsMap[currentEditingImage.id]}
+                {@const langRow = assetTrans?.find((t) => t.languageCode === lang.code)}
+                <div>
+                  <Label for="alt-text-{lang.code}">Alt text ({lang.name})</Label>
+                  <Input
+                    id="alt-text-{lang.code}"
+                    name="alt_{lang.code}"
+                    value={langRow?.alt ?? ""}
+                    placeholder="Describe this image in {lang.name}..."
+                  />
+                </div>
+              {/each}
+
               <label class="flex items-center gap-2">
                 <Checkbox
                   checked={currentEditingImage.isFeatured}

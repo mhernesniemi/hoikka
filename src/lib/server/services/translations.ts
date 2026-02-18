@@ -8,7 +8,8 @@ import {
 	facetValues,
 	collectionTranslations,
 	categoryTranslations,
-	contentPageTranslations
+	contentPageTranslations,
+	assetTranslations
 } from "../db/schema.js";
 
 // ── Generic helper ──────────────────────────────────────────────────
@@ -70,6 +71,11 @@ const contentPage = translationOps<typeof contentPageTranslations.$inferSelect>(
 	contentPageTranslations,
 	contentPageTranslations.contentPageId,
 	"contentPageId"
+);
+const assetOps = translationOps<typeof assetTranslations.$inferSelect>(
+	assetTranslations,
+	assetTranslations.assetId,
+	"assetId"
 );
 
 // ── Service ─────────────────────────────────────────────────────────
@@ -182,6 +188,31 @@ export class TranslationService {
 		const map: Record<number, typeof rows> = {};
 		for (const row of rows) {
 			(map[row.categoryId] ??= []).push(row);
+		}
+		return map;
+	}
+
+	// ── Assets ───────────────────────────────────────────────────────────
+
+	getAssetTranslations(assetId: number) {
+		return assetOps.get(assetId);
+	}
+
+	upsertAssetTranslation(assetId: number, languageCode: string, data: { alt?: string | null }) {
+		return assetOps.upsert(assetId, languageCode, { alt: data.alt ?? null });
+	}
+
+	async getAllAssetTranslations(assetIds: number[]) {
+		if (assetIds.length === 0) return {};
+
+		const rows = await db
+			.select()
+			.from(assetTranslations)
+			.where(inArray(assetTranslations.assetId, assetIds));
+
+		const map: Record<number, typeof rows> = {};
+		for (const row of rows) {
+			(map[row.assetId] ??= []).push(row);
 		}
 		return map;
 	}

@@ -113,7 +113,6 @@
             bind:value={code}
             required
             maxlength={6}
-            pattern="[0-9]{6}"
             placeholder="000000"
             autocomplete="one-time-code"
             inputmode="numeric"
