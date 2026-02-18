@@ -40,6 +40,7 @@ import { STATE_TRANSITIONS, isValidTransition } from "./order-utils.js";
 import { promotionService } from "./promotions.js";
 import { calculateDiscount, calculateProductDiscount } from "./promotion-utils.js";
 import { categoryService } from "./categories.js";
+import { withSpan } from "../telemetry.js";
 
 // Generate a secure cart token for guest users
 function generateCartToken(): string {
@@ -642,105 +643,101 @@ export class OrderService {
 			throw new Error(`Cannot transition from ${currentState} to ${newState}`);
 		}
 
-		console.log("[order] state_transition", {
-			orderId,
-			from: currentState,
-			to: newState,
-			total: order.total
-		});
+		return withSpan(
+			"order.transition",
+			async () => {
+				const updateData: Partial<Order> = {
+					state: newState
+				};
 
-		const updateData: Partial<Order> = {
-			state: newState
-		};
-
-		// When transitioning to payment_pending, mark cart as no longer active (becomes an order)
-		if (newState === "payment_pending") {
-			updateData.active = false;
-			if (!order.orderPlacedAt) {
-				updateData.orderPlacedAt = new Date();
-			}
-			// Extend reservations during checkout (additional 15 minutes)
-			await reservationService.extendForOrder(orderId);
-		}
-
-		const [updated] = await db
-			.update(orders)
-			.set(updateData)
-			.where(eq(orders.id, orderId))
-			.returning();
-
-		// Update promotion usage counts when order is paid
-		if (newState === "paid") {
-			// Validate stock one final time before payment completion
-			const stockCheck = await this.validateStock(orderId);
-			if (!stockCheck.valid) {
-				throw new Error(`Stock unavailable: ${stockCheck.errors.join(", ")}`);
-			}
-
-			const appliedPromotions = await db
-				.select()
-				.from(orderPromotions)
-				.where(eq(orderPromotions.orderId, orderId));
-
-			for (const op of appliedPromotions) {
-				await db
-					.update(promotions)
-					.set({ usageCount: sql`${promotions.usageCount} + 1` })
-					.where(eq(promotions.id, op.promotionId));
-			}
-
-			// Decrease stock for tracked variants
-			for (const line of order.lines) {
-				const [v] = await db
-					.select({ trackInventory: productVariants.trackInventory })
-					.from(productVariants)
-					.where(eq(productVariants.id, line.variantId));
-				if (v?.trackInventory) {
-					await db
-						.update(productVariants)
-						.set({ stock: sql`${productVariants.stock} - ${line.quantity}` })
-						.where(eq(productVariants.id, line.variantId));
-				}
-			}
-
-			console.log("[inventory] stock_deducted", { orderId, lineCount: order.lines.length });
-
-			// Release reservations since stock has been permanently deducted
-			await reservationService.releaseForOrder(orderId);
-		}
-
-		// Handle cancellation
-		if (newState === "cancelled") {
-			// If order was paid, restore stock for tracked variants
-			if (currentState === "paid" || currentState === "shipped") {
-				for (const line of order.lines) {
-					const [v] = await db
-						.select({ trackInventory: productVariants.trackInventory })
-						.from(productVariants)
-						.where(eq(productVariants.id, line.variantId));
-					if (v?.trackInventory) {
-						await db
-							.update(productVariants)
-							.set({ stock: sql`${productVariants.stock} + ${line.quantity}` })
-							.where(eq(productVariants.id, line.variantId));
+				// When transitioning to payment_pending, mark cart as no longer active (becomes an order)
+				if (newState === "payment_pending") {
+					updateData.active = false;
+					if (!order.orderPlacedAt) {
+						updateData.orderPlacedAt = new Date();
 					}
+					// Extend reservations during checkout (additional 15 minutes)
+					await reservationService.extendForOrder(orderId);
 				}
-				console.log("[inventory] stock_restored", {
-					orderId,
-					lineCount: order.lines.length
-				});
+
+				const [updated] = await db
+					.update(orders)
+					.set(updateData)
+					.where(eq(orders.id, orderId))
+					.returning();
+
+				// Update promotion usage counts when order is paid
+				if (newState === "paid") {
+					// Validate stock one final time before payment completion
+					const stockCheck = await this.validateStock(orderId);
+					if (!stockCheck.valid) {
+						throw new Error(`Stock unavailable: ${stockCheck.errors.join(", ")}`);
+					}
+
+					const appliedPromotions = await db
+						.select()
+						.from(orderPromotions)
+						.where(eq(orderPromotions.orderId, orderId));
+
+					for (const op of appliedPromotions) {
+						await db
+							.update(promotions)
+							.set({ usageCount: sql`${promotions.usageCount} + 1` })
+							.where(eq(promotions.id, op.promotionId));
+					}
+
+					// Decrease stock for tracked variants
+					for (const line of order.lines) {
+						const [v] = await db
+							.select({ trackInventory: productVariants.trackInventory })
+							.from(productVariants)
+							.where(eq(productVariants.id, line.variantId));
+						if (v?.trackInventory) {
+							await db
+								.update(productVariants)
+								.set({
+									stock: sql`${productVariants.stock} - ${line.quantity}`
+								})
+								.where(eq(productVariants.id, line.variantId));
+						}
+					}
+
+					// Release reservations since stock has been permanently deducted
+					await reservationService.releaseForOrder(orderId);
+				}
+
+				// Handle cancellation
+				if (newState === "cancelled") {
+					// If order was paid, restore stock for tracked variants
+					if (currentState === "paid" || currentState === "shipped") {
+						for (const line of order.lines) {
+							const [v] = await db
+								.select({ trackInventory: productVariants.trackInventory })
+								.from(productVariants)
+								.where(eq(productVariants.id, line.variantId));
+							if (v?.trackInventory) {
+								await db
+									.update(productVariants)
+									.set({
+										stock: sql`${productVariants.stock} + ${line.quantity}`
+									})
+									.where(eq(productVariants.id, line.variantId));
+							}
+						}
+					}
+					// Release any remaining reservations
+					await reservationService.releaseForOrder(orderId);
+				}
+
+				return updated;
+			},
+			{
+				"order.id": orderId,
+				"order.from_state": currentState,
+				"order.to_state": newState,
+				"order.total": order.total
 			}
-			// Release any remaining reservations
-			await reservationService.releaseForOrder(orderId);
-
-			console.log("[order] cancelled", {
-				orderId,
-				previousState: currentState,
-				total: order.total
-			});
-		}
-
-		return updated;
+		);
 	}
 
 	/**

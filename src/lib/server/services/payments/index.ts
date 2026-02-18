@@ -15,6 +15,7 @@ import type {
 } from "$lib/types.js";
 import type { PaymentProvider, PaymentInfo, PaymentStatus, RefundInfo } from "./types.js";
 import { StripeProvider, MockProvider } from "./providers/index.js";
+import { withSpan } from "../../telemetry.js";
 
 // Provider registry - maps provider codes to provider instances
 const PROVIDERS: Map<string, PaymentProvider> = new Map([
@@ -63,44 +64,47 @@ export class PaymentService {
 		order: OrderWithRelations,
 		paymentMethodId: number
 	): Promise<{ payment: Payment; paymentInfo: PaymentInfo }> {
-		const method = await this.getMethodById(paymentMethodId);
-		if (!method) {
-			throw new Error("Payment method not found");
-		}
-
-		const provider = PROVIDERS.get(method.code);
-		if (!provider) {
-			throw new Error(`Provider not found for method ${method.code}`);
-		}
-
-		// Create payment via provider
-		const paymentInfo = await provider.createPayment(order);
-
-		// Save payment record (include clientSecret in metadata for page reload)
-		const [payment] = await db
-			.insert(payments)
-			.values({
-				orderId: order.id,
-				paymentMethodId: method.id,
-				method: method.code, // Legacy field
-				amount: order.total,
-				state: "pending",
-				transactionId: paymentInfo.providerTransactionId,
-				metadata: {
-					...paymentInfo.metadata,
-					clientSecret: paymentInfo.clientSecret
+		return withSpan(
+			"payment.create",
+			async () => {
+				const method = await this.getMethodById(paymentMethodId);
+				if (!method) {
+					throw new Error("Payment method not found");
 				}
-			})
-			.returning();
 
-		console.log("[payment] created", {
-			paymentId: payment.id,
-			orderId: order.id,
-			amount: order.total,
-			method: method.code
-		});
+				const provider = PROVIDERS.get(method.code);
+				if (!provider) {
+					throw new Error(`Provider not found for method ${method.code}`);
+				}
 
-		return { payment, paymentInfo };
+				// Create payment via provider
+				const paymentInfo = await provider.createPayment(order);
+
+				// Save payment record (include clientSecret in metadata for page reload)
+				const [payment] = await db
+					.insert(payments)
+					.values({
+						orderId: order.id,
+						paymentMethodId: method.id,
+						method: method.code, // Legacy field
+						amount: order.total,
+						state: "pending",
+						transactionId: paymentInfo.providerTransactionId,
+						metadata: {
+							...paymentInfo.metadata,
+							clientSecret: paymentInfo.clientSecret
+						}
+					})
+					.returning();
+
+				return { payment, paymentInfo };
+			},
+			{
+				"order.id": order.id,
+				"payment.amount": order.total,
+				"payment.method_id": paymentMethodId
+			}
+		);
 	}
 
 	/**
@@ -127,118 +131,119 @@ export class PaymentService {
 	 * Confirm payment status via provider
 	 */
 	async confirmPayment(paymentId: number): Promise<PaymentStatus> {
-		const payment = await this.getById(paymentId);
-		if (!payment) {
-			throw new Error("Payment not found");
-		}
+		return withSpan(
+			"payment.confirm",
+			async () => {
+				const payment = await this.getById(paymentId);
+				if (!payment) {
+					throw new Error("Payment not found");
+				}
 
-		const method = await this.getMethodById(payment.paymentMethodId);
-		if (!method) {
-			throw new Error("Payment method not found");
-		}
+				const method = await this.getMethodById(payment.paymentMethodId);
+				if (!method) {
+					throw new Error("Payment method not found");
+				}
 
-		const provider = PROVIDERS.get(method.code);
-		if (!provider || !provider.confirmPayment) {
-			// If provider doesn't support confirmation, return current state
-			return payment.state as PaymentStatus;
-		}
+				const provider = PROVIDERS.get(method.code);
+				if (!provider || !provider.confirmPayment) {
+					// If provider doesn't support confirmation, return current state
+					return payment.state as PaymentStatus;
+				}
 
-		if (!payment.transactionId) {
-			throw new Error("Payment has no transaction ID");
-		}
+				if (!payment.transactionId) {
+					throw new Error("Payment has no transaction ID");
+				}
 
-		try {
-			const status = await provider.confirmPayment(payment.transactionId);
+				try {
+					const status = await provider.confirmPayment(payment.transactionId);
 
-			// Update payment state
-			await db
-				.update(payments)
-				.set({
-					state: status
-				})
-				.where(eq(payments.id, paymentId));
+					// Update payment state
+					await db
+						.update(payments)
+						.set({
+							state: status
+						})
+						.where(eq(payments.id, paymentId));
 
-			console.log("[payment] confirmed", {
-				paymentId,
-				orderId: payment.orderId,
-				status,
-				amount: payment.amount
-			});
-
-			return status;
-		} catch (error) {
-			console.error("[payment] confirmation_failed", {
-				paymentId,
-				orderId: payment.orderId,
-				error: (error as Error).message
-			});
-			throw error;
-		}
+					return status;
+				} catch (error) {
+					console.error("[payment] confirmation_failed", {
+						paymentId,
+						orderId: payment.orderId,
+						error: (error as Error).message
+					});
+					throw error;
+				}
+			},
+			{ "payment.id": paymentId }
+		);
 	}
 
 	/**
 	 * Refund a payment via provider
 	 */
 	async refundPayment(paymentId: number, amount?: number): Promise<RefundInfo> {
-		const payment = await this.getById(paymentId);
-		if (!payment) {
-			throw new Error("Payment not found");
-		}
+		return withSpan(
+			"payment.refund",
+			async () => {
+				const payment = await this.getById(paymentId);
+				if (!payment) {
+					throw new Error("Payment not found");
+				}
 
-		if (payment.state !== "settled") {
-			throw new Error(`Cannot refund payment in state: ${payment.state}`);
-		}
+				if (payment.state !== "settled") {
+					throw new Error(`Cannot refund payment in state: ${payment.state}`);
+				}
 
-		const method = await this.getMethodById(payment.paymentMethodId);
-		if (!method) {
-			throw new Error("Payment method not found");
-		}
+				const method = await this.getMethodById(payment.paymentMethodId);
+				if (!method) {
+					throw new Error("Payment method not found");
+				}
 
-		const provider = PROVIDERS.get(method.code);
-		if (!provider || !provider.refundPayment) {
-			throw new Error(`Provider ${method.code} does not support refunds`);
-		}
+				const provider = PROVIDERS.get(method.code);
+				if (!provider || !provider.refundPayment) {
+					throw new Error(`Provider ${method.code} does not support refunds`);
+				}
 
-		if (!payment.transactionId) {
-			throw new Error("Payment has no transaction ID");
-		}
+				if (!payment.transactionId) {
+					throw new Error("Payment has no transaction ID");
+				}
 
-		const refundAmount = amount ?? payment.amount;
-		if (refundAmount > payment.amount) {
-			throw new Error("Refund amount exceeds payment amount");
-		}
+				const refundAmount = amount ?? payment.amount;
+				if (refundAmount > payment.amount) {
+					throw new Error("Refund amount exceeds payment amount");
+				}
 
-		try {
-			const refundInfo = await provider.refundPayment(payment.transactionId, refundAmount);
+				try {
+					const refundInfo = await provider.refundPayment(
+						payment.transactionId,
+						refundAmount
+					);
 
-			// Update payment state
-			await db
-				.update(payments)
-				.set({
-					state: "refunded",
-					metadata: {
-						...(payment.metadata as Record<string, unknown>),
-						refund: refundInfo
-					}
-				})
-				.where(eq(payments.id, paymentId));
+					// Update payment state
+					await db
+						.update(payments)
+						.set({
+							state: "refunded",
+							metadata: {
+								...(payment.metadata as Record<string, unknown>),
+								refund: refundInfo
+							}
+						})
+						.where(eq(payments.id, paymentId));
 
-			console.log("[payment] refunded", {
-				paymentId,
-				orderId: payment.orderId,
-				refundAmount,
-				originalAmount: payment.amount
-			});
-
-			return refundInfo;
-		} catch (error) {
-			console.error("[payment] refund_failed", {
-				paymentId,
-				orderId: payment.orderId,
-				error: (error as Error).message
-			});
-			throw error;
-		}
+					return refundInfo;
+				} catch (error) {
+					console.error("[payment] refund_failed", {
+						paymentId,
+						orderId: payment.orderId,
+						error: (error as Error).message
+					});
+					throw error;
+				}
+			},
+			{ "payment.id": paymentId, "payment.refund_amount": amount ?? 0 }
+		);
 	}
 
 	/**

@@ -10,6 +10,7 @@ import { eq } from "drizzle-orm";
 import { env } from "$env/dynamic/private";
 import { orderService } from "$lib/server/services/orders.js";
 import { shippingService, paymentService, wishlistService } from "$lib/server/services/index.js";
+import { withSpan } from "$lib/server/telemetry.js";
 
 const CART_COOKIE_NAME = "cart_token";
 const CART_COOKIE_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
@@ -28,13 +29,17 @@ const sessionHandler: Handle = async ({ event, resolve }) => {
 		const cookie = event.request.headers.get("cookie") ?? "";
 		if (cookie) {
 			try {
-				const sessionRes = await event.fetch(`${neonAuthUrl}/get-session`, {
-					headers: { cookie }
+				const user = await withSpan("auth.validate_session", async () => {
+					const sessionRes = await event.fetch(`${neonAuthUrl}/get-session`, {
+						headers: { cookie }
+					});
+					if (sessionRes.ok) {
+						const data = await sessionRes.json();
+						return data?.user ?? null;
+					}
+					return null;
 				});
-				if (sessionRes.ok) {
-					const data = await sessionRes.json();
-					event.locals.user = data?.user ?? null;
-				}
+				event.locals.user = user;
 			} catch (error) {
 				console.error("[hooks] Failed to validate session:", error);
 			}
