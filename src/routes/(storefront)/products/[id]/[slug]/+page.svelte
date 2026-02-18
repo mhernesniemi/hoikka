@@ -1,7 +1,7 @@
 <script lang="ts">
   import { enhance } from "$app/forms";
   import { cn } from "$lib/utils";
-  import { imageUrl } from "$lib/image";
+  import { imageUrl, focalPosition } from "$lib/image";
   import { addToCart } from "$lib/remote/cart.remote";
   import { toggleWishlist } from "$lib/remote/wishlist.remote";
   import { invalidateAll } from "$app/navigation";
@@ -63,6 +63,8 @@
         fileSize: 0,
         source: selectedVariant.imageUrl,
         alt: null,
+        focalX: "0.5",
+        focalY: "0.5",
         createdAt: new Date()
       };
       return [variantImage, ...baseImages];
@@ -256,10 +258,12 @@
       <!-- Main Image -->
       <div class="aspect-square overflow-hidden rounded-lg bg-gray-100">
         {#if images.length > 0}
+          {@const currentImage = images[selectedImageIndex]}
           <img
-            src={imageUrl(images[selectedImageIndex].source, 600)}
+            src={imageUrl(currentImage.source, 600)}
             alt={product.name}
             class="h-full w-full object-cover"
+            style="object-position: {focalPosition(currentImage.focalX, currentImage.focalY)}"
           />
         {:else}
           <div class="flex h-full w-full items-center justify-center text-gray-400">
@@ -282,7 +286,12 @@
                   : "border-transparent hover:border-gray-300"
               )}
             >
-              <img src={imageUrl(image.source, 100)} alt="" class="h-full w-full object-cover" />
+              <img
+                src={imageUrl(image.source, 100)}
+                alt=""
+                class="h-full w-full object-cover"
+                style="object-position: {focalPosition(image.focalX, image.focalY)}"
+              />
             </button>
           {/each}
         </div>
