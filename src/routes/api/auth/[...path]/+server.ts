@@ -32,9 +32,23 @@ async function proxy({ request, params }: Parameters<RequestHandler>[0]) {
 		body: request.method !== "GET" ? await request.text() : undefined
 	});
 
-	return new Response(res.body, {
+	// Consume the body fully before returning — streaming the body directly
+	// hangs under Bun's dev server because the ReadableStream never closes
+	const body = await res.arrayBuffer();
+
+	// Forward only the headers we need — passing all upstream headers causes
+	// duplicate Date/Connection headers and broken HTTP framing
+	const responseHeaders = new Headers();
+	const resContentType = res.headers.get("content-type");
+	if (resContentType) responseHeaders.set("content-type", resContentType);
+	// Forward all Set-Cookie headers for session management
+	for (const value of res.headers.getSetCookie()) {
+		responseHeaders.append("set-cookie", value);
+	}
+
+	return new Response(body, {
 		status: res.status,
-		headers: res.headers
+		headers: responseHeaders
 	});
 }
 
