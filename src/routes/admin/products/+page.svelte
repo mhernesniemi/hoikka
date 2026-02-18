@@ -12,6 +12,7 @@
   import PlusIcon from "@lucide/svelte/icons/plus";
   import { toast } from "svelte-sonner";
   import { formatDate } from "$lib/utils";
+  import { imageUrl } from "$lib/image";
   import type { PageData, ActionData } from "./$types";
 
   let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -80,7 +81,7 @@
 {#snippet productCell({ name, id, image }: { name: string; id: number; image: string | null })}
   <a href="/admin/products/{id}" class="group inline-flex items-center">
     {#if image}
-      <img src={image} alt="" class="mr-3 h-10 w-10 rounded object-cover" />
+      <img src={imageUrl(image, 80)} alt="" class="mr-3 h-10 w-10 rounded object-cover" />
     {:else}
       <div class="mr-3 flex h-10 w-10 items-center justify-center rounded bg-muted-strong">
         <ImageIcon class="h-5 w-5 text-placeholder" />
