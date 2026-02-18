@@ -48,19 +48,19 @@
                   href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fmhernesniemi%2Fsvelte-ecomm&project-name=hoikka&repository-name=hoikka&stores=%5B%7B%22type%22%3A%22integration%22%2C%22productSlug%22%3A%22neon%22%2C%22integrationSlug%22%3A%22neon%22%7D%2C%7B%22type%22%3A%22blob%22%7D%5D&skippable-integrations=1"
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="group ml-1 inline-flex items-center overflow-hidden rounded-md border border-pink-300 bg-pink-50/50 transition-colors hover:border-black hover:bg-white"
+                  class="group ml-1 inline-flex items-center overflow-hidden rounded-md border border-black bg-white transition-colors hover:border-pink-300 hover:bg-pink-50/50"
                 >
                   <code
-                    class="inline-flex items-center px-1.5 py-0.5 font-mono text-xs font-medium text-pink-700 group-hover:text-black"
+                    class="inline-flex items-center px-1.5 py-0.5 font-mono text-xs font-medium text-black transition-colors group-hover:text-pink-700"
                     >deploy to vercel</code
                   >
                   <span
-                    class="inline-flex shrink-0 items-center justify-center border-l border-pink-300 px-1.5 py-0.5 group-hover:border-black/30"
+                    class="inline-flex shrink-0 items-center justify-center border-l border-black/30 px-1.5 py-0.5 transition-colors group-hover:border-pink-300"
                   >
                     <svg
                       viewBox="0 3.2 24 20.8"
                       fill="currentColor"
-                      class="h-3.5 w-3.5 shrink-0 text-pink-700 group-hover:text-black"
+                      class="h-3.5 w-3.5 shrink-0 text-black transition-colors group-hover:text-pink-700"
                     >
                       <path d="M12 3.2 L0 24 L24 24 Z" />
                     </svg>
