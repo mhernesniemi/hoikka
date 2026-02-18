@@ -36,3 +36,4 @@ docs/
 /blob-report/
 /playwright/.cache/
 
+.env*.local
