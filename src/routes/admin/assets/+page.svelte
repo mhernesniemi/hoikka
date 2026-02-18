@@ -46,9 +46,21 @@
       alt: string;
     }[]
   ) {
-    if (files.length > 0) {
-      toast.success(`${files.length} image(s) uploaded`);
+    try {
+      for (const file of files) {
+        const formData = new FormData();
+        formData.append("url", file.url);
+        formData.append("name", file.name);
+        formData.append("width", file.width.toString());
+        formData.append("height", file.height.toString());
+        formData.append("fileSize", file.size.toString());
+        formData.append("alt", file.alt);
+
+        await fetch("?/addAsset", { method: "POST", body: formData });
+      }
       window.location.reload();
+    } catch {
+      toast.error("Failed to save assets");
     }
   }
 </script>
@@ -114,7 +126,7 @@
           <!-- Checkbox overlay -->
           <div
             class={cn(
-              "absolute top-2 left-2 z-10 transition-opacity",
+              "absolute top-2 left-2 z-10 rounded bg-white p-0.5 transition-opacity dark:bg-black",
               selectedIds.has(asset.id) ? "opacity-100" : "opacity-0 group-hover:opacity-100"
             )}
           >
@@ -122,6 +134,7 @@
               checked={selectedIds.has(asset.id)}
               onCheckedChange={() => toggleSelection(asset.id)}
               aria-label="Select {asset.name}"
+              class="border-2 border-black/40 dark:border-white/40"
             />
           </div>
 
@@ -157,6 +170,7 @@
   onClose={() => (showImagePicker = false)}
   onSelect={handleImagesUploaded}
   folder="products"
+  uploadOnly
 />
 
 <DeleteConfirmDialog

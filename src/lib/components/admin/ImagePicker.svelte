@@ -32,9 +32,16 @@
     onClose: () => void;
     onSelect: (files: SelectedImage[]) => void;
     folder?: string;
+    uploadOnly?: boolean;
   }
 
-  let { open = $bindable(), onClose, onSelect, folder = "products" }: Props = $props();
+  let {
+    open = $bindable(),
+    onClose,
+    onSelect,
+    folder = "products",
+    uploadOnly = false
+  }: Props = $props();
 
   let activeTab = $state<"upload" | "existing">("upload");
   let existingImages = $state<BlobFile[]>([]);
@@ -247,40 +254,42 @@
       </Dialog.Footer>
     {:else}
       <!-- Selection Stage: Tabs -->
-      <div class="flex border-b border-border" role="tablist">
-        <div
-          role="tab"
-          tabindex="0"
-          aria-selected={activeTab === "upload"}
-          onclick={() => handleTabChange("upload")}
-          onkeydown={(e) => e.key === "Enter" && handleTabChange("upload")}
-          class={cn(
-            "cursor-pointer px-4 py-2 text-sm font-medium",
-            activeTab === "upload"
-              ? "border-b-2 border-blue-500 text-blue-600 dark:text-blue-400"
-              : "text-muted-foreground hover:text-foreground-secondary"
-          )}
-        >
-          <Upload class="mr-1.5 inline-block h-4 w-4" />
-          Upload New
+      {#if !uploadOnly}
+        <div class="flex border-b border-border" role="tablist">
+          <div
+            role="tab"
+            tabindex="0"
+            aria-selected={activeTab === "upload"}
+            onclick={() => handleTabChange("upload")}
+            onkeydown={(e) => e.key === "Enter" && handleTabChange("upload")}
+            class={cn(
+              "cursor-pointer px-4 py-2 text-sm font-medium",
+              activeTab === "upload"
+                ? "border-b-2 border-blue-500 text-blue-600 dark:text-blue-400"
+                : "text-muted-foreground hover:text-foreground-secondary"
+            )}
+          >
+            <Upload class="mr-1.5 inline-block h-4 w-4" />
+            Upload New
+          </div>
+          <div
+            role="tab"
+            tabindex="0"
+            aria-selected={activeTab === "existing"}
+            onclick={() => handleTabChange("existing")}
+            onkeydown={(e) => e.key === "Enter" && handleTabChange("existing")}
+            class={cn(
+              "cursor-pointer px-4 py-2 text-sm font-medium",
+              activeTab === "existing"
+                ? "border-b-2 border-blue-500 text-blue-600 dark:text-blue-400"
+                : "text-muted-foreground hover:text-foreground-secondary"
+            )}
+          >
+            <ImageIcon class="mr-1.5 inline-block h-4 w-4" />
+            Select Existing
+          </div>
         </div>
-        <div
-          role="tab"
-          tabindex="0"
-          aria-selected={activeTab === "existing"}
-          onclick={() => handleTabChange("existing")}
-          onkeydown={(e) => e.key === "Enter" && handleTabChange("existing")}
-          class={cn(
-            "cursor-pointer px-4 py-2 text-sm font-medium",
-            activeTab === "existing"
-              ? "border-b-2 border-blue-500 text-blue-600 dark:text-blue-400"
-              : "text-muted-foreground hover:text-foreground-secondary"
-          )}
-        >
-          <ImageIcon class="mr-1.5 inline-block h-4 w-4" />
-          Select Existing
-        </div>
-      </div>
+      {/if}
 
       <!-- Tab Content -->
       <div class="min-h-[300px] py-4">
