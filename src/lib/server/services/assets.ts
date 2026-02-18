@@ -35,7 +35,10 @@ class AssetService {
 	/**
 	 * Update asset name and/or alt text
 	 */
-	async update(id: number, data: { name?: string; alt?: string }) {
+	async update(
+		id: number,
+		data: { name?: string; alt?: string; focalX?: string; focalY?: string }
+	) {
 		const [asset] = await db.update(assets).set(data).where(eq(assets.id, id)).returning();
 
 		return asset;

@@ -5,10 +5,10 @@
   import { Input } from "$lib/components/admin/ui/input";
   import { Label } from "$lib/components/admin/ui/label";
   import AdminCard from "$lib/components/admin/AdminCard.svelte";
+  import FocalPointPicker from "$lib/components/admin/FocalPointPicker.svelte";
   import TranslationEditor from "$lib/components/admin/TranslationEditor.svelte";
   import DeleteConfirmDialog from "$lib/components/admin/DeleteConfirmDialog.svelte";
   import { translationsToMap, TRANSLATION_LANGUAGES } from "$lib/config/languages.js";
-  import { imageUrl } from "$lib/image";
   import { formatFileSize } from "$lib/utils";
   import ChevronLeft from "@lucide/svelte/icons/chevron-left";
   import type { ActionData, PageData } from "./$types";
@@ -20,12 +20,16 @@
 
   let name = $state("");
   let alt = $state("");
+  let focalX = $state(0.5);
+  let focalY = $state(0.5);
 
   const translationMap = $derived(translationsToMap(data.translations));
 
   $effect(() => {
     name = data.asset.name;
     alt = data.asset.alt ?? "";
+    focalX = Number(data.asset.focalX) || 0.5;
+    focalY = Number(data.asset.focalY) || 0.5;
   });
 
   $effect(() => {
@@ -54,16 +58,16 @@
   <div class="flex flex-col gap-6 lg:flex-row">
     <!-- Main Content (Left) -->
     <div class="flex-1 space-y-6">
-      <!-- Image Preview -->
-      <div class="overflow-hidden rounded-lg bg-surface shadow">
-        <div class="flex items-center justify-center bg-muted p-4">
-          <img
-            src={imageUrl(data.asset.source, 800)}
-            alt={alt || name}
-            class="max-h-[500px] rounded object-contain"
-          />
-        </div>
-      </div>
+      <!-- Focal Point Picker -->
+      <FocalPointPicker
+        src={data.asset.source}
+        {focalX}
+        {focalY}
+        onchange={(x, y) => {
+          focalX = x;
+          focalY = y;
+        }}
+      />
 
       <!-- Details Card -->
       <form
@@ -81,6 +85,8 @@
           };
         }}
       >
+        <input type="hidden" name="focalX" value={focalX} />
+        <input type="hidden" name="focalY" value={focalY} />
         <AdminCard title="Details">
           <div class="space-y-4">
             <div>

@@ -30,13 +30,20 @@ export const actions: Actions = {
 
 		const name = formData.get("name") as string;
 		const alt = formData.get("alt") as string;
+		const focalX = formData.get("focalX") as string;
+		const focalY = formData.get("focalY") as string;
 
 		if (!name) {
 			return fail(400, { error: "Name is required" });
 		}
 
 		try {
-			await assetService.update(id, { name, alt: alt || "" });
+			await assetService.update(id, {
+				name,
+				alt: alt || "",
+				focalX: focalX || "0.5",
+				focalY: focalY || "0.5"
+			});
 
 			// Save translations
 			for (const lang of TRANSLATION_LANGUAGES) {

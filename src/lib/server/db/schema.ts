@@ -274,6 +274,8 @@ export const assets = pgTable("assets", {
 	fileSize: integer("file_size").default(0),
 	source: varchar("source", { length: 500 }).notNull(), // Vercel Blob URL
 	alt: text("alt"), // Alt text for accessibility
+	focalX: numeric("focal_x", { precision: 4, scale: 3 }).default("0.5").notNull(), // 0–1 horizontal focal point
+	focalY: numeric("focal_y", { precision: 4, scale: 3 }).default("0.5").notNull(), // 0–1 vertical focal point
 	createdAt: timestamp("created_at").defaultNow().notNull()
 });
 

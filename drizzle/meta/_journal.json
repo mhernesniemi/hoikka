@@ -15,6 +15,13 @@
       "when": 1771435910176,
       "tag": "0001_dizzy_smiling_tiger",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1771440715913,
+      "tag": "0002_spooky_jasper_sitwell",
+      "breakpoints": true
     }
   ]
 }
