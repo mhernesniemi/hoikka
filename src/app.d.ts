@@ -6,7 +6,13 @@ declare global {
 	namespace App {
 		// interface Error {}
 		interface Locals {
-			user: { id: string; name: string; email: string; role?: string } | null;
+			user: {
+				id: string;
+				name: string;
+				email: string;
+				role?: string;
+				emailVerified?: boolean;
+			} | null;
 			customer: Customer | null;
 			cartToken: string | null;
 			newCartToken?: string;

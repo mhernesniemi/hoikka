@@ -10,6 +10,13 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 		throw redirect(303, "/sign-in?redirect=/account");
 	}
 
+	if (locals.user.emailVerified === false) {
+		throw redirect(
+			303,
+			`/verify-email?email=${encodeURIComponent(locals.user.email)}&redirect=/account`
+		);
+	}
+
 	return {
 		customer: locals.customer
 	};

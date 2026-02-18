@@ -17,14 +17,24 @@ async function proxy({ request, params }: Parameters<RequestHandler>[0]) {
 
 	const url = `${baseUrl}/${params.path}`;
 
-	// Build headers for the upstream request — forward content type and cookies
-	// but replace Host/Origin so Neon Auth doesn't reject the request
+	// Build headers for the upstream request — forward cookies, content type,
+	// and the real origin so Neon Auth redirects OAuth callbacks to our app
 	const headers = new Headers();
 	const contentType = request.headers.get("content-type");
 	if (contentType) headers.set("content-type", contentType);
 	const cookie = request.headers.get("cookie");
 	if (cookie) headers.set("cookie", cookie);
-	headers.set("origin", baseUrl);
+	const referer = request.headers.get("referer");
+	if (referer) headers.set("referer", referer);
+	const userAgent = request.headers.get("user-agent");
+	if (userAgent) headers.set("user-agent", userAgent);
+
+	// Forward the real origin so Neon Auth knows where to redirect after OAuth
+	const origin =
+		request.headers.get("origin") ||
+		referer?.split("/").slice(0, 3).join("/") ||
+		new URL(request.url).origin;
+	headers.set("origin", origin);
 
 	const res = await fetch(url, {
 		method: request.method,

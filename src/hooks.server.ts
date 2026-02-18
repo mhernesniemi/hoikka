@@ -18,6 +18,42 @@ const CART_COOKIE_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
 const WISHLIST_COOKIE_NAME = "wishlist_token";
 const WISHLIST_COOKIE_MAX_AGE = 60 * 60 * 24 * 365; // 1 year
 
+// OAuth verifier handler — exchanges neon_auth_session_verifier for a session cookie
+// After Google OAuth, Neon Auth redirects here with ?neon_auth_session_verifier=xxx
+const oauthVerifierHandler: Handle = async ({ event, resolve }) => {
+	const verifier = event.url.searchParams.get("neon_auth_session_verifier");
+	if (!verifier) return resolve(event);
+
+	const neonAuthUrl = env.NEON_AUTH_BASE_URL;
+	if (!neonAuthUrl) return resolve(event);
+
+	try {
+		const cookie = event.request.headers.get("cookie") ?? "";
+		const sessionRes = await fetch(`${neonAuthUrl}/get-session`, {
+			headers: { cookie }
+		});
+
+		const redirectUrl = new URL(event.url);
+		redirectUrl.searchParams.delete("neon_auth_session_verifier");
+
+		const response = new Response(null, {
+			status: 302,
+			headers: { Location: redirectUrl.toString() }
+		});
+
+		if (sessionRes.ok) {
+			for (const sc of sessionRes.headers.getSetCookie()) {
+				response.headers.append("set-cookie", sc);
+			}
+		}
+
+		return response;
+	} catch (error) {
+		console.error("[hooks] Failed to exchange OAuth session verifier:", error);
+		return resolve(event);
+	}
+};
+
 // Session handler — validates session via Neon Auth API and syncs customer record
 const sessionHandler: Handle = async ({ event, resolve }) => {
 	event.locals.user = null;
@@ -35,7 +71,12 @@ const sessionHandler: Handle = async ({ event, resolve }) => {
 					});
 					if (sessionRes.ok) {
 						const data = await sessionRes.json();
-						return data?.user ?? null;
+						if (data?.user) {
+							return {
+								...data.user,
+								emailVerified: data.user.emailVerified ?? false
+							};
+						}
 					}
 					return null;
 				});
@@ -182,6 +223,7 @@ const paymentInit: Handle = async ({ event, resolve }) => {
 
 // Combine handlers in sequence
 export const handle = sequence(
+	oauthVerifierHandler,
 	sessionHandler,
 	cartHandler,
 	wishlistHandler,
