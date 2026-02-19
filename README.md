@@ -10,7 +10,7 @@ Hoikka follows the principles of the [Rails Doctrine](https://rubyonrails.org/do
 
 There are no plugin systems, configuration DSLs, or hidden admin logic. Everything is plain TypeScript that you can read, change, and extend directly.
 
-This also makes Hoikka well-suited for AI-assisted development - the codebase is structured so that both humans and AI agents can reason about it easily.
+This also makes Hoikka well-suited for AI-assisted development: the codebase is structured so that both humans and AI agents can reason about it easily.
 
 ## Quick Start
 
