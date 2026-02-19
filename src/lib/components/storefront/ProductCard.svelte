@@ -55,7 +55,7 @@
         alt={name}
         class={cn(
           "h-full w-full object-cover transition-transform group-hover:scale-105",
-          grayscale && "opacity-70 grayscale hover:opacity-90 hover:grayscale-0"
+          grayscale && "opacity-70 grayscale group-hover:opacity-90 group-hover:grayscale-0"
         )}
         style="object-position: {focalPosition(
           product.featuredAsset.focalX,
