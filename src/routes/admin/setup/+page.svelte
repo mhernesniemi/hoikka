@@ -21,14 +21,14 @@
         <div class="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm">
           <p class="font-medium text-amber-800">Neon Auth is not enabled</p>
           <p class="mt-1 text-amber-700">
-            To create an admin account, enable Auth in your
+            To create an admin account, enable Auth for your Neon database in the
             <a
-              href="https://console.neon.tech"
+              href="https://vercel.com/dashboard"
               target="_blank"
               rel="noopener noreferrer"
-              class="font-medium underline">Neon dashboard</a
+              class="font-medium underline">Vercel dashboard</a
             >
-            under your project's settings, then redeploy on Vercel.
+            under Storage &rarr; your database &rarr; Settings, then redeploy.
           </p>
         </div>
       {/if}

@@ -45,7 +45,7 @@
               <p class="pt-4 text-xs text-gray-600">
                 or
                 <a
-                  href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fmhernesniemi%2Fsvelte-ecomm&project-name=hoikka&repository-name=hoikka&stores=%5B%7B%22type%22%3A%22integration%22%2C%22productSlug%22%3A%22neon%22%2C%22integrationSlug%22%3A%22neon%22%7D%2C%7B%22type%22%3A%22blob%22%7D%5D&skippable-integrations=1"
+                  href="/deploy"
                   target="_blank"
                   rel="noopener noreferrer"
                   class="group ml-1 inline-flex items-center overflow-hidden rounded-md border border-black"
