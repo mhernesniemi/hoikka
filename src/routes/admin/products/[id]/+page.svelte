@@ -1,5 +1,6 @@
 <script lang="ts">
   import { enhance } from "$app/forms";
+  import { invalidateAll } from "$app/navigation";
   import { page } from "$app/stores";
   import { onMount } from "svelte";
   import { toast } from "svelte-sonner";
@@ -273,8 +274,8 @@
         });
       }
 
-      // Reload page to show new images
-      window.location.reload();
+      // Refresh server data without losing form state
+      await invalidateAll();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to save images");
     } finally {

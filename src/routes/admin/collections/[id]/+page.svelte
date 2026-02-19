@@ -175,7 +175,7 @@
         });
       }
 
-      window.location.reload();
+      await invalidateAll();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to save images");
     } finally {

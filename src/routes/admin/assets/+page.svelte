@@ -1,5 +1,6 @@
 <script lang="ts">
   import { enhance } from "$app/forms";
+  import { invalidateAll } from "$app/navigation";
   import { Button } from "$lib/components/admin/ui/button";
   import { Checkbox } from "$lib/components/admin/ui/checkbox";
   import DeleteConfirmDialog from "$lib/components/admin/DeleteConfirmDialog.svelte";
@@ -58,7 +59,7 @@
 
         await fetch("?/addAsset", { method: "POST", body: formData });
       }
-      window.location.reload();
+      await invalidateAll();
     } catch {
       toast.error("Failed to save assets");
     }

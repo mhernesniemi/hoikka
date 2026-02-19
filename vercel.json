@@ -1,6 +1,6 @@
 {
 	"images": {
-		"sizes": [64, 100, 128, 150, 200, 400, 600, 768, 1200],
+		"sizes": [64, 80, 100, 128, 150, 200, 300, 400, 600, 768, 800, 1200],
 		"domains": [],
 		"remotePatterns": [{ "hostname": "*.public.blob.vercel-storage.com" }]
 	},
