@@ -14,8 +14,15 @@ import {
 	index,
 	uniqueIndex,
 	numeric,
-	jsonb
+	jsonb,
+	customType
 } from "drizzle-orm/pg-core";
+
+const tsvector = customType<{ data: string }>({
+	dataType() {
+		return "tsvector";
+	}
+});
 
 // ============================================================================
 // TAX RATES
@@ -967,6 +974,40 @@ export const wishlistItems = pgTable(
 );
 
 // ============================================================================
+// PRODUCT SEARCH (Denormalized search table)
+// ============================================================================
+
+export const productSearch = pgTable(
+	"product_search",
+	{
+		productId: integer("product_id")
+			.primaryKey()
+			.references(() => products.id, { onDelete: "cascade" }),
+		name: varchar("name", { length: 255 }).notNull(),
+		slug: varchar("slug", { length: 255 }).notNull(),
+		description: text("description"),
+		visibility: text("visibility", {
+			enum: ["public", "private", "draft"]
+		}).notNull(),
+		minPrice: integer("min_price"),
+		inStock: boolean("in_stock").default(false).notNull(),
+		featuredAsset: jsonb("featured_asset"),
+		facets: jsonb("facets").default({}).notNull(),
+		searchVector: tsvector("search_vector"),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+		updatedAt: timestamp("updated_at")
+			.defaultNow()
+			.$onUpdate(() => new Date())
+			.notNull()
+	},
+	(table) => [
+		index("product_search_vector_idx").using("gin", table.searchVector),
+		index("product_search_facets_idx").using("gin", table.facets),
+		index("product_search_visibility_idx").on(table.visibility)
+	]
+);
+
+// ============================================================================
 // RELATIONS
 // These define the relationship graph for Drizzle's relational query API
 // (db.query.*.findFirst/findMany with `with: { ... }`). They have no effect
@@ -984,6 +1025,13 @@ export const productsRelations = relations(products, ({ one, many }) => ({
 	featuredAsset: one(assets, {
 		fields: [products.featuredAssetId],
 		references: [assets.id]
+	})
+}));
+
+export const productSearchRelations = relations(productSearch, ({ one }) => ({
+	product: one(products, {
+		fields: [productSearch.productId],
+		references: [products.id]
 	})
 }));
 

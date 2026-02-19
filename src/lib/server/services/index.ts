@@ -16,3 +16,11 @@ export type { Category, CategoryTreeNode, CategoryBreadcrumb } from "./categorie
 export { contentPageService, ContentPageService } from "./content-pages.js";
 export { translationService, TranslationService } from "./translations.js";
 export { relatedProductService, RelatedProductService } from "./related-products.js";
+export {
+	reindexProduct,
+	removeFromIndex,
+	reindexAll,
+	searchProducts,
+	getFilteredFacetCounts,
+	getAllProductCards
+} from "./product-search.js";

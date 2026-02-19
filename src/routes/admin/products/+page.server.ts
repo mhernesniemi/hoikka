@@ -1,4 +1,5 @@
 import { productService } from "$lib/server/services/products.js";
+import { reindexProduct, removeFromIndex } from "$lib/server/services/product-search.js";
 import { dbError } from "$lib/server/db-error.js";
 import { fail, redirect, isRedirect } from "@sveltejs/kit";
 import type { PageServerLoad, Actions } from "./$types";
@@ -33,6 +34,8 @@ export const actions: Actions = {
 				slug
 			});
 
+			await reindexProduct(product.id);
+
 			throw redirect(303, `/admin/products/${product.id}?created`);
 		} catch (err) {
 			if (isRedirect(err)) throw err;
@@ -50,6 +53,7 @@ export const actions: Actions = {
 
 		try {
 			await Promise.all(ids.map((id) => productService.update(id, { visibility: "public" })));
+			await Promise.all(ids.map((id) => reindexProduct(id)));
 			return {
 				success: true,
 				message: `${ids.length} product${ids.length !== 1 ? "s" : ""} published`
@@ -69,6 +73,7 @@ export const actions: Actions = {
 
 		try {
 			await Promise.all(ids.map((id) => productService.delete(id)));
+			await Promise.all(ids.map((id) => removeFromIndex(id)));
 			return { success: true };
 		} catch (e) {
 			return fail(500, { error: dbError(e, "Failed to delete products") });

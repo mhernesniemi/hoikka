@@ -6,6 +6,7 @@
   import CartSheet from "$lib/components/storefront/CartSheet.svelte";
   import { cartStore } from "$lib/stores/cart.svelte";
   import { wishlistStore } from "$lib/stores/wishlist.svelte";
+  import { productStore } from "$lib/stores/products.svelte";
   import type { LayoutData } from "./$types";
   import Heart from "@lucide/svelte/icons/heart";
   import Dot from "@lucide/svelte/icons/dot";
@@ -46,6 +47,10 @@
     wishlistStore.sync(data.wishlistCount);
   });
 
+  $effect(() => {
+    data.cachedProducts.then((products) => productStore.sync(products));
+  });
+
   const wishlistCount = $derived.by(() => wishlistStore.count);
 </script>
 
@@ -62,7 +67,7 @@
         <div class="flex h-16 items-center justify-between">
           <a href="/" class="bg-[#f7d0dd] text-xl font-bold text-gray-900">"Hoikka"</a>
 
-          <SearchBar products={data.searchCatalog} />
+          <SearchBar />
 
           <nav class="flex items-center gap-6">
             <a

@@ -1,4 +1,5 @@
 import { productService } from "$lib/server/services/products.js";
+import { reindexProduct } from "$lib/server/services/product-search.js";
 import { facetService } from "$lib/server/services/facets.js";
 import { customerGroupService } from "$lib/server/services/customerGroups.js";
 import { translationService } from "$lib/server/services/translations.js";
@@ -131,6 +132,8 @@ export const actions: Actions = {
 				});
 			}
 
+			await reindexProduct(Number(params.id));
+
 			return { success: true };
 		} catch (e) {
 			return fail(500, { error: dbError(e, "Failed to update variant") });
@@ -142,6 +145,7 @@ export const actions: Actions = {
 		const variantId = Number(params.variantId);
 
 		await productService.deleteVariant(variantId);
+		await reindexProduct(productId);
 
 		throw redirect(303, `/admin/products/${productId}?variantDeleted=1`);
 	}

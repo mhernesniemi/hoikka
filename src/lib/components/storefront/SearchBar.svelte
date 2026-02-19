@@ -2,21 +2,22 @@
   import { goto } from "$app/navigation";
   import { formatPrice } from "$lib/utils";
   import { imageUrl } from "$lib/image";
+  import { productStore } from "$lib/stores/products.svelte";
   import * as Command from "$lib/components/storefront/ui/command/index.js";
-
-  interface SearchProduct {
-    id: number;
-    name: string;
-    slug: string;
-    price: number;
-    image: string | null;
-  }
-
-  let { products }: { products: SearchProduct[] } = $props();
 
   let searchQuery = $state("");
   let showResults = $state(false);
   let containerEl = $state<HTMLDivElement | null>(null);
+
+  const searchProducts = $derived(
+    productStore.products.map((p) => ({
+      id: p.id,
+      name: p.name,
+      slug: p.slug,
+      price: p.minPrice ?? 0,
+      image: p.featuredAsset?.source ?? null
+    }))
+  );
 
   function handleSelect() {
     searchQuery = "";
@@ -56,7 +57,7 @@
       >
         <Command.List class="max-h-96">
           <Command.Empty>No products found</Command.Empty>
-          {#each products as product (product.id)}
+          {#each searchProducts as product (product.id)}
             <Command.LinkItem
               value={product.name}
               href="/products/{product.id}/{product.slug}"

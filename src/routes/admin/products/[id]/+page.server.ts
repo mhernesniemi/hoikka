@@ -1,4 +1,5 @@
 import { productService } from "$lib/server/services/products.js";
+import { reindexProduct, removeFromIndex } from "$lib/server/services/product-search.js";
 import { facetService } from "$lib/server/services/facets.js";
 import { assetService } from "$lib/server/services/assets.js";
 import { categoryService } from "$lib/server/services/categories.js";
@@ -142,6 +143,8 @@ export const actions: Actions = {
 				});
 			}
 
+			await reindexProduct(id);
+
 			return { success: true };
 		} catch (e) {
 			return fail(500, { error: dbError(e, "Failed to update product") });
@@ -152,6 +155,7 @@ export const actions: Actions = {
 		const id = Number(params.id);
 
 		await productService.delete(id);
+		await removeFromIndex(id);
 
 		throw redirect(303, "/admin/products");
 	},
@@ -184,6 +188,8 @@ export const actions: Actions = {
 				}
 			}
 
+			await reindexProduct(productId);
+
 			return { facetSuccess: true };
 		} catch (e) {
 			return fail(500, { error: dbError(e, "Failed to update facet values") });
@@ -214,6 +220,8 @@ export const actions: Actions = {
 				await assetService.updateAlt(asset.id, alt);
 			}
 
+			await reindexProduct(productId);
+
 			return { imageSuccess: true };
 		} catch (e) {
 			return fail(500, { imageError: dbError(e, "Failed to add image") });
@@ -232,6 +240,7 @@ export const actions: Actions = {
 		try {
 			await assetService.removeFromProduct(productId, assetId);
 			await assetService.delete(assetId);
+			await reindexProduct(productId);
 			return { imageRemoved: true };
 		} catch (e) {
 			return fail(500, { imageError: dbError(e, "Failed to remove image") });
@@ -249,6 +258,7 @@ export const actions: Actions = {
 
 		try {
 			await assetService.setFeaturedAsset(productId, assetId);
+			await reindexProduct(productId);
 			return { featuredSet: true };
 		} catch (e) {
 			return fail(500, { imageError: dbError(e, "Failed to set featured image") });
@@ -295,13 +305,15 @@ export const actions: Actions = {
 				name: name || undefined
 			});
 
+			await reindexProduct(productId);
+
 			return { variantCreated: true };
 		} catch (err) {
 			return fail(500, { error: dbError(err, "Failed to create variant") });
 		}
 	},
 
-	deleteVariant: async ({ request }) => {
+	deleteVariant: async ({ params, request }) => {
 		const formData = await request.formData();
 		const variantId = Number(formData.get("variantId"));
 
@@ -311,6 +323,7 @@ export const actions: Actions = {
 
 		try {
 			await productService.deleteVariant(variantId);
+			await reindexProduct(Number(params.id));
 			return { variantDeleted: true };
 		} catch (err) {
 			return fail(500, { error: dbError(err, "Failed to delete variant") });
@@ -342,6 +355,8 @@ export const actions: Actions = {
 			if (setFeatured) {
 				await assetService.setFeaturedAsset(productId, assetId);
 			}
+
+			await reindexProduct(productId);
 
 			return { altUpdated: true };
 		} catch (e) {

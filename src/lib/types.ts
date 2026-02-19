@@ -65,6 +65,18 @@ export type ProductVisibility = Product["visibility"];
 /** Product type - physical or digital */
 export type ProductType = Product["type"];
 
+/** Lightweight product for client-side cache (from product_search table) */
+export interface CachedProduct {
+	id: number;
+	name: string;
+	slug: string;
+	description: string | null;
+	minPrice: number | null;
+	inStock: boolean;
+	featuredAsset: { source: string; focalX: string; focalY: string } | null;
+	facets: Record<string, { code: string; name: string; facetValueId: number }[]>;
+}
+
 /** Product with all related data */
 export interface ProductWithRelations extends Product {
 	variants: ProductVariantWithRelations[];
