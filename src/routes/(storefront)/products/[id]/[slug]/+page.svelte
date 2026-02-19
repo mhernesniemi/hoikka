@@ -342,7 +342,7 @@
       {/if}
 
       {#if product.description}
-        <div class="prose mb-12 max-w-none prose-gray">
+        <div class="prose mb-8 max-w-none prose-gray">
           {@html product.description}
         </div>
       {/if}
