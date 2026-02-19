@@ -34,7 +34,7 @@ This also makes Hoikka well-suited for AI-assisted development: the codebase is 
 - [Content Pages](https://docs.hoikka.dev/features/content-pages): Static pages for policies, FAQs, and more
 - [Multi-Language](https://docs.hoikka.dev/features/translations): Translation tables for products, categories, collections, facets, and pages
 - [Asset Management](https://docs.hoikka.dev/features/assets): Media library with focal point cropping
-- [Integrations](https://docs.hoikka.dev/integrations/overview): Vercel Workflow for scheduled tasks, sync runner for ERP/PIM, webhooks with signature verification
+- [Integrations](https://docs.hoikka.dev/integrations/overview): Scheduled tasks, sync runner for ERP/PIM, webhooks with signature verification
 
 ## Quick Start
 
