@@ -10,10 +10,17 @@ export const load: PageServerLoad = async ({ locals }) => {
 	}
 
 	// If no admin user exists, redirect to setup
-	const result = await db.execute<{ id: string }>(
-		sql`SELECT id FROM neon_auth."user" WHERE role = 'admin' LIMIT 1`
-	);
-	if (result.rows.length === 0) {
+	try {
+		const result = await db.execute<{ id: string }>(
+			sql`SELECT id FROM neon_auth."user" WHERE role = 'admin' LIMIT 1`
+		);
+		if (result.rows.length === 0) {
+			throw redirect(303, "/admin/setup");
+		}
+	} catch (error) {
+		// Re-throw redirects
+		if (error && typeof error === "object" && "status" in error) throw error;
+		// neon_auth schema/table doesn't exist (Auth not enabled) — redirect to setup
 		throw redirect(303, "/admin/setup");
 	}
 

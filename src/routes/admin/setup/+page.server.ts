@@ -5,10 +5,15 @@ import { env } from "$env/dynamic/private";
 import type { Actions, PageServerLoad } from "./$types";
 
 async function hasAdminUser(): Promise<boolean> {
-	const result = await db.execute<{ id: string }>(
-		sql`SELECT id FROM neon_auth."user" WHERE role = 'admin' LIMIT 1`
-	);
-	return result.rows.length > 0;
+	try {
+		const result = await db.execute<{ id: string }>(
+			sql`SELECT id FROM neon_auth."user" WHERE role = 'admin' LIMIT 1`
+		);
+		return result.rows.length > 0;
+	} catch {
+		// neon_auth schema/table doesn't exist (Auth not enabled)
+		return false;
+	}
 }
 
 export const load: PageServerLoad = async () => {
