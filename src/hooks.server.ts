@@ -47,16 +47,11 @@ const oauthVerifierHandler: Handle = async ({ event, resolve }) => {
 		const upstreamUrl = new URL(`${neonAuthUrl}/get-session`);
 		upstreamUrl.searchParams.set("neon_auth_session_verifier", verifier);
 
-		const forwardedHost = event.request.headers.get("x-forwarded-host");
-		const forwardedProto = event.request.headers.get("x-forwarded-proto") ?? "https";
-		const realOrigin =
-			(forwardedHost ? `${forwardedProto}://${forwardedHost}` : null) || event.url.origin;
-
 		const sessionRes = await fetch(upstreamUrl.toString(), {
 			method: "GET",
 			headers: {
 				cookie: neonCookies,
-				origin: realOrigin,
+				origin: neonAuthUrl,
 				"x-neon-auth-middleware": "true"
 			}
 		});

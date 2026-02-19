@@ -29,17 +29,10 @@ async function proxy({ request, params }: Parameters<RequestHandler>[0]) {
 	const userAgent = request.headers.get("user-agent");
 	if (userAgent) headers.set("user-agent", userAgent);
 
-	// Forward the real origin so Neon Auth knows where to redirect after OAuth.
-	// On Vercel, request.url may be an internal function URL, so prefer
-	// x-forwarded-host/proto which Vercel always sets to the real domain.
-	const forwardedHost = request.headers.get("x-forwarded-host");
-	const forwardedProto = request.headers.get("x-forwarded-proto") ?? "https";
-	const origin =
-		request.headers.get("origin") ||
-		(forwardedHost ? `${forwardedProto}://${forwardedHost}` : null) ||
-		referer?.split("/").slice(0, 3).join("/") ||
-		new URL(request.url).origin;
-	headers.set("origin", origin);
+	// Use the Neon Auth base URL as origin for server-to-server calls.
+	// Neon Auth always trusts its own base URL, so this avoids needing to
+	// manually configure trusted domains in the Neon dashboard.
+	headers.set("origin", baseUrl);
 	headers.set("x-neon-auth-middleware", "true");
 
 	const res = await fetch(url, {
@@ -54,7 +47,7 @@ async function proxy({ request, params }: Parameters<RequestHandler>[0]) {
 
 	if (!res.ok) {
 		const bodyText = new TextDecoder().decode(body);
-		console.error("[auth proxy]", params.path, res.status, bodyText, { origin });
+		console.error("[auth proxy]", params.path, res.status, bodyText);
 	}
 
 	// Forward only the headers we need — passing all upstream headers causes
