@@ -76,8 +76,10 @@ try {
 	const client = postgres(DATABASE_URL);
 	const db = drizzle(client);
 
-	// Update the user's role in neon_auth schema
-	await db.execute(sql`UPDATE neon_auth."user" SET role = 'admin' WHERE id = ${userId}`);
+	// Update the user's role and verify email in neon_auth schema
+	await db.execute(
+		sql`UPDATE neon_auth."user" SET role = 'admin', "emailVerified" = true WHERE id = ${userId}`
+	);
 
 	await client.end();
 

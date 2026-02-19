@@ -81,7 +81,9 @@ export const actions: Actions = {
 				});
 			}
 
-			await db.execute(sql`UPDATE neon_auth."user" SET role = 'admin' WHERE id = ${userId}`);
+			await db.execute(
+				sql`UPDATE neon_auth."user" SET role = 'admin', "emailVerified" = true WHERE id = ${userId}`
+			);
 		} catch (error) {
 			console.error("[setup] Failed to create admin:", error);
 			return fail(500, { error: "An unexpected error occurred", name, email });
