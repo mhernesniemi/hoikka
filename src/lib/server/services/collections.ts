@@ -436,24 +436,17 @@ export class CollectionService {
 	/**
 	 * Get products for a collection by applying filters dynamically
 	 */
-	async getProductsForCollection(
-		collectionId: number,
-		options: { limit?: number; offset?: number } = {}
-	): Promise<PaginatedResult<ProductWithRelations>> {
-		const { limit = 20, offset = 0 } = options;
-
-		// Load filters for this collection
+	/**
+	 * Get all matching product IDs for a collection (evaluates filters, no pagination).
+	 */
+	async getProductIdsForCollection(collectionId: number): Promise<number[]> {
 		const filters = await db
 			.select()
 			.from(collectionFilters)
 			.where(eq(collectionFilters.collectionId, collectionId));
 
-		// If no filters, return empty result
-		if (filters.length === 0) {
-			return { items: [], pagination: { total: 0, limit, offset, hasMore: false } };
-		}
+		if (filters.length === 0) return [];
 
-		// Apply filters to get matching product IDs
 		let matchingProductIds: Set<number> | null = null;
 
 		for (const filter of filters) {
@@ -461,7 +454,6 @@ export class CollectionService {
 			if (handler) {
 				const filterResults = await handler(matchingProductIds, filter);
 
-				// AND logic: intersect with previous results
 				if (matchingProductIds === null) {
 					matchingProductIds = filterResults;
 				} else {
@@ -471,18 +463,25 @@ export class CollectionService {
 					);
 				}
 
-				// Short circuit if no matches
-				if (matchingProductIds.size === 0) {
-					return { items: [], pagination: { total: 0, limit, offset, hasMore: false } };
-				}
+				if (matchingProductIds.size === 0) return [];
 			}
 		}
 
-		if (!matchingProductIds || matchingProductIds.size === 0) {
+		return matchingProductIds ? [...matchingProductIds] : [];
+	}
+
+	async getProductsForCollection(
+		collectionId: number,
+		options: { limit?: number; offset?: number } = {}
+	): Promise<PaginatedResult<ProductWithRelations>> {
+		const { limit = 20, offset = 0 } = options;
+
+		const productIdArray = await this.getProductIdsForCollection(collectionId);
+
+		if (productIdArray.length === 0) {
 			return { items: [], pagination: { total: 0, limit, offset, hasMore: false } };
 		}
 
-		const productIdArray = [...matchingProductIds];
 		const total = productIdArray.length;
 
 		// Fetch paginated products

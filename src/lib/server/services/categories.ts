@@ -235,6 +235,20 @@ export class CategoryService {
 	}
 
 	/**
+	 * Get all product IDs in category (including subcategories), no pagination.
+	 */
+	async getAllProductIds(categoryId: number): Promise<number[]> {
+		const descendantIds = await this.getDescendantIds(categoryId);
+
+		const result = await db
+			.selectDistinct({ productId: productCategories.productId })
+			.from(productCategories)
+			.where(inArray(productCategories.categoryId, descendantIds));
+
+		return result.map((r) => r.productId);
+	}
+
+	/**
 	 * Get products in category (including subcategories)
 	 */
 	async getProducts(

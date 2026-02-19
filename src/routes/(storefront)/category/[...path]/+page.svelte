@@ -1,7 +1,6 @@
 <script lang="ts">
   import type { PageData } from "./$types";
-  import Package from "@lucide/svelte/icons/package";
-  import ProductCard from "$lib/components/storefront/ProductCard.svelte";
+  import ProductListing from "$lib/components/storefront/ProductListing.svelte";
 
   let { data }: { data: PageData } = $props();
 
@@ -14,6 +13,8 @@
         .join("/")
     );
   }
+
+  const basePath = `/category/${data.breadcrumbs.map((b) => b.slug).join("/")}`;
 </script>
 
 <svelte:head>
@@ -58,9 +59,6 @@
   <!-- Category Header -->
   <div class="mb-8">
     <h1 class="text-3xl font-bold text-gray-900">{data.category.name}</h1>
-    {#if data.pagination.total > 0}
-      <p class="mt-2 text-sm text-gray-600">{data.pagination.total} products</p>
-    {/if}
   </div>
 
   <!-- Subcategories -->
@@ -80,53 +78,10 @@
     </div>
   {/if}
 
-  <!-- Products Grid -->
-  {#if data.products.length === 0}
-    <div class="py-16 text-center">
-      <Package class="mx-auto h-12 w-12 text-gray-400" />
-      <h3 class="mt-4 text-lg font-medium text-gray-900">No products in this category</h3>
-      <p class="mt-2 text-gray-500">
-        {#if data.children.length > 0}
-          Browse the subcategories above to find products.
-        {:else}
-          <a href="/products" class="text-blue-600 hover:text-blue-700">View all products</a>
-        {/if}
-      </p>
-    </div>
-  {:else}
-    <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-      {#each data.products as product}
-        {#if product}
-          <ProductCard {product} activeDiscounts={data.activeDiscounts} />
-        {/if}
-      {/each}
-    </div>
-
-    <!-- Pagination -->
-    {#if data.pagination.totalPages > 1}
-      <div class="mt-8 flex items-center justify-center gap-4">
-        {#if data.pagination.page > 1}
-          <a
-            href="?page={data.pagination.page - 1}"
-            class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            Previous
-          </a>
-        {/if}
-
-        <span class="text-sm text-gray-600">
-          Page {data.pagination.page} of {data.pagination.totalPages}
-        </span>
-
-        {#if data.pagination.page < data.pagination.totalPages}
-          <a
-            href="?page={data.pagination.page + 1}"
-            class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            Next
-          </a>
-        {/if}
-      </div>
-    {/if}
-  {/if}
+  <ProductListing
+    facets={data.facets}
+    activeDiscounts={data.activeDiscounts}
+    productIds={data.productIds}
+    {basePath}
+  />
 </div>

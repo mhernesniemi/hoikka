@@ -34,12 +34,20 @@ function matchesFacets(product: CachedProduct, facets: Record<string, string[]>)
 	return true;
 }
 
-function filterProducts(
-	all: CachedProduct[],
-	search?: string,
-	facets?: Record<string, string[]>
-): CachedProduct[] {
-	let result = all;
+function scopeAndFilter(opts: {
+	productIds?: number[];
+	search?: string;
+	facets?: Record<string, string[]>;
+}): CachedProduct[] {
+	const { productIds, search, facets } = opts;
+
+	let result: CachedProduct[] = products;
+
+	// Scope to specific product IDs (for categories/collections)
+	if (productIds) {
+		const idSet = new Set(productIds);
+		result = result.filter((p) => idSet.has(p.id));
+	}
 
 	if (search && search.trim()) {
 		const query = search.trim();
@@ -68,15 +76,17 @@ export const productStore = {
 
 	/**
 	 * Search and paginate products client-side.
+	 * Pass productIds to scope to a subset (e.g. category or collection).
 	 */
 	search(opts: {
+		productIds?: number[];
 		search?: string;
 		facets?: Record<string, string[]>;
 		page?: number;
 		limit?: number;
 	}): { items: CachedProduct[]; total: number } {
-		const { search, facets, page = 1, limit = 12 } = opts;
-		const filtered = filterProducts(products, search, facets);
+		const { page = 1, limit = 12 } = opts;
+		const filtered = scopeAndFilter(opts);
 		const offset = (page - 1) * limit;
 		return {
 			items: filtered.slice(offset, offset + limit),
@@ -86,14 +96,14 @@ export const productStore = {
 
 	/**
 	 * Compute facet value counts for the current filter state.
-	 * Returns Record<facetCode, { code, name, count }[]>.
+	 * Pass productIds to scope to a subset (e.g. category or collection).
 	 */
 	getFacetCounts(opts: {
+		productIds?: number[];
 		search?: string;
 		facets?: Record<string, string[]>;
 	}): Record<string, { code: string; name: string; count: number }[]> {
-		const { search, facets: activeFacets } = opts;
-		const filtered = filterProducts(products, search, activeFacets);
+		const filtered = scopeAndFilter(opts);
 
 		const counts: Record<string, Map<string, { name: string; count: number }>> = {};
 

@@ -1,22 +1,16 @@
 import type { PageServerLoad } from "./$types";
 import { collectionService } from "$lib/server/services/collections.js";
-import { productService, stampGroupPrices } from "$lib/server/services/products.js";
+import { facetService } from "$lib/server/services/facets.js";
 import { error, redirect } from "@sveltejs/kit";
 
-export const load: PageServerLoad = async ({ params, url, locals }) => {
+export const load: PageServerLoad = async ({ params, locals }) => {
 	const id = Number(params.id);
 
 	if (isNaN(id)) {
 		throw error(404, "Collection not found");
 	}
 
-	const isPreview =
-		url.searchParams.has("preview") &&
-		!!locals.user &&
-		["admin", "staff"].includes(locals.user.role ?? "");
-	const page = parseInt(url.searchParams.get("page") ?? "1");
-	const limit = 12;
-	const offset = (page - 1) * limit;
+	const isPreview = !!locals.user && ["admin", "staff"].includes(locals.user.role ?? "");
 
 	const collection = await collectionService.getById(id);
 	if (!collection || (!isPreview && collection.isPrivate)) {
@@ -25,24 +19,17 @@ export const load: PageServerLoad = async ({ params, url, locals }) => {
 
 	// Redirect if slug doesn't match (for SEO and correct URLs)
 	if (collection.slug && params.slug !== collection.slug) {
-		const pageParam = page > 1 ? `?page=${page}` : "";
-		throw redirect(301, `/collections/${id}/${collection.slug}${pageParam}`);
+		throw redirect(301, `/collections/${id}/${collection.slug}`);
 	}
 
-	const { items: products, pagination } = await collectionService.getProductsForCollection(
-		collection.id,
-		{ limit, offset }
-	);
-
-	await stampGroupPrices(products, locals.customer?.id ?? null);
+	const [productIds, allFacets] = await Promise.all([
+		collectionService.getProductIdsForCollection(collection.id),
+		facetService.list()
+	]);
 
 	return {
 		collection,
-		products,
-		pagination: {
-			...pagination,
-			currentPage: page,
-			totalPages: Math.ceil(pagination.total / limit)
-		}
+		productIds,
+		facets: allFacets.filter((f) => !f.isPrivate)
 	};
 };

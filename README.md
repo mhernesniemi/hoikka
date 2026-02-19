@@ -1,10 +1,10 @@
-# Hoikka
+[![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![SvelteKit](https://img.shields.io/badge/SvelteKit-5-ff3e00.svg)](https://svelte.dev) [![Neon](https://img.shields.io/badge/Neon-Postgres-00e599.svg)](https://neon.tech) [![Vercel](https://img.shields.io/badge/Vercel-deploy-black.svg)](https://vercel.com) [![Bun](https://img.shields.io/badge/Bun-runtime-f9f1e1.svg)](https://bun.sh)
 
-[Hoikka](https://hoikka.dev) is an opinionated, full-stack e-commerce platform built with SvelteKit.
+![Hoikka](static/screenshot-hoikka.jpg)
+
+**[Hoikka](https://hoikka.dev)** is an opinionated, full-stack e-commerce platform built with SvelteKit.
 
 It includes the storefront, admin panel, API, and business logic in a single lightweight codebase and is ready to deploy serverless.
-
-[![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![SvelteKit](https://img.shields.io/badge/SvelteKit-5-ff3e00.svg)](https://svelte.dev) [![Neon](https://img.shields.io/badge/Neon-Postgres-00e599.svg)](https://neon.tech) [![Vercel](https://img.shields.io/badge/Vercel-deploy-black.svg)](https://vercel.com) [![Bun](https://img.shields.io/badge/Bun-runtime-f9f1e1.svg)](https://bun.sh)
 
 ## Philosophy: Code Over Configuration
 
