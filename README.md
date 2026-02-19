@@ -18,23 +18,23 @@ This also makes Hoikka well-suited for AI-assisted development: the codebase is 
 
 ## Features
 
-- **Products & Variants:** multiple variants per product with independent pricing, inventory, and images
-- **Full-Text Search:** client-side product cache with instant filtering, faceted search, and pagination
-- **Smart Collections:** rule-based product grouping by facets, price, stock, or manual selection
-- **Categories:** hierarchical category tree with breadcrumb navigation
-- **Promotions:** percentage and fixed discounts, coupon codes, automatic promotions, per-group and per-product targeting
-- **B2B Pricing:** customer groups with group-specific variant prices and tax exemptions
-- **Inventory:** stock tracking with timed reservations to prevent overselling
-- **Orders & Checkout:** full checkout flow with guest and registered customer support
-- **Payments:** pluggable payment methods (Stripe, PayPal, Klarna ready)
-- **Shipping:** configurable shipping methods with tracking
-- **Tax:** VAT calculation with multiple rates per product type
-- **Wishlists:** for both logged-in and guest users
-- **Reviews:** customer ratings with moderation and verified purchase badges
-- **Content Pages:** static pages for policies, FAQs, and more
-- **Multi-Language:** translation tables for products, categories, collections, facets, and pages
-- **Asset Management:** media library with focal point cropping
-- **Admin Panel:** full back-office for managing all of the above
+- [Products & Variants](https://hoikka-docs.vercel.app/features/products) — multiple variants per product with independent pricing, inventory, and images
+- [Full-Text Search](https://hoikka-docs.vercel.app/features/search) — client-side product cache with instant filtering, faceted search, and pagination
+- [Smart Collections](https://hoikka-docs.vercel.app/features/collections) — rule-based product grouping by facets, price, stock, or manual selection
+- [Categories](https://hoikka-docs.vercel.app/features/categories) — hierarchical category tree with breadcrumb navigation
+- [Promotions](https://hoikka-docs.vercel.app/features/promotions) — percentage and fixed discounts, coupon codes, automatic promotions, per-group and per-product targeting
+- [B2B Pricing](https://hoikka-docs.vercel.app/features/b2b) — customer groups with group-specific variant prices and tax exemptions
+- [Inventory](https://hoikka-docs.vercel.app/features/inventory) — stock tracking with timed reservations to prevent overselling
+- [Orders & Checkout](https://hoikka-docs.vercel.app/features/orders) — full checkout flow with guest and registered customer support
+- [Payments](https://hoikka-docs.vercel.app/features/payments) — pluggable payment methods (Stripe, PayPal, Klarna ready)
+- [Shipping](https://hoikka-docs.vercel.app/features/shipping) — configurable shipping methods with tracking
+- [Tax](https://hoikka-docs.vercel.app/features/tax) — VAT calculation with multiple rates per product type
+- [Wishlists](https://hoikka-docs.vercel.app/features/wishlists) — for both logged-in and guest users
+- [Reviews](https://hoikka-docs.vercel.app/features/reviews) — customer ratings with moderation and verified purchase badges
+- [Content Pages](https://hoikka-docs.vercel.app/features/content-pages) — static pages for policies, FAQs, and more
+- [Multi-Language](https://hoikka-docs.vercel.app/features/translations) — translation tables for products, categories, collections, facets, and pages
+- [Asset Management](https://hoikka-docs.vercel.app/features/assets) — media library with focal point cropping
+- [Admin Panel](https://hoikka-docs.vercel.app/features/admin) — full back-office for managing all of the above
 
 ## Quick Start
 
