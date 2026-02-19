@@ -1,6 +1,6 @@
 # Hoikka
 
-**Hoikka** is an opinionated, full-stack e-commerce platform built with SvelteKit.
+[Hoikka](https://hoikka.dev) is an opinionated, full-stack e-commerce platform built with SvelteKit.
 
 It includes the storefront, admin panel, API, and business logic in a single lightweight codebase and is ready to deploy serverless.
 
