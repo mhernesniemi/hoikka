@@ -29,9 +29,14 @@ async function proxy({ request, params }: Parameters<RequestHandler>[0]) {
 	const userAgent = request.headers.get("user-agent");
 	if (userAgent) headers.set("user-agent", userAgent);
 
-	// Forward the real origin so Neon Auth knows where to redirect after OAuth
+	// Forward the real origin so Neon Auth knows where to redirect after OAuth.
+	// On Vercel, request.url may be an internal function URL, so prefer
+	// x-forwarded-host/proto which Vercel always sets to the real domain.
+	const forwardedHost = request.headers.get("x-forwarded-host");
+	const forwardedProto = request.headers.get("x-forwarded-proto") ?? "https";
 	const origin =
 		request.headers.get("origin") ||
+		(forwardedHost ? `${forwardedProto}://${forwardedHost}` : null) ||
 		referer?.split("/").slice(0, 3).join("/") ||
 		new URL(request.url).origin;
 	headers.set("origin", origin);

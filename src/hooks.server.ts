@@ -18,6 +18,8 @@ const CART_COOKIE_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
 const WISHLIST_COOKIE_NAME = "wishlist_token";
 const WISHLIST_COOKIE_MAX_AGE = 60 * 60 * 24 * 365; // 1 year
 
+const isProduction = env.NODE_ENV === "production" || !!env.VERCEL;
+
 // Extract only Neon Auth cookies (prefixed __Secure-neon-auth) from a cookie header
 function extractNeonAuthCookies(cookieHeader: string): string {
 	return cookieHeader
@@ -45,11 +47,16 @@ const oauthVerifierHandler: Handle = async ({ event, resolve }) => {
 		const upstreamUrl = new URL(`${neonAuthUrl}/get-session`);
 		upstreamUrl.searchParams.set("neon_auth_session_verifier", verifier);
 
+		const forwardedHost = event.request.headers.get("x-forwarded-host");
+		const forwardedProto = event.request.headers.get("x-forwarded-proto") ?? "https";
+		const realOrigin =
+			(forwardedHost ? `${forwardedProto}://${forwardedHost}` : null) || event.url.origin;
+
 		const sessionRes = await fetch(upstreamUrl.toString(), {
 			method: "GET",
 			headers: {
 				cookie: neonCookies,
-				origin: event.url.origin,
+				origin: realOrigin,
 				"x-neon-auth-middleware": "true"
 			}
 		});
@@ -98,6 +105,13 @@ const sessionHandler: Handle = async ({ event, resolve }) => {
 								emailVerified: data.user.emailVerified ?? false
 							};
 						}
+					} else if (sessionRes.status !== 401) {
+						// 401 is expected for expired/invalid sessions, log anything else
+						console.error(
+							"[hooks] Session validation failed:",
+							sessionRes.status,
+							sessionRes.statusText
+						);
 					}
 					return null;
 				});
@@ -170,7 +184,7 @@ const cartHandler: Handle = async ({ event, resolve }) => {
 	if (event.locals.newCartToken) {
 		response.headers.append(
 			"Set-Cookie",
-			`${CART_COOKIE_NAME}=${event.locals.newCartToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${CART_COOKIE_MAX_AGE}`
+			`${CART_COOKIE_NAME}=${event.locals.newCartToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${CART_COOKIE_MAX_AGE}${isProduction ? "; Secure" : ""}`
 		);
 	}
 
@@ -199,7 +213,7 @@ const wishlistHandler: Handle = async ({ event, resolve }) => {
 	if (event.locals.newWishlistToken) {
 		response.headers.append(
 			"Set-Cookie",
-			`${WISHLIST_COOKIE_NAME}=${event.locals.newWishlistToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${WISHLIST_COOKIE_MAX_AGE}`
+			`${WISHLIST_COOKIE_NAME}=${event.locals.newWishlistToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${WISHLIST_COOKIE_MAX_AGE}${isProduction ? "; Secure" : ""}`
 		);
 	}
 

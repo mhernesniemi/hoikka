@@ -22,7 +22,11 @@
   }
 
   async function handleSignOut() {
-    await authClient.signOut();
+    try {
+      await authClient.signOut();
+    } catch (e) {
+      console.error("[account] signOut failed:", e);
+    }
     goto("/");
   }
 </script>

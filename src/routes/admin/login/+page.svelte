@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { goto } from "$app/navigation";
+  import { goto, invalidateAll } from "$app/navigation";
   import { Button } from "$lib/components/admin/ui/button";
   import { Input } from "$lib/components/admin/ui/input";
   import { Label } from "$lib/components/admin/ui/label";
@@ -20,6 +20,7 @@
       if (result.error) {
         error = result.error.message ?? "Invalid email or password";
       } else {
+        await invalidateAll();
         goto("/admin");
       }
     } catch {

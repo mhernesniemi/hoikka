@@ -221,7 +221,11 @@
             <DropdownMenu.Separator />
             <DropdownMenu.Item
               onclick={async () => {
-                await authClient.signOut();
+                try {
+                  await authClient.signOut();
+                } catch (e) {
+                  console.error("[admin] signOut failed:", e);
+                }
                 goto("/admin/login");
               }}
             >
