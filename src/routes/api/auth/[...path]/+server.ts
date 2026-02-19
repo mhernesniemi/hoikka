@@ -52,6 +52,11 @@ async function proxy({ request, params }: Parameters<RequestHandler>[0]) {
 	// hangs under Bun's dev server because the ReadableStream never closes
 	const body = await res.arrayBuffer();
 
+	if (!res.ok) {
+		const bodyText = new TextDecoder().decode(body);
+		console.error("[auth proxy]", params.path, res.status, bodyText, { origin });
+	}
+
 	// Forward only the headers we need — passing all upstream headers causes
 	// duplicate Date/Connection headers and broken HTTP framing
 	const responseHeaders = new Headers();

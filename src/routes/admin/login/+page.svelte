@@ -18,12 +18,14 @@
     try {
       const result = await authClient.signIn.email({ email, password });
       if (result.error) {
+        console.error("[admin login]", result.error);
         error = result.error.message ?? "Invalid email or password";
       } else {
         await invalidateAll();
         goto("/admin");
       }
-    } catch {
+    } catch (e) {
+      console.error("[admin login] exception:", e);
       error = "Invalid email or password";
     } finally {
       isLoading = false;
