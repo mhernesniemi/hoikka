@@ -65,7 +65,7 @@
 
   <div class="flex gap-8">
     <!-- Sidebar Filters -->
-    <aside class="w-64 shrink-0">
+    <aside class="w-64 shrink-0" data-sveltekit-keepfocus data-sveltekit-noscroll>
       <!-- Search -->
       <form method="GET" class="mb-6">
         <Input type="text" name="q" value={data.search ?? ""} placeholder="Search products..." />
