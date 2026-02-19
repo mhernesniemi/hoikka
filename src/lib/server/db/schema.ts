@@ -382,7 +382,6 @@ export const customers = pgTable(
 		lastName: varchar("last_name", { length: 100 }).notNull(),
 		phone: varchar("phone", { length: 50 }),
 		vatId: varchar("vat_id", { length: 50 }), // B2B VAT ID for tax exemption
-		isAdmin: boolean("is_admin").default(false).notNull(),
 		deletedAt: timestamp("deleted_at"),
 		createdAt: timestamp("created_at").defaultNow().notNull(),
 		updatedAt: timestamp("updated_at")
