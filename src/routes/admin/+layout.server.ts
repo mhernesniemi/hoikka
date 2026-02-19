@@ -6,8 +6,8 @@ import { redirect } from "@sveltejs/kit";
 import type { LayoutServerLoad } from "./$types";
 
 export const load: LayoutServerLoad = async ({ locals, url }) => {
-	// Skip auth for login page
-	if (url.pathname === "/admin/login") {
+	// Skip auth for login and setup pages
+	if (url.pathname === "/admin/login" || url.pathname === "/admin/setup") {
 		return { adminUser: null, adminDark: locals.adminDark };
 	}
 
