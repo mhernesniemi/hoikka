@@ -1,10 +1,17 @@
 <script lang="ts">
+  import { goto } from "$app/navigation";
   import { page } from "$app/stores";
   import { cn } from "$lib/utils";
-  import { Input } from "$lib/components/storefront/ui/input";
+  import { SelectNative } from "$lib/components/storefront/ui/select-native";
   import ProductCard from "$lib/components/storefront/ProductCard.svelte";
   import { productStore } from "$lib/stores/products.svelte";
-  import type { CachedProduct, FacetWithValues, ProductWithRelations } from "$lib/types";
+  import {
+    PRODUCT_SORT_OPTIONS,
+    type CachedProduct,
+    type FacetWithValues,
+    type ProductSortKey,
+    type ProductWithRelations
+  } from "$lib/types";
   import type { ActiveDiscount } from "$lib/promotion-utils";
   import Check from "@lucide/svelte/icons/check";
 
@@ -25,6 +32,7 @@
   // Parse URL params reactively
   const search = $derived($page.url.searchParams.get("q") ?? undefined);
   const currentPage = $derived(Number($page.url.searchParams.get("page")) || 1);
+  const sortKey = $derived(($page.url.searchParams.get("sort") as ProductSortKey) || "newest");
 
   const activeFilters = $derived.by(() => {
     const filters: Record<string, string[]> = {};
@@ -49,6 +57,7 @@
           productIds,
           search,
           facets: hasActiveFilters ? activeFilters : undefined,
+          sort: sortKey,
           page: currentPage,
           limit
         })
@@ -172,6 +181,18 @@
     return paramString ? `?${paramString}` : basePath;
   }
 
+  function getSortUrl(sort: string): string {
+    const params = new URLSearchParams($page.url.searchParams);
+    if (sort === "newest") {
+      params.delete("sort");
+    } else {
+      params.set("sort", sort);
+    }
+    params.delete("page");
+    const paramString = params.toString();
+    return paramString ? `?${paramString}` : basePath;
+  }
+
   function getPageUrl(pageNum: number): string {
     const params = new URLSearchParams($page.url.searchParams);
     if (pageNum <= 1) {
@@ -184,22 +205,34 @@
   }
 </script>
 
+<!-- Toolbar: Clear filters + Sort -->
+<div
+  class="mb-4 flex items-center justify-between"
+  data-sveltekit-keepfocus
+  data-sveltekit-noscroll
+>
+  <div>
+    {#if hasActiveFilters}
+      <a href={clearAllFilters()} class="text-sm text-blue-600 hover:underline">
+        Clear all filters
+      </a>
+    {/if}
+  </div>
+  <SelectNative
+    value={sortKey}
+    onchange={(e) => {
+      goto(getSortUrl(e.currentTarget.value), { keepFocus: true, noScroll: true });
+    }}
+  >
+    {#each PRODUCT_SORT_OPTIONS as option}
+      <option value={option.value}>{option.label}</option>
+    {/each}
+  </SelectNative>
+</div>
+
 <div class="flex flex-col gap-8 md:flex-row">
   <!-- Sidebar Filters -->
   <aside class="w-full shrink-0 md:w-64" data-sveltekit-keepfocus data-sveltekit-noscroll>
-    <!-- Search -->
-    <form method="GET" class="mb-6">
-      <Input type="text" name="q" value={search ?? ""} placeholder="Search products..." />
-    </form>
-
-    {#if hasActiveFilters}
-      <div class="mb-6">
-        <a href={clearAllFilters()} class="text-sm text-blue-600 hover:underline">
-          Clear all filters
-        </a>
-      </div>
-    {/if}
-
     <!-- Facet Filters -->
     {#if productStore.loaded}
       {#each facets as facet}

@@ -338,6 +338,20 @@ export type ContentPageTranslation = InferSelectModel<typeof contentPageTranslat
 export type NewContentPageTranslation = InferInsertModel<typeof contentPageTranslations>;
 
 // ============================================================================
+// SORT TYPES
+// ============================================================================
+
+export type ProductSortKey = "newest" | "price-asc" | "price-desc" | "name-asc" | "name-desc";
+
+export const PRODUCT_SORT_OPTIONS: { value: ProductSortKey; label: string }[] = [
+	{ value: "newest", label: "Newest" },
+	{ value: "price-asc", label: "Price: Low to High" },
+	{ value: "price-desc", label: "Price: High to Low" },
+	{ value: "name-asc", label: "Name: A–Z" },
+	{ value: "name-desc", label: "Name: Z–A" }
+];
+
+// ============================================================================
 // FILTER & QUERY TYPES
 // ============================================================================
 

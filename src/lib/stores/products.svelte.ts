@@ -10,7 +10,7 @@
  *   productStore.search({ search: "shirt", facets: { color: ["red"] }, page: 1, limit: 12 });
  */
 
-import type { CachedProduct } from "$lib/types";
+import type { CachedProduct, ProductSortKey } from "$lib/types";
 
 let products = $state<CachedProduct[]>([]);
 let loaded = $state(false);
@@ -58,8 +58,16 @@ function scopeAndFilter(opts: {
 		result = result.filter((p) => matchesFacets(p, facets));
 	}
 
-	return [...result].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+	return result;
 }
+
+const sortFns: Record<ProductSortKey, (a: CachedProduct, b: CachedProduct) => number> = {
+	newest: (a, b) => b.createdAt.localeCompare(a.createdAt),
+	"price-asc": (a, b) => (a.minPrice ?? 0) - (b.minPrice ?? 0),
+	"price-desc": (a, b) => (b.minPrice ?? 0) - (a.minPrice ?? 0),
+	"name-asc": (a, b) => a.name.localeCompare(b.name),
+	"name-desc": (a, b) => b.name.localeCompare(a.name)
+};
 
 export const productStore = {
 	get products() {
@@ -82,11 +90,12 @@ export const productStore = {
 		productIds?: number[];
 		search?: string;
 		facets?: Record<string, string[]>;
+		sort?: ProductSortKey;
 		page?: number;
 		limit?: number;
 	}): { items: CachedProduct[]; total: number } {
-		const { page = 1, limit = 12 } = opts;
-		const filtered = scopeAndFilter(opts);
+		const { sort = "newest", page = 1, limit = 12 } = opts;
+		const filtered = [...scopeAndFilter(opts)].sort(sortFns[sort]);
 		const offset = (page - 1) * limit;
 		return {
 			items: filtered.slice(offset, offset + limit),
