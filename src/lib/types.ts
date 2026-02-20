@@ -77,6 +77,7 @@ export interface CachedProduct {
 	featuredAsset: { source: string; focalX: string; focalY: string } | null;
 	facets: Record<string, { code: string; name: string; facetValueId: number }[]>;
 	variantFacetImages: Record<string, Record<string, string>> | null;
+	createdAt: string;
 }
 
 /** Product with all related data */

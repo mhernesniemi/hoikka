@@ -58,7 +58,7 @@ function scopeAndFilter(opts: {
 		result = result.filter((p) => matchesFacets(p, facets));
 	}
 
-	return result;
+	return [...result].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
 export const productStore = {

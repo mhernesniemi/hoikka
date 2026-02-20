@@ -104,7 +104,8 @@ export async function getAllProductCards(customerId: number | null): Promise<Cac
 	const rows = await db
 		.select()
 		.from(productSearch)
-		.where(eq(productSearch.visibility, "public"));
+		.where(eq(productSearch.visibility, "public"))
+		.orderBy(sql`${productSearch.createdAt} DESC`);
 
 	const products: CachedProduct[] = rows.map((row) => ({
 		id: row.productId,
@@ -116,7 +117,8 @@ export async function getAllProductCards(customerId: number | null): Promise<Cac
 		inStock: row.inStock,
 		featuredAsset: row.featuredAsset as CachedProduct["featuredAsset"],
 		facets: (row.facets ?? {}) as CachedProduct["facets"],
-		variantFacetImages: (row.variantFacetImages as CachedProduct["variantFacetImages"]) ?? null
+		variantFacetImages: (row.variantFacetImages as CachedProduct["variantFacetImages"]) ?? null,
+		createdAt: row.createdAt.toISOString()
 	}));
 
 	// Resolve group prices if customer is logged in
