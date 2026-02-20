@@ -9,15 +9,32 @@
   let showResults = $state(false);
   let containerEl = $state<HTMLDivElement | null>(null);
 
-  const searchProducts = $derived(
-    productStore.products.map((p) => ({
-      id: p.id,
-      name: p.name,
-      slug: p.slug,
-      price: p.minPrice ?? 0,
-      image: p.featuredAsset?.source ?? null
-    }))
-  );
+  const MAX_RESULTS = 20;
+
+  const searchResults = $derived.by(() => {
+    const query = searchQuery.toLowerCase().trim();
+    if (!query) return [];
+    const results: {
+      id: number;
+      name: string;
+      slug: string;
+      price: number;
+      image: string | null;
+    }[] = [];
+    for (const p of productStore.products) {
+      if (p.name.toLowerCase().includes(query)) {
+        results.push({
+          id: p.id,
+          name: p.name,
+          slug: p.slug,
+          price: p.minPrice ?? 0,
+          image: p.featuredAsset?.source ?? null
+        });
+        if (results.length >= MAX_RESULTS) break;
+      }
+    }
+    return results;
+  });
 
   function handleSelect() {
     searchQuery = "";
@@ -44,7 +61,7 @@
 <svelte:document onclick={handleClickOutside} onkeydown={handleKeydown} />
 
 <div class="relative mx-4 max-w-md flex-1" bind:this={containerEl}>
-  <Command.Root class="rounded-lg border border-gray-300 ">
+  <Command.Root shouldFilter={false} class="rounded-lg border border-gray-300 ">
     <Command.Input
       class="placeholder:text-gray-500"
       placeholder="Search products..."
@@ -57,7 +74,7 @@
       >
         <Command.List class="max-h-96">
           <Command.Empty>No products found</Command.Empty>
-          {#each searchProducts as product (product.id)}
+          {#each searchResults as product (product.id)}
             <Command.LinkItem
               value={product.name}
               href="/products/{product.id}/{product.slug}"
