@@ -266,7 +266,7 @@
       </AdminCard>
 
       <!-- Group Pricing -->
-      <AdminCard title="Group Pricing">
+      <AdminCard title="Customer Group Pricing">
         {#snippet headerActions()}
           <Button
             type="button"

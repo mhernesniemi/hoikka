@@ -99,16 +99,10 @@
   let isSavingProduct = $state(false);
   let editingImageAlt = $state<{ id: number; alt: string; isFeatured: boolean } | null>(null);
 
-  // Selected facet values and categories - reset when product changes
-  let selectedProductFacets = $state<number[]>([]);
-  let selectedCategories = $state<number[]>([]);
+  // Selected facet values and categories
+  let selectedProductFacets = $state<number[]>(data.product.facetValues.map((fv) => fv.id));
+  let selectedCategories = $state<number[]>(data.productCategories.map((c) => c.id));
   let facetComboboxOpen = $state(false);
-
-  // Initialize selections when product data changes
-  $effect(() => {
-    selectedProductFacets = data.product.facetValues.map((fv) => fv.id);
-    selectedCategories = data.productCategories.map((c) => c.id);
-  });
 
   // Flatten facet values for combobox display (derived from data)
   type FlatFacetValue = {
@@ -182,12 +176,7 @@
     selectedCategories = selectedCategories.filter((c) => c !== id);
   }
 
-  let selectedRelatedIds = $state<number[]>([]);
-
-  // Initialize related product IDs when data changes
-  $effect(() => {
-    selectedRelatedIds = data.relatedProducts.map((p) => p.id);
-  });
+  let selectedRelatedIds = $state<number[]>(data.relatedProducts.map((p) => p.id));
 
   // Products available for the picker (exclude current product)
   const pickerProducts = $derived(data.allProducts.filter((p) => p.id !== data.product.id));
@@ -210,17 +199,11 @@
       .filter((p) => p !== undefined);
   }
 
-  let productName = $state("");
-  let productSlug = $state("");
-  let productDescription = $state("");
+  let productName = $state(data.product.name);
+  let productSlug = $state(data.product.slug);
+  let productDescription = $state(data.product.description ?? "");
   let activeLanguageTab = $state(DEFAULT_LANGUAGE);
   const translationMap = $derived(translationsToMap(data.translations));
-
-  $effect(() => {
-    productName = data.product.name;
-    productSlug = data.product.slug;
-    productDescription = data.product.description ?? "";
-  });
 
   const hasUnsavedChanges = $derived.by(() => {
     return (
@@ -339,6 +322,13 @@
             await update({ reset: false });
             isSavingProduct = false;
             if (result.type === "success") {
+              productName = data.product.name;
+              productSlug = data.product.slug;
+              productDescription = data.product.description ?? "";
+              visibility = data.product.visibility;
+              selectedProductFacets = data.product.facetValues.map((fv) => fv.id);
+              selectedCategories = data.productCategories.map((c) => c.id);
+              selectedRelatedIds = data.relatedProducts.map((p) => p.id);
               toast.success("Product updated successfully");
               hasSaved = true;
               showCancelDelete = false;

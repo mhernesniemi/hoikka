@@ -593,7 +593,7 @@ export class ProductService {
 				and(eq(productVariants.productId, products.id), isNull(productVariants.deletedAt))
 			)
 			.leftJoin(assets, eq(assets.id, products.featuredAssetId))
-			.where(and(eq(products.visibility, "public"), isNull(products.deletedAt)))
+			.where(isNull(products.deletedAt))
 			.orderBy(asc(products.name));
 
 		// Deduplicate by product id (multiple variants produce multiple rows), keep lowest price

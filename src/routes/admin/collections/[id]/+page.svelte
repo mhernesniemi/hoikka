@@ -67,30 +67,23 @@
   let isSavingImages = $state(false);
   let editingImageAlt = $state<{ id: number; alt: string } | null>(null);
 
-  // ── Form state (reset from server data) ──────────────────────────────
-  let name = $state("");
-  let slug = $state("");
-  let description = $state("");
-  let isPrivate = $state(false);
+  // ── Form state ────────────────────────────────────────────────────────
+  let name = $state(data.collection.name ?? "");
+  let slug = $state(data.collection.slug ?? "");
+  let description = $state(data.collection.description ?? "");
+  let isPrivate = $state(data.collection.isPrivate);
 
   type LocalFilter = { key: number; field: string; operator: string; value: unknown };
   type PreviewProduct = (typeof data.preview)[0];
   let filterKey = 0;
-  let localFilters = $state<LocalFilter[]>([]);
-
-  $effect(() => {
-    name = data.collection.name ?? "";
-    slug = data.collection.slug ?? "";
-    description = data.collection.description ?? "";
-    isPrivate = data.collection.isPrivate;
-
-    localFilters = data.collection.filters.map((f) => ({
+  let localFilters = $state<LocalFilter[]>(
+    data.collection.filters.map((f) => ({
       key: filterKey++,
       field: f.field,
       operator: f.operator,
       value: structuredClone(f.value)
-    }));
-  });
+    }))
+  );
 
   // Serialized filters for the hidden form input
   const filtersJson = $derived(
@@ -380,6 +373,16 @@
             await update({ reset: false });
             isSubmitting = false;
             if (result.type === "success") {
+              name = data.collection.name ?? "";
+              slug = data.collection.slug ?? "";
+              description = data.collection.description ?? "";
+              isPrivate = data.collection.isPrivate;
+              localFilters = data.collection.filters.map((f) => ({
+                key: filterKey++,
+                field: f.field,
+                operator: f.operator,
+                value: structuredClone(f.value)
+              }));
               toast.success("Collection updated");
               hasSaved = true;
               showCancelDelete = false;
