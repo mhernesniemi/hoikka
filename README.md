@@ -1,6 +1,6 @@
 # Hoikka
 
-[![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![SvelteKit](https://img.shields.io/badge/SvelteKit-5-ff3e00.svg)](https://svelte.dev) [![Drizzle](https://img.shields.io/badge/Drizzle-ORM-c5f74f.svg)](https://orm.drizzle.team) [![Neon](https://img.shields.io/badge/Neon-Postgres-00e599.svg)](https://neon.tech) [![Vercel](https://img.shields.io/badge/Vercel-deploy-black.svg)](https://vercel.com)
+[![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![Svelte](https://img.shields.io/badge/Svelte-5-ff3e00.svg)](https://svelte.dev) [![Drizzle](https://img.shields.io/badge/Drizzle-ORM-c5f74f.svg)](https://orm.drizzle.team) [![Neon](https://img.shields.io/badge/Neon-Postgres-00e599.svg)](https://neon.tech) [![Vercel](https://img.shields.io/badge/Vercel-deploy-black.svg)](https://vercel.com)
 
 ![Hoikka](static/hoikka-screenshot.jpg)
 
