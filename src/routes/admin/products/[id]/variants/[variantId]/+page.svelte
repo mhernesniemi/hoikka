@@ -282,7 +282,7 @@
           <p class="text-sm text-muted-foreground">
             No customer groups exist.
             <a
-              href="/admin/customers/groups"
+              href="/admin/customers?tab=groups"
               class="text-blue-600 hover:underline dark:text-blue-400"
             >
               Create one

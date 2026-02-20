@@ -256,7 +256,7 @@
       </form>
 
       <!-- Values -->
-      <AdminCard title="Values" noPadding>
+      <AdminCard title="Values" noPadding noBorder>
         {#snippet headerExtra()}
           <div class="border-b border-border px-6 py-4">
             <p class="text-sm text-foreground-tertiary">
@@ -272,13 +272,7 @@
                 placeholder="e.g., Red, Blue, Yellow"
                 class="w-full rounded-lg border border-input-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-placeholder hover:border-foreground/20"
               />
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onclick={addBulkValues}
-                class="shrink-0"
-              >
+              <Button type="button" variant="outline" onclick={addBulkValues} class="shrink-0">
                 Add
               </Button>
             </div>
