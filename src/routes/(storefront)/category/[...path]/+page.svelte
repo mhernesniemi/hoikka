@@ -57,7 +57,7 @@
   </nav>
 
   <!-- Category Header -->
-  <div class="mb-8">
+  <div class="mb-4">
     <h1 class="text-3xl font-bold text-gray-900">{data.category.name}</h1>
   </div>
 
