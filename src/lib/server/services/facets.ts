@@ -11,13 +11,13 @@ export class FacetService {
 	/**
 	 * Create a new facet
 	 */
-	async create(input: { code: string; name: string; isPrivate?: boolean }): Promise<Facet> {
+	async create(input: { code: string; name: string; isHidden?: boolean }): Promise<Facet> {
 		const [facet] = await db
 			.insert(facets)
 			.values({
 				code: input.code,
 				name: input.name,
-				isPrivate: input.isPrivate ?? false
+				isHidden: input.isHidden ?? false
 			})
 			.returning();
 
@@ -63,7 +63,7 @@ export class FacetService {
 		input: {
 			code?: string;
 			name?: string;
-			isPrivate?: boolean;
+			isHidden?: boolean;
 		}
 	): Promise<Facet | null> {
 		const [facet] = await db.select().from(facets).where(eq(facets.id, id));
@@ -73,7 +73,7 @@ export class FacetService {
 		const updateData: Record<string, unknown> = {};
 		if (input.code) updateData.code = input.code;
 		if (input.name !== undefined) updateData.name = input.name;
-		if (input.isPrivate !== undefined) updateData.isPrivate = input.isPrivate;
+		if (input.isHidden !== undefined) updateData.isHidden = input.isHidden;
 
 		const [updated] = await db
 			.update(facets)

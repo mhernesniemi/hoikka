@@ -107,7 +107,7 @@ export async function reindexProduct(db: Db, productId: number): Promise<void> {
 		.from(productFacetValues)
 		.innerJoin(facetValues, eq(facetValues.id, productFacetValues.facetValueId))
 		.innerJoin(facets, eq(facets.id, facetValues.facetId))
-		.where(and(eq(productFacetValues.productId, productId), eq(facets.isPrivate, false)));
+		.where(eq(productFacetValues.productId, productId));
 
 	const facetsJson: FacetsJson = {};
 	for (const row of facetRows) {
@@ -134,13 +134,7 @@ export async function reindexProduct(db: Db, productId: number): Promise<void> {
 		.innerJoin(productVariants, eq(productVariants.id, variantFacetValues.variantId))
 		.innerJoin(facetValues, eq(facetValues.id, variantFacetValues.facetValueId))
 		.innerJoin(facets, eq(facets.id, facetValues.facetId))
-		.where(
-			and(
-				eq(productVariants.productId, productId),
-				isNull(productVariants.deletedAt),
-				eq(facets.isPrivate, false)
-			)
-		);
+		.where(and(eq(productVariants.productId, productId), isNull(productVariants.deletedAt)));
 
 	// Merge variant facets into facetsJson (skip duplicates by code)
 	for (const row of variantFacetRows) {

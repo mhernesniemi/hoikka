@@ -5,6 +5,6 @@ export const load: PageServerLoad = async () => {
 	const allFacets = await facetService.list();
 
 	return {
-		facets: allFacets.filter((f) => !f.isPrivate)
+		facets: allFacets.filter((f) => !f.isHidden)
 	};
 };

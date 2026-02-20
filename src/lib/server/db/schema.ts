@@ -170,7 +170,7 @@ export const facets = pgTable("facets", {
 	id: serial("id").primaryKey(),
 	name: varchar("name", { length: 255 }).default("").notNull(),
 	code: varchar("code", { length: 255 }).notNull().unique(),
-	isPrivate: boolean("is_private").default(false).notNull(),
+	isHidden: boolean("is_hidden").default(false).notNull(),
 	createdAt: timestamp("created_at").defaultNow().notNull(),
 	updatedAt: timestamp("updated_at")
 		.defaultNow()

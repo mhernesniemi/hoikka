@@ -35,6 +35,6 @@ export const load: PageServerLoad = async ({ params }) => {
 		breadcrumbs,
 		children,
 		productIds,
-		facets: allFacets.filter((f) => !f.isPrivate)
+		facets: allFacets.filter((f) => !f.isHidden)
 	};
 };

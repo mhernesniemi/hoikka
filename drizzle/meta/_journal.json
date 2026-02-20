@@ -57,6 +57,13 @@
       "when": 1771608375527,
       "tag": "0007_short_purple_man",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1771707600000,
+      "tag": "0008_rename_facets_is_hidden",
+      "breakpoints": true
     }
   ]
 }

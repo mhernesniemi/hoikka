@@ -9,6 +9,7 @@
   import { Label } from "$lib/components/admin/ui/label";
   import * as Dialog from "$lib/components/admin/ui/dialog";
   import AdminCard from "$lib/components/admin/AdminCard.svelte";
+  import { Checkbox } from "$lib/components/admin/ui/checkbox";
   import DeleteConfirmDialog from "$lib/components/admin/DeleteConfirmDialog.svelte";
   import CreateDialog from "$lib/components/admin/CreateDialog.svelte";
   import TranslationEditor from "$lib/components/admin/TranslationEditor.svelte";
@@ -40,6 +41,7 @@
 
   let facetName = $state("");
   let facetCode = $state("");
+  let facetIsHidden = $state(false);
   let values = $state<ValueEntry[]>([]);
   let valuesJson = $derived(JSON.stringify(values));
 
@@ -58,6 +60,7 @@
   $effect(() => {
     facetName = data.facet.name ?? "";
     facetCode = data.facet.code;
+    facetIsHidden = data.facet.isHidden;
     values = data.facet.values
       .map((v) => ({
         id: v.id,
@@ -95,6 +98,7 @@
     return (
       facetName !== (data.facet.name ?? "") ||
       facetCode !== data.facet.code ||
+      facetIsHidden !== data.facet.isHidden ||
       JSON.stringify(values) !== originalValuesJson
     );
   });
@@ -241,6 +245,7 @@
         }}
       >
         <input type="hidden" name="values_json" value={valuesJson} />
+        <input type="hidden" name="is_hidden" value={facetIsHidden ? "on" : ""} />
         <AdminCard title="Facet Details">
           <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
@@ -335,15 +340,23 @@
     </div>
 
     <!-- Sidebar (Right) -->
-    {#if TRANSLATION_LANGUAGES.length > 0}
-      <div class="w-full space-y-6 lg:w-80 lg:shrink-0">
+    <div class="w-full space-y-6 lg:w-80 lg:shrink-0">
+      <AdminCard title="Settings">
+        <div class="flex items-center gap-2">
+          <Checkbox id="is_hidden" bind:checked={facetIsHidden} />
+          <label for="is_hidden" class="text-sm font-medium text-foreground-secondary">
+            Hidden from storefront filters
+          </label>
+        </div>
+      </AdminCard>
+      {#if TRANSLATION_LANGUAGES.length > 0}
         <TranslationEditor
           fields={[{ name: "name", label: "Name", type: "text" }]}
           translations={translationsToMap(data.facetTranslations)}
           formId="facet-form"
         />
-      </div>
-    {/if}
+      {/if}
+    </div>
   </div>
 </div>
 

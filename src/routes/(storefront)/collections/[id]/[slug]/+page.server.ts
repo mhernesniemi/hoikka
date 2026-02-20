@@ -30,6 +30,6 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 	return {
 		collection,
 		productIds,
-		facets: allFacets.filter((f) => !f.isPrivate)
+		facets: allFacets.filter((f) => !f.isHidden)
 	};
 };

@@ -29,6 +29,7 @@ export const actions: Actions = {
 		const formData = await request.formData();
 		const code = formData.get("code") as string;
 		const name = formData.get("name") as string;
+		const isHidden = formData.get("is_hidden") === "on";
 
 		if (!code || !name) {
 			return fail(400, { error: "All fields are required" });
@@ -37,7 +38,8 @@ export const actions: Actions = {
 		try {
 			await facetService.update(id, {
 				code: code.toLowerCase().replace(/\s+/g, "_"),
-				name: name
+				name: name,
+				isHidden
 			});
 
 			// Save facet translations
