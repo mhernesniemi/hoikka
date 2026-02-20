@@ -112,6 +112,7 @@ export async function getAllProductCards(customerId: number | null): Promise<Cac
 		slug: row.slug,
 		description: row.description,
 		minPrice: row.minPrice,
+		maxPrice: row.maxPrice,
 		inStock: row.inStock,
 		featuredAsset: row.featuredAsset as CachedProduct["featuredAsset"],
 		facets: (row.facets ?? {}) as CachedProduct["facets"],
@@ -323,6 +324,7 @@ interface SearchRow {
 	description: string | null;
 	visibility: "public" | "private" | "draft";
 	min_price: number | null;
+	max_price: number | null;
 	in_stock: boolean;
 	featured_asset: FeaturedAssetJson | null;
 	facets: FacetsJson;

@@ -8,11 +8,13 @@
   let {
     product,
     activeDiscounts = [],
-    grayscale = false
+    grayscale = false,
+    showFromPrice
   }: {
     product: ProductWithRelations;
     activeDiscounts?: ActiveDiscount[];
     grayscale?: boolean;
+    showFromPrice?: boolean;
   } = $props();
 
   const name = $derived(product.name);
@@ -23,6 +25,13 @@
       ? Math.min(...product.variants.map((v) => v.effectivePrice ?? v.price))
       : null
   );
+
+  const hasPriceRange = $derived.by(() => {
+    if (showFromPrice !== undefined) return showFromPrice;
+    if (product.variants.length <= 1) return false;
+    const prices = product.variants.map((v) => v.effectivePrice ?? v.price);
+    return Math.min(...prices) !== Math.max(...prices);
+  });
 
   const bestDiscount = $derived(
     lowestPrice ? findBestDiscount(activeDiscounts, product.id, lowestPrice) : null
@@ -76,11 +85,13 @@
       {#if discountedPrice !== null && lowestPrice !== null}
         <div class="mt-1 flex items-center gap-2 text-sm">
           <span class="text-gray-400 line-through">{formatPrice(lowestPrice)}</span>
-          <span class="font-semibold text-red-600">From {formatPrice(discountedPrice)}</span>
+          <span class="font-semibold text-red-600"
+            >{hasPriceRange ? "From " : ""}{formatPrice(discountedPrice)}</span
+          >
         </div>
       {:else}
         <p class="mt-1 text-sm text-gray-700">
-          From {formatPrice(displayPrice)}
+          {hasPriceRange ? "From " : ""}{formatPrice(displayPrice)}
         </p>
       {/if}
     {/if}

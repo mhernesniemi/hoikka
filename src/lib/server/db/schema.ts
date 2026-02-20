@@ -991,6 +991,7 @@ export const productSearch = pgTable(
 			enum: ["public", "private", "draft"]
 		}).notNull(),
 		minPrice: integer("min_price"),
+		maxPrice: integer("max_price"),
 		inStock: boolean("in_stock").default(false).notNull(),
 		featuredAsset: jsonb("featured_asset"),
 		facets: jsonb("facets").default({}).notNull(),

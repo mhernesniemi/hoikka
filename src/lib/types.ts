@@ -72,6 +72,7 @@ export interface CachedProduct {
 	slug: string;
 	description: string | null;
 	minPrice: number | null;
+	maxPrice: number | null;
 	inStock: boolean;
 	featuredAsset: { source: string; focalX: string; focalY: string } | null;
 	facets: Record<string, { code: string; name: string; facetValueId: number }[]>;

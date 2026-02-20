@@ -50,6 +50,13 @@
       "when": 1771607024196,
       "tag": "0006_perfect_ma_gnuci",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1771608375527,
+      "tag": "0007_short_purple_man",
+      "breakpoints": true
     }
   ]
 }

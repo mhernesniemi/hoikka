@@ -56,10 +56,14 @@ export async function reindexProduct(db: Db, productId: number): Promise<void> {
 		.where(and(eq(productVariants.productId, productId), isNull(productVariants.deletedAt)));
 
 	let minPrice: number | null = null;
+	let maxPrice: number | null = null;
 	let inStock = false;
 	for (const v of variants) {
 		if (minPrice === null || v.price < minPrice) {
 			minPrice = v.price;
+		}
+		if (maxPrice === null || v.price > maxPrice) {
+			maxPrice = v.price;
 		}
 		if (!v.trackInventory || v.stock > 0) {
 			inStock = true;
@@ -173,6 +177,7 @@ export async function reindexProduct(db: Db, productId: number): Promise<void> {
 			description: product.description,
 			visibility: product.visibility,
 			minPrice,
+			maxPrice,
 			inStock,
 			featuredAsset: featuredAsset,
 			facets: facetsJson,
@@ -189,6 +194,7 @@ export async function reindexProduct(db: Db, productId: number): Promise<void> {
 				description: product.description,
 				visibility: product.visibility,
 				minPrice,
+				maxPrice,
 				inStock,
 				featuredAsset: featuredAsset,
 				facets: facetsJson,

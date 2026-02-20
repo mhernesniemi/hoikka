@@ -267,7 +267,13 @@
     {:else}
       <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {#each searchResult.items as product (product.id)}
-          <ProductCard product={toProductCard(product)} {activeDiscounts} />
+          <ProductCard
+            product={toProductCard(product)}
+            {activeDiscounts}
+            showFromPrice={product.minPrice !== null &&
+              product.maxPrice !== null &&
+              product.minPrice !== product.maxPrice}
+          />
         {/each}
       </div>
 
