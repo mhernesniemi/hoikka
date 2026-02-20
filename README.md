@@ -18,23 +18,23 @@ This also makes Hoikka well-suited for AI-assisted development: the codebase is 
 
 ## Features
 
-- [Products & Variants](https://docs.hoikka.dev/features/products): Multiple variants per product with independent pricing, inventory, and images
-- [Full-Text Search](https://docs.hoikka.dev/features/search): Client-side product cache with instant filtering, faceted search, and pagination
-- [Smart Collections](https://docs.hoikka.dev/features/collections): Rule-based product grouping by facets, price, stock, or manual selection
-- [Categories](https://docs.hoikka.dev/features/categories): Hierarchical category tree with breadcrumb navigation
-- [Promotions](https://docs.hoikka.dev/features/promotions): Percentage and fixed discounts, coupon codes, automatic promotions, per-group and per-product targeting
-- [B2B Pricing](https://docs.hoikka.dev/features/b2b): Customer groups with group-specific variant prices and tax exemptions
-- [Inventory](https://docs.hoikka.dev/features/inventory): Stock tracking with timed reservations to prevent overselling
-- [Orders & Checkout](https://docs.hoikka.dev/features/orders): Full checkout flow with guest and registered customer support
-- [Payments](https://docs.hoikka.dev/features/payments): Pluggable payment methods (Stripe ready)
-- [Shipping](https://docs.hoikka.dev/features/shipping): Configurable shipping methods with tracking
+- [Products & Variants](https://docs.hoikka.dev/features/products): multiple variants per product with independent pricing, inventory, and images
+- [Full-Text Search](https://docs.hoikka.dev/features/search): client-side product cache with instant filtering, faceted search, and pagination
+- [Smart Collections](https://docs.hoikka.dev/features/collections): rule-based product grouping by facets, price, stock, or manual selection
+- [Categories](https://docs.hoikka.dev/features/categories): hierarchical category tree with breadcrumb navigation
+- [Promotions](https://docs.hoikka.dev/features/promotions): percentage and fixed discounts, coupon codes, automatic promotions, per-group and per-product targeting
+- [B2B Pricing](https://docs.hoikka.dev/features/b2b): customer groups with group-specific variant prices and tax exemptions
+- [Inventory](https://docs.hoikka.dev/features/inventory): stock tracking with timed reservations to prevent overselling
+- [Orders & Checkout](https://docs.hoikka.dev/features/orders): full checkout flow with guest and registered customer support
+- [Payments](https://docs.hoikka.dev/features/payments): pluggable payment methods (Stripe ready)
+- [Shipping](https://docs.hoikka.dev/features/shipping): configurable shipping methods with tracking
 - [Tax](https://docs.hoikka.dev/features/tax): VAT calculation with multiple rates per product type
-- [Wishlists](https://docs.hoikka.dev/features/wishlists): For both logged-in and guest users
-- [Reviews](https://docs.hoikka.dev/features/reviews): Customer ratings with moderation and verified purchase badges
-- [Content Pages](https://docs.hoikka.dev/features/content-pages): Static pages for policies, FAQs, and more
-- [Multi-Language](https://docs.hoikka.dev/features/translations): Translation tables for products, categories, collections, facets, and pages
-- [Asset Management](https://docs.hoikka.dev/features/assets): Media library with focal point cropping
-- [Integrations](https://docs.hoikka.dev/integrations/overview): Scheduled tasks, sync runner for ERP/PIM, webhooks with signature verification
+- [Wishlists](https://docs.hoikka.dev/features/wishlists): for both logged-in and guest users
+- [Reviews](https://docs.hoikka.dev/features/reviews): customer ratings with moderation and verified purchase badges
+- [Content Pages](https://docs.hoikka.dev/features/content-pages): static pages for policies, FAQs, and more
+- [Multi-Language](https://docs.hoikka.dev/features/translations): translation tables for products, categories, collections, facets, and pages
+- [Asset Management](https://docs.hoikka.dev/features/assets): media library with focal point cropping
+- [Integrations](https://docs.hoikka.dev/integrations/overview): scheduled tasks, sync runner for ERP/PIM, webhooks with signature verification
 
 ## Quick Start
 
