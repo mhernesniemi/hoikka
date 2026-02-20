@@ -1,0 +1,1 @@
+ALTER TABLE "product_search" ADD COLUMN "variant_facet_images" jsonb;

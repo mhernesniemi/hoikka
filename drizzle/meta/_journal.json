@@ -43,6 +43,13 @@
       "when": 1771587312147,
       "tag": "0005_burly_synch",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1771607024196,
+      "tag": "0006_perfect_ma_gnuci",
+      "breakpoints": true
     }
   ]
 }

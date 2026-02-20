@@ -9,6 +9,7 @@ import {
 	products,
 	productVariants,
 	productFacetValues,
+	variantFacetValues,
 	facetValues,
 	facets,
 	assets,
@@ -116,6 +117,52 @@ export async function reindexProduct(db: Db, productId: number): Promise<void> {
 		});
 	}
 
+	// 4b. Fetch variant facet values with variant imageUrl
+	const variantFacetRows = await db
+		.select({
+			imageUrl: productVariants.imageUrl,
+			facetCode: facets.code,
+			facetValueCode: facetValues.code,
+			facetValueName: facetValues.name,
+			facetValueId: facetValues.id
+		})
+		.from(variantFacetValues)
+		.innerJoin(productVariants, eq(productVariants.id, variantFacetValues.variantId))
+		.innerJoin(facetValues, eq(facetValues.id, variantFacetValues.facetValueId))
+		.innerJoin(facets, eq(facets.id, facetValues.facetId))
+		.where(
+			and(
+				eq(productVariants.productId, productId),
+				isNull(productVariants.deletedAt),
+				eq(facets.isPrivate, false)
+			)
+		);
+
+	// Merge variant facets into facetsJson (skip duplicates by code)
+	for (const row of variantFacetRows) {
+		if (!facetsJson[row.facetCode]) facetsJson[row.facetCode] = [];
+		if (!facetsJson[row.facetCode].find((v) => v.code === row.facetValueCode)) {
+			facetsJson[row.facetCode].push({
+				code: row.facetValueCode,
+				name: row.facetValueName,
+				facetValueId: row.facetValueId
+			});
+		}
+	}
+
+	// Build variantFacetImages map
+	const variantFacetImages: Record<string, Record<string, string>> = {};
+	for (const row of variantFacetRows) {
+		if (!row.imageUrl) continue;
+		if (!variantFacetImages[row.facetCode]) variantFacetImages[row.facetCode] = {};
+		if (!variantFacetImages[row.facetCode][row.facetValueCode]) {
+			variantFacetImages[row.facetCode][row.facetValueCode] = row.imageUrl;
+		}
+	}
+
+	const variantFacetImagesValue =
+		Object.keys(variantFacetImages).length > 0 ? variantFacetImages : null;
+
 	// 5. Upsert into productSearch
 	await db
 		.insert(productSearch)
@@ -129,6 +176,7 @@ export async function reindexProduct(db: Db, productId: number): Promise<void> {
 			inStock,
 			featuredAsset: featuredAsset,
 			facets: facetsJson,
+			variantFacetImages: variantFacetImagesValue,
 			searchVector: sql`to_tsvector('simple', ${product.name} || ' ' || coalesce(${product.description}, ''))`,
 			createdAt: product.createdAt,
 			updatedAt: new Date()
@@ -144,6 +192,7 @@ export async function reindexProduct(db: Db, productId: number): Promise<void> {
 				inStock,
 				featuredAsset: featuredAsset,
 				facets: facetsJson,
+				variantFacetImages: variantFacetImagesValue,
 				searchVector: sql`to_tsvector('simple', ${product.name} || ' ' || coalesce(${product.description}, ''))`,
 				updatedAt: new Date()
 			}

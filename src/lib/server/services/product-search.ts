@@ -114,7 +114,8 @@ export async function getAllProductCards(customerId: number | null): Promise<Cac
 		minPrice: row.minPrice,
 		inStock: row.inStock,
 		featuredAsset: row.featuredAsset as CachedProduct["featuredAsset"],
-		facets: (row.facets ?? {}) as CachedProduct["facets"]
+		facets: (row.facets ?? {}) as CachedProduct["facets"],
+		variantFacetImages: (row.variantFacetImages as CachedProduct["variantFacetImages"]) ?? null
 	}));
 
 	// Resolve group prices if customer is logged in
@@ -325,6 +326,7 @@ interface SearchRow {
 	in_stock: boolean;
 	featured_asset: FeaturedAssetJson | null;
 	facets: FacetsJson;
+	variant_facet_images: Record<string, Record<string, string>> | null;
 	created_at: string;
 	updated_at: string;
 }

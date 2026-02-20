@@ -69,7 +69,22 @@
 
   // Convert CachedProduct → ProductWithRelations for ProductCard
   function toProductCard(cached: CachedProduct): ProductWithRelations {
-    const featuredAsset = cached.featuredAsset
+    // Swap image when a variant-level filter is active
+    let effectiveAsset = cached.featuredAsset;
+    if (hasActiveFilters && cached.variantFacetImages) {
+      outer: for (const [facetCode, valueCodes] of Object.entries(activeFilters)) {
+        const facetImages = cached.variantFacetImages[facetCode];
+        if (!facetImages) continue;
+        for (const code of valueCodes) {
+          if (facetImages[code]) {
+            effectiveAsset = { source: facetImages[code], focalX: "0.5", focalY: "0.5" };
+            break outer;
+          }
+        }
+      }
+    }
+
+    const featuredAsset = effectiveAsset
       ? {
           id: 0,
           name: "",
@@ -78,10 +93,10 @@
           width: 0,
           height: 0,
           fileSize: 0,
-          source: cached.featuredAsset.source,
+          source: effectiveAsset.source,
           alt: null,
-          focalX: cached.featuredAsset.focalX,
-          focalY: cached.featuredAsset.focalY,
+          focalX: effectiveAsset.focalX,
+          focalY: effectiveAsset.focalY,
           createdAt: new Date()
         }
       : null;

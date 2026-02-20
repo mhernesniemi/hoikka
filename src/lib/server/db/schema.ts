@@ -994,6 +994,7 @@ export const productSearch = pgTable(
 		inStock: boolean("in_stock").default(false).notNull(),
 		featuredAsset: jsonb("featured_asset"),
 		facets: jsonb("facets").default({}).notNull(),
+		variantFacetImages: jsonb("variant_facet_images"),
 		searchVector: tsvector("search_vector"),
 		createdAt: timestamp("created_at").defaultNow().notNull(),
 		updatedAt: timestamp("updated_at")
