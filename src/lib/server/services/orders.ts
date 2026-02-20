@@ -1052,10 +1052,16 @@ export class OrderService {
 
 	private async loadOrderRelations(order: Order): Promise<OrderWithRelations> {
 		// Join order lines with variant -> product -> featured asset to get images
+		// Priority: variant's own image > product featured asset > featured variant image > first variant image
 		const linesWithImages = await db
 			.select({
 				line: orderLines,
-				imageUrl: assets.source,
+				imageUrl: sql<string | null>`COALESCE(
+					${productVariants.imageUrl},
+					${assets.source},
+					(SELECT pv.image_url FROM product_variants pv WHERE pv.product_id = ${products.id} AND pv.is_featured = true AND pv.image_url IS NOT NULL AND pv.deleted_at IS NULL LIMIT 1),
+					(SELECT pv.image_url FROM product_variants pv WHERE pv.product_id = ${products.id} AND pv.image_url IS NOT NULL AND pv.deleted_at IS NULL ORDER BY pv.id ASC LIMIT 1)
+				)`,
 				productId: productVariants.productId,
 				currentProductName: sql<string>`(SELECT name FROM product_translations WHERE product_id = ${products.id} LIMIT 1)`,
 				currentVariantName: productVariants.name

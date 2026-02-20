@@ -107,6 +107,7 @@ export const productVariants = pgTable(
 		trackInventory: boolean("track_inventory").default(true).notNull(),
 		featuredAssetId: integer("featured_asset_id"),
 		imageUrl: varchar("image_url", { length: 500 }),
+		isFeatured: boolean("is_featured").default(false).notNull(),
 		deletedAt: timestamp("deleted_at"),
 		createdAt: timestamp("created_at").defaultNow().notNull(),
 		updatedAt: timestamp("updated_at")

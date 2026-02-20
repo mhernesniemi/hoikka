@@ -26,7 +26,8 @@
 		"db:generate": "bun --bun drizzle-kit generate",
 		"db:migrate": "bun --bun drizzle-kit migrate",
 		"db:studio": "bun --bun drizzle-kit studio",
-		"create:admin": "bun scripts/create-admin.ts"
+		"create:admin": "bun scripts/create-admin.ts",
+		"reindex": "bun scripts/reindex-products.ts"
 	},
 	"files": [
 		"dist",

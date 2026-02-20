@@ -36,6 +36,13 @@
       "when": 1771531136968,
       "tag": "0004_concerned_korvac",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1771587312147,
+      "tag": "0005_burly_synch",
+      "breakpoints": true
     }
   ]
 }

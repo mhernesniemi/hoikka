@@ -276,6 +276,19 @@ export class ProductService {
 
 		if (!variant) return null;
 
+		// When setting isFeatured to true, un-feature all other variants for the same product
+		if (input.isFeatured) {
+			await db
+				.update(productVariants)
+				.set({ isFeatured: false })
+				.where(
+					and(
+						eq(productVariants.productId, variant.productId),
+						eq(productVariants.isFeatured, true)
+					)
+				);
+		}
+
 		const updateData: Record<string, unknown> = {};
 		if (input.sku !== undefined) updateData.sku = input.sku;
 		if (input.price !== undefined) updateData.price = input.price;
@@ -283,6 +296,7 @@ export class ProductService {
 		if (input.trackInventory !== undefined) updateData.trackInventory = input.trackInventory;
 		if (input.name !== undefined) updateData.name = input.name;
 		if (input.imageUrl !== undefined) updateData.imageUrl = input.imageUrl;
+		if (input.isFeatured !== undefined) updateData.isFeatured = input.isFeatured;
 
 		const [updated] = await db
 			.update(productVariants)
@@ -439,14 +453,22 @@ export class ProductService {
 	// PRIVATE HELPERS
 	// ============================================================================
 
+	private resolveVariantFallbackImage(variants: ProductVariantWithRelations[]): string | null {
+		const featured = variants.find((v) => v.isFeatured && v.imageUrl);
+		if (featured) return featured.imageUrl;
+		const first = variants.find((v) => v.imageUrl);
+		return first?.imageUrl ?? null;
+	}
+
 	private async loadProductRelations(product: Product): Promise<ProductWithRelations> {
-		// Load variants
+		// Load variants, sorting isFeatured first then by id
 		const variantList = await db
 			.select()
 			.from(productVariants)
 			.where(
 				and(eq(productVariants.productId, product.id), isNull(productVariants.deletedAt))
-			);
+			)
+			.orderBy(desc(productVariants.isFeatured), asc(productVariants.id));
 
 		const variants = await Promise.all(variantList.map((v) => this.loadVariantRelations(v)));
 
@@ -479,7 +501,7 @@ export class ProductService {
 
 		const assetList = productAssetList.map((pa) => pa.asset);
 
-		// Load featured asset
+		// Load featured asset, falling back to variant image
 		let featuredAsset = null;
 		if (product.featuredAssetId) {
 			const [fa] = await db
@@ -487,6 +509,26 @@ export class ProductService {
 				.from(assets)
 				.where(eq(assets.id, product.featuredAssetId));
 			featuredAsset = fa ?? null;
+		}
+
+		if (!featuredAsset) {
+			const fallbackUrl = this.resolveVariantFallbackImage(variants);
+			if (fallbackUrl) {
+				featuredAsset = {
+					id: 0,
+					name: "",
+					type: "image" as const,
+					mimeType: "image/jpeg",
+					width: 0,
+					height: 0,
+					fileSize: 0,
+					source: fallbackUrl,
+					alt: null,
+					focalX: "0.500",
+					focalY: "0.500",
+					createdAt: product.createdAt
+				};
+			}
 		}
 
 		return {
@@ -585,7 +627,9 @@ export class ProductService {
 				name: products.name,
 				slug: products.slug,
 				price: productVariants.price,
-				image: assets.source
+				image: assets.source,
+				variantImageUrl: productVariants.imageUrl,
+				variantIsFeatured: productVariants.isFeatured
 			})
 			.from(products)
 			.leftJoin(
@@ -599,22 +643,51 @@ export class ProductService {
 		// Deduplicate by product id (multiple variants produce multiple rows), keep lowest price
 		const seen = new Map<
 			number,
-			{ id: number; name: string; slug: string; price: number; image: string | null }
+			{
+				id: number;
+				name: string;
+				slug: string;
+				price: number;
+				image: string | null;
+				featuredVariantImage: string | null;
+				firstVariantImage: string | null;
+			}
 		>();
 		for (const row of rows) {
 			const existing = seen.get(row.id);
-			if (!existing || (row.price !== null && row.price < existing.price)) {
+			if (!existing) {
 				seen.set(row.id, {
 					id: row.id,
 					name: row.name,
 					slug: row.slug,
 					price: row.price ?? 0,
-					image: row.image
+					image: row.image,
+					featuredVariantImage:
+						row.variantIsFeatured && row.variantImageUrl ? row.variantImageUrl : null,
+					firstVariantImage: row.variantImageUrl ?? null
 				});
+			} else {
+				if (row.price !== null && row.price < existing.price) {
+					existing.price = row.price;
+				}
+				if (row.variantIsFeatured && row.variantImageUrl) {
+					existing.featuredVariantImage = row.variantImageUrl;
+				}
+				if (!existing.firstVariantImage && row.variantImageUrl) {
+					existing.firstVariantImage = row.variantImageUrl;
+				}
 			}
 		}
 
-		return [...seen.values()];
+		return [...seen.values()].map(
+			({ id, name, slug, price, image, featuredVariantImage, firstVariantImage }) => ({
+				id,
+				name,
+				slug,
+				price,
+				image: image ?? featuredVariantImage ?? firstVariantImage
+			})
+		);
 	}
 }
 

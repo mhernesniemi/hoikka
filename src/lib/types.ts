@@ -413,6 +413,7 @@ export interface UpdateVariantInput {
 	trackInventory?: boolean;
 	name?: string;
 	imageUrl?: string | null;
+	isFeatured?: boolean;
 }
 
 export interface CreateOrderInput {

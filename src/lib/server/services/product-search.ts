@@ -5,16 +5,16 @@
 import { eq, and, sql, isNull, inArray } from "drizzle-orm";
 import { db } from "../db/index.js";
 import {
-	products,
 	productVariants,
 	productVariantGroupPrices,
-	productFacetValues,
-	facetValues,
-	facets,
-	assets,
 	productSearch,
 	customerGroupMembers
 } from "../db/schema.js";
+import {
+	reindexProduct as reindexProductCore,
+	removeFromIndex as removeFromIndexCore,
+	reindexAll as reindexAllCore
+} from "./reindex.js";
 import type {
 	CachedProduct,
 	ProductWithRelations,
@@ -77,153 +77,19 @@ function buildFacetCondition(facetCode: string, valueCodes: string[]) {
 }
 
 // ============================================================================
-// REINDEX FUNCTIONS
+// REINDEX FUNCTIONS (delegates to shared reindex.ts)
 // ============================================================================
 
-/**
- * Reindex a single product into the search table.
- * Gathers all data via efficient JOINs and upserts.
- */
-export async function reindexProduct(productId: number): Promise<void> {
-	// 1. Fetch product
-	const [product] = await db
-		.select()
-		.from(products)
-		.where(and(eq(products.id, productId), isNull(products.deletedAt)))
-		.limit(1);
-
-	if (!product) {
-		// Product deleted or not found - remove from index
-		await removeFromIndex(productId);
-		return;
-	}
-
-	// 2. Fetch non-deleted variants -> compute minPrice, inStock
-	const variants = await db
-		.select({
-			price: productVariants.price,
-			stock: productVariants.stock,
-			trackInventory: productVariants.trackInventory
-		})
-		.from(productVariants)
-		.where(and(eq(productVariants.productId, productId), isNull(productVariants.deletedAt)));
-
-	let minPrice: number | null = null;
-	let inStock = false;
-	for (const v of variants) {
-		if (minPrice === null || v.price < minPrice) {
-			minPrice = v.price;
-		}
-		if (!v.trackInventory || v.stock > 0) {
-			inStock = true;
-		}
-	}
-
-	// 3. Fetch featured asset
-	let featuredAsset: FeaturedAssetJson | null = null;
-	if (product.featuredAssetId) {
-		const [fa] = await db
-			.select({
-				source: assets.source,
-				focalX: assets.focalX,
-				focalY: assets.focalY
-			})
-			.from(assets)
-			.where(eq(assets.id, product.featuredAssetId))
-			.limit(1);
-		if (fa) {
-			featuredAsset = { source: fa.source, focalX: fa.focalX, focalY: fa.focalY };
-		}
-	}
-
-	// 4. Fetch product facet values with facet info (single JOIN, exclude private)
-	const facetRows = await db
-		.select({
-			facetCode: facets.code,
-			facetValueCode: facetValues.code,
-			facetValueName: facetValues.name,
-			facetValueId: facetValues.id
-		})
-		.from(productFacetValues)
-		.innerJoin(facetValues, eq(facetValues.id, productFacetValues.facetValueId))
-		.innerJoin(facets, eq(facets.id, facetValues.facetId))
-		.where(and(eq(productFacetValues.productId, productId), eq(facets.isPrivate, false)));
-
-	const facetsJson: FacetsJson = {};
-	for (const row of facetRows) {
-		if (!facetsJson[row.facetCode]) {
-			facetsJson[row.facetCode] = [];
-		}
-		facetsJson[row.facetCode].push({
-			code: row.facetValueCode,
-			name: row.facetValueName,
-			facetValueId: row.facetValueId
-		});
-	}
-
-	// 5. Upsert into productSearch
-	await db
-		.insert(productSearch)
-		.values({
-			productId: product.id,
-			name: product.name,
-			slug: product.slug,
-			description: product.description,
-			visibility: product.visibility,
-			minPrice,
-			inStock,
-			featuredAsset: featuredAsset,
-			facets: facetsJson,
-			searchVector: sql`to_tsvector('simple', ${product.name} || ' ' || coalesce(${product.description}, ''))`,
-			createdAt: product.createdAt,
-			updatedAt: new Date()
-		})
-		.onConflictDoUpdate({
-			target: productSearch.productId,
-			set: {
-				name: product.name,
-				slug: product.slug,
-				description: product.description,
-				visibility: product.visibility,
-				minPrice,
-				inStock,
-				featuredAsset: featuredAsset,
-				facets: facetsJson,
-				searchVector: sql`to_tsvector('simple', ${product.name} || ' ' || coalesce(${product.description}, ''))`,
-				updatedAt: new Date()
-			}
-		});
+export function reindexProduct(productId: number): Promise<void> {
+	return reindexProductCore(db, productId);
 }
 
-/**
- * Remove a product from the search index.
- */
-export async function removeFromIndex(productId: number): Promise<void> {
-	await db.delete(productSearch).where(eq(productSearch.productId, productId));
+export function removeFromIndex(productId: number): Promise<void> {
+	return removeFromIndexCore(db, productId);
 }
 
-/**
- * Reindex all non-deleted products. Clears table first.
- * Returns the number of products indexed.
- */
-export async function reindexAll(): Promise<number> {
-	// Clear table
-	await db.delete(productSearch);
-
-	// Get all non-deleted product IDs
-	const allProducts = await db
-		.select({ id: products.id })
-		.from(products)
-		.where(isNull(products.deletedAt));
-
-	// Reindex in batches of 50
-	const batchSize = 50;
-	for (let i = 0; i < allProducts.length; i += batchSize) {
-		const batch = allProducts.slice(i, i + batchSize);
-		await Promise.all(batch.map((p) => reindexProduct(p.id)));
-	}
-
-	return allProducts.length;
+export function reindexAll(): Promise<number> {
+	return reindexAllCore(db);
 }
 
 // ============================================================================
@@ -499,6 +365,7 @@ function toProductCard(row: SearchRow): ProductWithRelations {
 						trackInventory: true,
 						featuredAssetId: null,
 						imageUrl: null,
+						isFeatured: false,
 						deletedAt: null,
 						createdAt: new Date(row.created_at),
 						updatedAt: new Date(row.updated_at),

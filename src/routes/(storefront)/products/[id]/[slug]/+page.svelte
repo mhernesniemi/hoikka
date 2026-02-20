@@ -51,6 +51,8 @@
   const selectedVariant = $derived(product.variants.find((v) => v.id === selectedVariantId));
 
   // When a variant has an imageUrl, prepend it as a synthetic asset
+  // Filter out any base image with the same source to avoid duplicates
+  // (e.g. when the featured fallback image is the same variant's image)
   const images = $derived.by(() => {
     if (selectedVariant?.imageUrl) {
       const variantImage = {
@@ -67,7 +69,8 @@
         focalY: "0.5",
         createdAt: new Date()
       };
-      return [variantImage, ...baseImages];
+      const filtered = baseImages.filter((img) => img.source !== selectedVariant.imageUrl);
+      return [variantImage, ...filtered];
     }
     return baseImages;
   });

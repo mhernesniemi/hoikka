@@ -111,6 +111,7 @@
                 trackInventory: true,
                 featuredAssetId: null,
                 imageUrl: null,
+                isFeatured: false,
                 deletedAt: null,
                 createdAt: new Date(),
                 updatedAt: new Date(),

@@ -562,7 +562,14 @@
                       <div class="h-8 w-8 rounded bg-muted"></div>
                     {/if}
                   </TableCell>
-                  <TableCell class="font-mono text-sm">{variant.sku}</TableCell>
+                  <TableCell class="font-mono text-sm">
+                    <span class="flex items-center gap-1.5">
+                      {variant.sku}
+                      {#if variant.isFeatured}
+                        <Badge variant="secondary" class="text-xs">Featured</Badge>
+                      {/if}
+                    </span>
+                  </TableCell>
                   <TableCell class="text-sm">
                     {variant.name}
                   </TableCell>
@@ -593,7 +600,9 @@
                           const url = `/admin/products/${data.product.id}/variants/${variant.id}`;
                           if (hasUnsavedChanges) {
                             pendingNavigationUrl = url;
-                            document.querySelector<HTMLFormElement>("#product-form")?.requestSubmit();
+                            document
+                              .querySelector<HTMLFormElement>("#product-form")
+                              ?.requestSubmit();
                           } else {
                             goto(url);
                           }

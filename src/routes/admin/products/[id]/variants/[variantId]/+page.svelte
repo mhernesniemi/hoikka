@@ -42,6 +42,7 @@
   let variantStock = $state(0);
   let variantPrice = $state(0);
   let imageUrl = $state<string | null>(null);
+  let isFeatured = $state(false);
 
   // Facet value selections - initialize from current variant data
   let selectedFacetValues = $state<number[]>([]);
@@ -54,6 +55,7 @@
     variantPrice = data.variant.price / 100;
     trackInventory = data.variant.trackInventory;
     imageUrl = data.variant.imageUrl ?? null;
+    isFeatured = data.variant.isFeatured;
     groupPrices = data.groupPrices.map((gp) => ({
       groupId: gp.groupId,
       price: (gp.price / 100).toFixed(2)
@@ -147,6 +149,7 @@
       variantPrice !== data.variant.price / 100 ||
       trackInventory !== data.variant.trackInventory ||
       imageUrl !== (data.variant.imageUrl ?? null) ||
+      isFeatured !== data.variant.isFeatured ||
       [...selectedFacetValues].sort().join() !==
         data.variant.facetValues
           .map((fv) => fv.id)
@@ -200,6 +203,9 @@
         }}
       >
         <input type="hidden" name="imageUrl" value={imageUrl ?? ""} />
+        {#if isFeatured}
+          <input type="hidden" name="isFeatured" value="on" />
+        {/if}
         <AdminCard title="Variant Details">
           <div class="grid grid-cols-2 gap-4">
             <div>
@@ -354,6 +360,19 @@
         translations={translationsToMap(data.translations)}
         formId="variant-form"
       />
+      <!-- Featured Variant -->
+      <AdminCard title="Featured Variant" variant="sidebar">
+        <div class="flex items-center gap-2">
+          <Checkbox id="isFeatured" bind:checked={isFeatured} />
+          <label for="isFeatured" class="text-sm text-foreground-secondary">
+            Featured variant
+          </label>
+        </div>
+        <p class="mt-2 text-xs text-muted-foreground">
+          Featured variant image is used as the product display image when the product has no image.
+        </p>
+      </AdminCard>
+
       <!-- Image Section -->
       <AdminCard title="Image" variant="sidebar">
         {#snippet headerActions()}

@@ -57,6 +57,7 @@ export const actions: Actions = {
 		const name = formData.get("variant_name") as string;
 		const rawImageUrl = formData.get("imageUrl") as string;
 		const imageUrl = rawImageUrl || null;
+		const isFeatured = formData.get("isFeatured") === "on";
 		const facetValueIds = formData
 			.getAll("facetValueIds")
 			.map(Number)
@@ -77,7 +78,8 @@ export const actions: Actions = {
 				stock,
 				trackInventory,
 				name: name || undefined,
-				imageUrl
+				imageUrl,
+				isFeatured
 			});
 
 			// Sync facet values
