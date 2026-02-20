@@ -1,7 +1,7 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
   import { page } from "$app/stores";
-  import { cn } from "$lib/utils";
+  import { cn, getCurrencySymbol } from "$lib/utils";
   import { SelectNative } from "$lib/components/storefront/ui/select-native";
   import ProductCard from "$lib/components/storefront/ProductCard.svelte";
   import { productStore } from "$lib/stores/products.svelte";
@@ -48,7 +48,24 @@
     return filters;
   });
 
-  const hasActiveFilters = $derived(Object.keys(activeFilters).length > 0);
+  // Price range from URL (stored in cents)
+  const priceMinParam = $derived.by(() => {
+    const v = $page.url.searchParams.get("price_min");
+    return v ? Math.round(Number(v) * 100) : undefined;
+  });
+  const priceMaxParam = $derived.by(() => {
+    const v = $page.url.searchParams.get("price_max");
+    return v ? Math.round(Number(v) * 100) : undefined;
+  });
+
+  const hasActiveFilters = $derived(
+    Object.keys(activeFilters).length > 0 || priceMinParam != null || priceMaxParam != null
+  );
+
+  // Available price range for this page's scope
+  const priceRange = $derived(
+    productStore.loaded ? productStore.getPriceRange({ productIds, search }) : null
+  );
 
   // Derive filtered products from store
   const searchResult = $derived(
@@ -56,7 +73,9 @@
       ? productStore.search({
           productIds,
           search,
-          facets: hasActiveFilters ? activeFilters : undefined,
+          facets: Object.keys(activeFilters).length > 0 ? activeFilters : undefined,
+          priceMin: priceMinParam,
+          priceMax: priceMaxParam,
           sort: sortKey,
           page: currentPage,
           limit
@@ -64,19 +83,21 @@
       : { items: [], total: 0 }
   );
 
-  // Base counts: no facet filters, just productIds + search scope.
+  // Base counts: no facet/price filters, just productIds + search scope.
   // Determines which values are relevant to this page.
   const baseFacetCounts = $derived(
     productStore.loaded ? productStore.getFacetCounts({ productIds, search }) : {}
   );
 
-  // Disjunctive counts: reflects cross-group filtering for current state.
+  // Disjunctive counts: reflects cross-group filtering + price for current state.
   const facetCounts = $derived(
     productStore.loaded && hasActiveFilters
       ? productStore.getFacetCounts({
           productIds,
           search,
-          facets: activeFilters
+          facets: Object.keys(activeFilters).length > 0 ? activeFilters : undefined,
+          priceMin: priceMinParam,
+          priceMax: priceMaxParam
         })
       : baseFacetCounts
   );
@@ -188,6 +209,28 @@
     return paramString ? `?${paramString}` : basePath;
   }
 
+  function applyPriceFilter(form: HTMLFormElement) {
+    const data = new FormData(form);
+    const min = (data.get("price_min") as string)?.trim();
+    const max = (data.get("price_max") as string)?.trim();
+    const params = new URLSearchParams($page.url.searchParams);
+
+    if (min && Number(min) > 0) {
+      params.set("price_min", min);
+    } else {
+      params.delete("price_min");
+    }
+    if (max && Number(max) > 0) {
+      params.set("price_max", max);
+    } else {
+      params.delete("price_max");
+    }
+    params.delete("page");
+
+    const paramString = params.toString();
+    goto(paramString ? `?${paramString}` : basePath, { keepFocus: true, noScroll: true });
+  }
+
   function getSortUrl(sort: string): string {
     const params = new URLSearchParams($page.url.searchParams);
     if (sort === "newest") {
@@ -240,6 +283,42 @@
 <div class="flex flex-col gap-8 md:flex-row">
   <!-- Sidebar Filters -->
   <aside class="w-full shrink-0 md:w-64" data-sveltekit-keepfocus data-sveltekit-noscroll>
+    <!-- Price Range Filter -->
+    {#if priceRange && priceRange.min !== priceRange.max}
+      <div class="mb-6">
+        <h3 class="mb-3 font-semibold">Price ({getCurrencySymbol("EUR")})</h3>
+        <form
+          class="flex items-center gap-2"
+          onsubmit={(e) => {
+            e.preventDefault();
+            applyPriceFilter(e.currentTarget);
+          }}
+        >
+          <input
+            type="number"
+            name="price_min"
+            placeholder={String(Math.floor(priceRange.min / 100))}
+            value={$page.url.searchParams.get("price_min") ?? ""}
+            oninput={(e) => applyPriceFilter(e.currentTarget.form!)}
+            min="0"
+            step="any"
+            class="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm text-gray-700 placeholder:text-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+          />
+          <span class="text-gray-400">–</span>
+          <input
+            type="number"
+            name="price_max"
+            placeholder={String(Math.ceil(priceRange.max / 100))}
+            value={$page.url.searchParams.get("price_max") ?? ""}
+            oninput={(e) => applyPriceFilter(e.currentTarget.form!)}
+            min="0"
+            step="any"
+            class="w-full rounded-md border border-gray-300 px-2 py-1.5 text-sm text-gray-700 placeholder:text-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+          />
+        </form>
+      </div>
+    {/if}
+
     <!-- Facet Filters -->
     {#if productStore.loaded}
       {#each facets as facet}

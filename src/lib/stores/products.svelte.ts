@@ -34,12 +34,16 @@ function matchesFacets(product: CachedProduct, facets: Record<string, string[]>)
 	return true;
 }
 
-function scopeAndFilter(opts: {
+interface FilterOpts {
 	productIds?: number[];
 	search?: string;
 	facets?: Record<string, string[]>;
-}): CachedProduct[] {
-	const { productIds, search, facets } = opts;
+	priceMin?: number;
+	priceMax?: number;
+}
+
+function scopeAndFilter(opts: FilterOpts): CachedProduct[] {
+	const { productIds, search, facets, priceMin, priceMax } = opts;
 
 	let result: CachedProduct[] = products;
 
@@ -56,6 +60,15 @@ function scopeAndFilter(opts: {
 
 	if (facets && Object.keys(facets).length > 0) {
 		result = result.filter((p) => matchesFacets(p, facets));
+	}
+
+	if (priceMin != null || priceMax != null) {
+		result = result.filter((p) => {
+			if (p.minPrice == null) return false;
+			if (priceMin != null && p.minPrice < priceMin) return false;
+			if (priceMax != null && p.minPrice > priceMax) return false;
+			return true;
+		});
 	}
 
 	return result;
@@ -86,14 +99,13 @@ export const productStore = {
 	 * Search and paginate products client-side.
 	 * Pass productIds to scope to a subset (e.g. category or collection).
 	 */
-	search(opts: {
-		productIds?: number[];
-		search?: string;
-		facets?: Record<string, string[]>;
-		sort?: ProductSortKey;
-		page?: number;
-		limit?: number;
-	}): { items: CachedProduct[]; total: number } {
+	search(
+		opts: FilterOpts & {
+			sort?: ProductSortKey;
+			page?: number;
+			limit?: number;
+		}
+	): { items: CachedProduct[]; total: number } {
 		const { sort = "newest", page = 1, limit = 12 } = opts;
 		const filtered = [...scopeAndFilter(opts)].sort(sortFns[sort]);
 		const offset = (page - 1) * limit;
@@ -110,11 +122,9 @@ export const productStore = {
 	 * with that group's own filter removed so users can see alternatives.
 	 * Cross-group filters (AND) are still applied.
 	 */
-	getFacetCounts(opts: {
-		productIds?: number[];
-		search?: string;
-		facets?: Record<string, string[]>;
-	}): Record<string, { code: string; name: string; count: number }[]> {
+	getFacetCounts(
+		opts: FilterOpts
+	): Record<string, { code: string; name: string; count: number }[]> {
 		const { facets: activeFacets, ...baseOpts } = opts;
 
 		// Collect all facet codes that exist in the product set (unfiltered by facets)
@@ -168,5 +178,25 @@ export const productStore = {
 		}
 
 		return result;
+	},
+
+	/**
+	 * Get the min/max price range for the current scope (ignoring price filter).
+	 */
+	getPriceRange(opts: {
+		productIds?: number[];
+		search?: string;
+	}): { min: number; max: number } | null {
+		const filtered = scopeAndFilter(opts);
+		let min = Infinity;
+		let max = -Infinity;
+		for (const p of filtered) {
+			if (p.minPrice != null) {
+				if (p.minPrice < min) min = p.minPrice;
+				if (p.minPrice > max) max = p.minPrice;
+			}
+		}
+		if (min === Infinity) return null;
+		return { min, max };
 	}
 };
