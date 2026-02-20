@@ -105,38 +105,66 @@ export const productStore = {
 
 	/**
 	 * Compute facet value counts for the current filter state.
-	 * Pass productIds to scope to a subset (e.g. category or collection).
+	 *
+	 * Uses disjunctive faceting: for each facet group, counts are computed
+	 * with that group's own filter removed so users can see alternatives.
+	 * Cross-group filters (AND) are still applied.
 	 */
 	getFacetCounts(opts: {
 		productIds?: number[];
 		search?: string;
 		facets?: Record<string, string[]>;
 	}): Record<string, { code: string; name: string; count: number }[]> {
-		const filtered = scopeAndFilter(opts);
+		const { facets: activeFacets, ...baseOpts } = opts;
 
-		const counts: Record<string, Map<string, { name: string; count: number }>> = {};
-
-		for (const product of filtered) {
-			for (const [facetCode, values] of Object.entries(product.facets)) {
-				if (!counts[facetCode]) {
-					counts[facetCode] = new Map();
-				}
-				for (const val of values) {
-					const existing = counts[facetCode].get(val.code);
-					if (existing) {
-						existing.count++;
-					} else {
-						counts[facetCode].set(val.code, { name: val.name, count: 1 });
-					}
-				}
+		// Collect all facet codes that exist in the product set (unfiltered by facets)
+		const baseProducts = scopeAndFilter(baseOpts);
+		const allFacetCodes = new Set<string>();
+		for (const product of baseProducts) {
+			for (const facetCode of Object.keys(product.facets)) {
+				allFacetCodes.add(facetCode);
 			}
 		}
 
 		const result: Record<string, { code: string; name: string; count: number }[]> = {};
-		for (const [facetCode, valueMap] of Object.entries(counts)) {
-			result[facetCode] = [...valueMap.entries()]
-				.map(([code, { name, count }]) => ({ code, name, count }))
-				.sort((a, b) => b.count - a.count);
+
+		for (const facetCode of allFacetCodes) {
+			// For this group, apply all OTHER group filters but exclude this group's filter
+			const otherFacets: Record<string, string[]> = {};
+			if (activeFacets) {
+				for (const [code, values] of Object.entries(activeFacets)) {
+					if (code !== facetCode && values.length > 0) {
+						otherFacets[code] = values;
+					}
+				}
+			}
+
+			const filtered =
+				Object.keys(otherFacets).length > 0
+					? scopeAndFilter({ ...baseOpts, facets: otherFacets })
+					: baseProducts;
+
+			const valueMap = new Map<string, { name: string; count: number }>();
+			for (const product of filtered) {
+				const values = product.facets[facetCode];
+				if (!values) continue;
+				for (const val of values) {
+					const existing = valueMap.get(val.code);
+					if (existing) {
+						existing.count++;
+					} else {
+						valueMap.set(val.code, { name: val.name, count: 1 });
+					}
+				}
+			}
+
+			if (valueMap.size > 0) {
+				result[facetCode] = [...valueMap.entries()].map(([code, { name, count }]) => ({
+					code,
+					name,
+					count
+				}));
+			}
 		}
 
 		return result;

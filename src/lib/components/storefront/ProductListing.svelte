@@ -64,14 +64,21 @@
       : { items: [], total: 0 }
   );
 
+  // Base counts: no facet filters, just productIds + search scope.
+  // Determines which values are relevant to this page.
+  const baseFacetCounts = $derived(
+    productStore.loaded ? productStore.getFacetCounts({ productIds, search }) : {}
+  );
+
+  // Disjunctive counts: reflects cross-group filtering for current state.
   const facetCounts = $derived(
-    productStore.loaded
+    productStore.loaded && hasActiveFilters
       ? productStore.getFacetCounts({
           productIds,
           search,
-          facets: hasActiveFilters ? activeFilters : undefined
+          facets: activeFilters
         })
-      : {}
+      : baseFacetCounts
   );
 
   const totalPages = $derived(Math.ceil(searchResult.total / limit));
@@ -236,35 +243,57 @@
     <!-- Facet Filters -->
     {#if productStore.loaded}
       {#each facets as facet}
-        {@const counts = facetCounts[facet.code] ?? []}
-        {#if counts.length > 0}
+        {@const baseMap = new Map(
+          (baseFacetCounts[facet.code] ?? []).map((v) => [v.code, v.count])
+        )}
+        {@const countsMap = new Map((facetCounts[facet.code] ?? []).map((v) => [v.code, v.count]))}
+        {@const relevantValues = facet.values.filter(
+          (v) => (baseMap.get(v.code) ?? 0) > 0 || isFilterActive(facet.code, v.code)
+        )}
+        {#if relevantValues.length > 0}
           <div class="mb-6">
             <h3 class="mb-3 font-semibold">{facet.name}</h3>
             <div class="space-y-2">
-              {#each counts as value}
+              {#each relevantValues as value}
+                {@const count = countsMap.get(value.code) ?? 0}
                 {@const active = isFilterActive(facet.code, value.code)}
-                <a
-                  href={getFilterUrl(facet.code, value.code, !active)}
-                  class={cn(
-                    "flex items-center justify-between text-sm",
-                    active ? "font-medium text-blue-600" : "text-gray-600 hover:text-gray-900"
-                  )}
-                >
-                  <span class="flex items-center gap-2">
-                    <span
-                      class={cn(
-                        "flex h-4 w-4 items-center justify-center rounded border",
-                        active ? "border-blue-600 bg-blue-600" : "border-gray-300"
-                      )}
-                    >
-                      {#if active}
-                        <Check class="h-3 w-3 text-white" />
-                      {/if}
+                {@const disabled = count === 0 && !active}
+                {#if disabled}
+                  <span
+                    class="flex cursor-default items-center justify-between text-sm text-gray-300"
+                  >
+                    <span class="flex items-center gap-2">
+                      <span
+                        class="flex h-4 w-4 items-center justify-center rounded border border-gray-200"
+                      ></span>
+                      {value.name}
                     </span>
-                    {value.name}
+                    <span>(0)</span>
                   </span>
-                  <span class="text-gray-400">({value.count})</span>
-                </a>
+                {:else}
+                  <a
+                    href={getFilterUrl(facet.code, value.code, !active)}
+                    class={cn(
+                      "flex items-center justify-between text-sm",
+                      active ? "font-medium text-blue-600" : "text-gray-600 hover:text-gray-900"
+                    )}
+                  >
+                    <span class="flex items-center gap-2">
+                      <span
+                        class={cn(
+                          "flex h-4 w-4 items-center justify-center rounded border",
+                          active ? "border-blue-600 bg-blue-600" : "border-gray-300"
+                        )}
+                      >
+                        {#if active}
+                          <Check class="h-3 w-3 text-white" />
+                        {/if}
+                      </span>
+                      {value.name}
+                    </span>
+                    <span class="text-gray-400">({count})</span>
+                  </a>
+                {/if}
               {/each}
             </div>
           </div>
