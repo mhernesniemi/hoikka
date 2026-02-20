@@ -1,6 +1,6 @@
 <script lang="ts">
   import { enhance } from "$app/forms";
-  import { invalidateAll } from "$app/navigation";
+  import { goto, invalidateAll } from "$app/navigation";
   import { page } from "$app/stores";
   import { onMount } from "svelte";
   import { toast } from "svelte-sonner";
@@ -57,6 +57,7 @@
   let hasSaved = $state(false);
   let createDialogOpen = $state(false);
   let variantToDelete = $state<{ id: number; sku: string } | null>(null);
+  let pendingNavigationUrl = $state<string | null>(null);
   let createVariantDialogOpen = $state(false);
   let newVariantName = $state("");
   let newVariantSku = $state("");
@@ -329,6 +330,12 @@
               selectedProductFacets = data.product.facetValues.map((fv) => fv.id);
               selectedCategories = data.productCategories.map((c) => c.id);
               selectedRelatedIds = data.relatedProducts.map((p) => p.id);
+              if (pendingNavigationUrl) {
+                const url = pendingNavigationUrl;
+                pendingNavigationUrl = null;
+                goto(url);
+                return;
+              }
               toast.success("Product updated successfully");
               hasSaved = true;
               showCancelDelete = false;
@@ -582,7 +589,15 @@
                       <IconButton
                         icon={Pencil}
                         tooltip="Edit variant"
-                        href="/admin/products/{data.product.id}/variants/{variant.id}"
+                        onclick={() => {
+                          const url = `/admin/products/${data.product.id}/variants/${variant.id}`;
+                          if (hasUnsavedChanges) {
+                            pendingNavigationUrl = url;
+                            document.querySelector<HTMLFormElement>("#product-form")?.requestSubmit();
+                          } else {
+                            goto(url);
+                          }
+                        }}
                       />
                       <IconButton
                         icon={Trash2}
