@@ -21,6 +21,12 @@ export interface CreateAssetInput {
 	fileSize?: number;
 }
 
+/** Extract original filename from a Vercel Blob URL by stripping the random hash suffix */
+function blobFilename(url: string): string {
+	const segment = url.split("/").pop() || "image";
+	return segment.replace(/-[A-Za-z0-9]{21}(?=\.\w+$)/, "");
+}
+
 class AssetService {
 	/**
 	 * List all assets ordered by creation date (newest first)
@@ -186,7 +192,7 @@ class AssetService {
 	async backfillVariantImages() {
 		const existingUrls = db.select({ source: assets.source }).from(assets);
 		const untracked = await db
-			.select({ imageUrl: productVariants.imageUrl, sku: productVariants.sku })
+			.select({ imageUrl: productVariants.imageUrl })
 			.from(productVariants)
 			.where(
 				isNotNull(productVariants.imageUrl) &&
@@ -199,7 +205,7 @@ class AssetService {
 			await db
 				.insert(assets)
 				.values({
-					name: row.sku || row.imageUrl.split("/").pop() || "variant-image",
+					name: blobFilename(row.imageUrl),
 					type: "image",
 					mimeType: "image/jpeg",
 					source: row.imageUrl,
@@ -208,6 +214,19 @@ class AssetService {
 					fileSize: 0
 				})
 				.onConflictDoNothing();
+		}
+
+		// Fix existing assets that were backfilled with wrong names (SKU or blob ID)
+		const badAssets = await db
+			.select({ id: assets.id, name: assets.name, source: assets.source })
+			.from(assets)
+			.where(isNotNull(assets.source));
+		for (const asset of badAssets) {
+			if (!asset.source || asset.name.includes(".")) continue;
+			const correctName = blobFilename(asset.source);
+			if (correctName !== asset.name) {
+				await db.update(assets).set({ name: correctName }).where(eq(assets.id, asset.id));
+			}
 		}
 	}
 

@@ -90,7 +90,12 @@ export const actions: Actions = {
 			// Create asset record for variant image (if not already tracked)
 			if (imageUrl && !(await assetService.existsByUrl(imageUrl))) {
 				await assetService.create({
-					name: imageName || imageUrl.split("/").pop() || "variant-image",
+					name:
+						imageName ||
+						(imageUrl.split("/").pop() || "variant-image").replace(
+							/-[A-Za-z0-9]{21}(?=\.\w+$)/,
+							""
+						),
 					url: imageUrl,
 					width: imageWidth,
 					height: imageHeight,
