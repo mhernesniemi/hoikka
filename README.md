@@ -49,7 +49,7 @@ After deploying to Vercel:
 ```bash
 # Clone your new repository and install dependencies
 git clone <your-repo>
-cd hoikka
+cd <your-repo>
 bun install
 
 # Link to your Vercel project and pull environment variables
