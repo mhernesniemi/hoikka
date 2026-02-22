@@ -58,7 +58,6 @@
   const wishlistCount = $derived.by(() => wishlistStore.count);
 </script>
 
-
 <div class="flex min-h-screen flex-col bg-white">
   <!-- Header (hidden on front page) -->
   {#if $page.url.pathname !== "/"}

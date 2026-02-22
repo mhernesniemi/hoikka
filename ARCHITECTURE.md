@@ -292,7 +292,7 @@ Services resolve translations internally using `src/lib/server/i18n.ts` and retu
 ```typescript
 // Service resolves translations — components access flat fields
 const product = await productService.getById(123);
-product.name;         // "Blue Shirt" (resolved)
+product.name; // "Blue Shirt" (resolved)
 product.translations; // Still available for editing forms
 ```
 

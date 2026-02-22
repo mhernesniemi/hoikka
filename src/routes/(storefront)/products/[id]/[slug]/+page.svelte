@@ -33,13 +33,45 @@
   // Use override if set (after toggle), otherwise use server data
   const isWishlisted = $derived(wishlistOverride ?? data.isWishlisted);
 
-  const baseImages = $derived(
-    product.assets.length > 0
-      ? product.assets
-      : product.featuredAsset
-        ? [product.featuredAsset]
-        : []
-  );
+  // Build a stable image list: product assets + unique variant images
+  const allImages = $derived.by(() => {
+    const productImages =
+      product.assets.length > 0
+        ? product.assets
+        : product.featuredAsset
+          ? [product.featuredAsset]
+          : [];
+
+    const existingSources = new Set(productImages.map((img) => img.source));
+
+    const variantImages = product.variants
+      .filter((v) => v.imageUrl && !existingSources.has(v.imageUrl))
+      .reduce(
+        (acc, v) => {
+          if (!acc.seen.has(v.imageUrl!)) {
+            acc.seen.add(v.imageUrl!);
+            acc.images.push({
+              id: -v.id,
+              name: v.name || v.sku,
+              type: "image" as const,
+              mimeType: "image/jpeg",
+              width: 0,
+              height: 0,
+              fileSize: 0,
+              source: v.imageUrl!,
+              alt: null,
+              focalX: "0.5",
+              focalY: "0.5",
+              createdAt: new Date()
+            });
+          }
+          return acc;
+        },
+        { seen: new Set<string>(), images: [] as typeof productImages }
+      );
+
+    return [...productImages, ...variantImages.images];
+  });
 
   // Initialize selected variant when product loads
   $effect(() => {
@@ -50,29 +82,15 @@
 
   const selectedVariant = $derived(product.variants.find((v) => v.id === selectedVariantId));
 
-  // When a variant has an imageUrl, prepend it as a synthetic asset
-  // Filter out any base image with the same source to avoid duplicates
-  // (e.g. when the featured fallback image is the same variant's image)
+  // When a variant is selected and has an image, move it to the front
   const images = $derived.by(() => {
     if (selectedVariant?.imageUrl) {
-      const variantImage = {
-        id: -1,
-        name: "variant",
-        type: "image" as const,
-        mimeType: "image/jpeg",
-        width: 0,
-        height: 0,
-        fileSize: 0,
-        source: selectedVariant.imageUrl,
-        alt: null,
-        focalX: "0.5",
-        focalY: "0.5",
-        createdAt: new Date()
-      };
-      const filtered = baseImages.filter((img) => img.source !== selectedVariant.imageUrl);
-      return [variantImage, ...filtered];
+      const idx = allImages.findIndex((img) => img.source === selectedVariant.imageUrl);
+      if (idx > 0) {
+        return [allImages[idx], ...allImages.slice(0, idx), ...allImages.slice(idx + 1)];
+      }
     }
-    return baseImages;
+    return allImages;
   });
 
   // Reset image index when variant changes
