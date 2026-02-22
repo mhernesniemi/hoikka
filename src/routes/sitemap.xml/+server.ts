@@ -1,11 +1,11 @@
 import { productService } from "$lib/server/services/products.js";
 import { collectionService } from "$lib/server/services/collections.js";
 import { categoryService } from "$lib/server/services/categories.js";
+import { env } from "$env/dynamic/public";
 import type { RequestHandler } from "./$types";
 
-const SITE_URL = "https://hoikka.dev"; // TODO: Move to env
-
-export const GET: RequestHandler = async () => {
+export const GET: RequestHandler = async ({ url }) => {
+	const SITE_URL = env.PUBLIC_SITE_URL || url.origin;
 	const [products, collections, categories] = await Promise.all([
 		productService.list({ visibility: "public", limit: 1000 }),
 		collectionService.list(),

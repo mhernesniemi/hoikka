@@ -1,5 +1,4 @@
 # Hoikka E-commerce Platform
-# https://hoikka.dev
 
 User-agent: *
 Allow: /
@@ -14,4 +13,4 @@ Disallow: /sign-in
 Disallow: /sign-up
 Disallow: /api
 
-Sitemap: https://hoikka.dev/sitemap.xml
+Sitemap: /sitemap.xml

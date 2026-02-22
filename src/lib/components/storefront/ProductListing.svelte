@@ -296,7 +296,11 @@
 <!-- Mobile filter overlay -->
 {#if mobileFiltersOpen}
   <div class="fixed inset-0 z-40 bg-black/30 md:hidden" role="presentation">
-    <button class="h-full w-full" onclick={() => (mobileFiltersOpen = false)}></button>
+    <button
+      class="h-full w-full"
+      onclick={() => (mobileFiltersOpen = false)}
+      aria-label="Close filters"
+    ></button>
   </div>
 {/if}
 

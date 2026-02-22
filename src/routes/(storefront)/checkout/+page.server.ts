@@ -589,7 +589,7 @@ export const actions: Actions = {
 			}
 
 			// Clear cart token cookie
-			cookies.delete("cartToken", { path: "/" });
+			cookies.delete("cart_token", { path: "/" });
 
 			// Redirect to thank you page
 			throw redirect(303, `/checkout/thank-you?order=${finalOrder.code}`);
