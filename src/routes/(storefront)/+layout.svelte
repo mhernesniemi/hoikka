@@ -72,7 +72,7 @@
           <a href="/" class="shrink-0 bg-[#f7d0dd] text-xl font-bold text-gray-900">"Hoikka"</a>
 
           <!-- Desktop search -->
-          <div class="hidden flex-1 sm:block">
+          <div class="hidden flex-1 items-center justify-center sm:flex">
             <SearchBar />
           </div>
 
