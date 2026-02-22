@@ -582,8 +582,10 @@
                 action="?/createPayment"
                 use:enhance={() => {
                   isProcessingPayment = true;
-                  return async ({ update }) => {
-                    isProcessingPayment = false;
+                  return async ({ result, update }) => {
+                    if (result.type === "failure" || result.type === "error") {
+                      isProcessingPayment = false;
+                    }
                     await update();
                   };
                 }}
