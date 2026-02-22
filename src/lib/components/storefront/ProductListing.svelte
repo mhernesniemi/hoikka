@@ -14,6 +14,10 @@
   } from "$lib/types";
   import type { ActiveDiscount } from "$lib/promotion-utils";
   import Check from "@lucide/svelte/icons/check";
+  import SlidersHorizontal from "@lucide/svelte/icons/sliders-horizontal";
+  import X from "@lucide/svelte/icons/x";
+
+  let mobileFiltersOpen = $state(false);
 
   let {
     facets,
@@ -257,11 +261,20 @@
 
 <!-- Toolbar: Clear filters + Sort -->
 <div
-  class="mb-4 flex items-center justify-between"
+  class="mb-4 flex items-center justify-between gap-2"
   data-sveltekit-keepfocus
   data-sveltekit-noscroll
 >
-  <div>
+  <div class="flex items-center gap-3">
+    <!-- Mobile filter toggle -->
+    <button
+      type="button"
+      class="inline-flex items-center gap-1.5 rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 md:hidden"
+      onclick={() => (mobileFiltersOpen = !mobileFiltersOpen)}
+    >
+      <SlidersHorizontal class="h-4 w-4" />
+      Filters
+    </button>
     {#if hasActiveFilters}
       <a href={clearAllFilters()} class="text-sm text-blue-600 hover:underline">
         Clear all filters
@@ -280,9 +293,36 @@
   </SelectNative>
 </div>
 
+<!-- Mobile filter overlay -->
+{#if mobileFiltersOpen}
+  <div class="fixed inset-0 z-40 bg-black/30 md:hidden" role="presentation">
+    <button class="h-full w-full" onclick={() => (mobileFiltersOpen = false)}></button>
+  </div>
+{/if}
+
 <div class="flex flex-col gap-8 md:flex-row">
   <!-- Sidebar Filters -->
-  <aside class="w-full shrink-0 md:w-64" data-sveltekit-keepfocus data-sveltekit-noscroll>
+  <aside
+    class={cn(
+      "shrink-0 md:relative md:block md:w-64",
+      mobileFiltersOpen
+        ? "fixed inset-y-0 left-0 z-50 w-72 overflow-y-auto bg-white p-6 shadow-lg"
+        : "hidden md:block"
+    )}
+    data-sveltekit-keepfocus
+    data-sveltekit-noscroll
+  >
+    <!-- Mobile filter header -->
+    <div class="mb-4 flex items-center justify-between md:hidden">
+      <h2 class="text-lg font-semibold">Filters</h2>
+      <button
+        type="button"
+        class="text-gray-500 hover:text-gray-900"
+        onclick={() => (mobileFiltersOpen = false)}
+      >
+        <X class="h-5 w-5" />
+      </button>
+    </div>
     <!-- Price Range Filter -->
     {#if priceRange && priceRange.min !== priceRange.max}
       <div class="mb-6">

@@ -11,6 +11,10 @@
   import Heart from "@lucide/svelte/icons/heart";
   import Dot from "@lucide/svelte/icons/dot";
   import UserIcon from "@lucide/svelte/icons/user";
+  import SearchIcon from "@lucide/svelte/icons/search";
+  import X from "@lucide/svelte/icons/x";
+
+  let mobileSearchOpen = $state(false);
 
   // Enable view transition only when navigating to admin
   onNavigate((navigation) => {
@@ -64,12 +68,29 @@
   {#if $page.url.pathname !== "/"}
     <header>
       <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div class="flex h-16 items-center justify-between">
-          <a href="/" class="bg-[#f7d0dd] text-xl font-bold text-gray-900">"Hoikka"</a>
+        <div class="flex h-16 items-center justify-between gap-2">
+          <a href="/" class="shrink-0 bg-[#f7d0dd] text-xl font-bold text-gray-900">"Hoikka"</a>
 
-          <SearchBar />
+          <!-- Desktop search -->
+          <div class="hidden flex-1 sm:block">
+            <SearchBar />
+          </div>
 
-          <nav class="flex items-center gap-6">
+          <nav class="flex items-center gap-4 sm:gap-6">
+            <!-- Mobile search toggle -->
+            <button
+              type="button"
+              class="text-gray-600 hover:text-gray-900 sm:hidden"
+              onclick={() => (mobileSearchOpen = !mobileSearchOpen)}
+              aria-label="Search"
+            >
+              {#if mobileSearchOpen}
+                <X class="h-6 w-6" />
+              {:else}
+                <SearchIcon class="h-6 w-6" />
+              {/if}
+            </button>
+
             <a
               href="/wishlist"
               class={cn(
@@ -86,7 +107,6 @@
               </span>
             </a>
 
-            <!-- Auth UI -->
             {#if data.user}
               <a href="/account"><UserIcon class="h-6 w-6" /></a>
             {:else}
@@ -96,6 +116,13 @@
             <CartSheet />
           </nav>
         </div>
+
+        <!-- Mobile search bar (expandable) -->
+        {#if mobileSearchOpen}
+          <div class="pb-3 sm:hidden">
+            <SearchBar />
+          </div>
+        {/if}
       </div>
     </header>
   {/if}
@@ -108,7 +135,7 @@
   <!-- Footer -->
   <footer class="mt-auto border-t border-gray-300">
     <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-      <div class="flex items-center justify-between">
+      <div class="flex flex-col items-center gap-3 sm:flex-row sm:justify-between">
         <p class="text-sm text-gray-500">Hoikka - DX-first ecommerce platform</p>
         <div class="flex items-center gap-2">
           <a href="/privacy-policy" class="text-sm text-gray-500 hover:text-gray-900"

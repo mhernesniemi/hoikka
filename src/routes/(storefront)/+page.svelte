@@ -20,25 +20,27 @@
 
 <div>
   <!-- Hero Section -->
-  <section class="bg-gray-100 pt-10 pb-18">
+  <section class="bg-gray-100 pt-10 pb-12 sm:pb-18">
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-      <div class="flex items-center gap-16">
-        <div>
+      <div class="flex flex-col items-center gap-8 md:flex-row md:gap-16">
+        <div class="flex-1">
           <a href="/" class="mb-6 inline-block bg-[#f7d0dd] text-xl font-bold text-gray-900"
             >"Hoikka"</a
           >
-          <h1 class="mb-4 text-4xl font-bold md:text-5xl">Opinionated Commerce</h1>
-          <p class="mb-10 text-lg leading-[1.75] text-gray-600">
-            Lightweight but powerful e-commerce platform, designed for developers.<br />
+          <h1 class="mb-4 text-3xl font-bold sm:text-4xl md:text-5xl">Opinionated Commerce</h1>
+          <p class="mb-10 text-base leading-[1.75] text-gray-600 sm:text-lg">
+            Lightweight but powerful e-commerce platform, designed for developers.<br
+              class="hidden sm:inline"
+            />
             Everything lives in code and it’s yours.
             <span class="text-gray-900 italic">Built with SvelteKit.</span>
           </p>
           <div class="flex items-start gap-4">
-            <img src="/kuvitus2.png" alt="Svelte" class="h-20 w-auto" />
+            <img src="/kuvitus2.png" alt="Svelte" class="h-16 w-auto sm:h-20" />
             <div class="pt-2">
               <a
                 href="https://hoikka-docs.vercel.app"
-                class="h inline-block rounded-lg border bg-white px-8 py-3 font-semibold text-gray-900 transition-colors hover:bg-[#f7d0dd]/50"
+                class="inline-block rounded-lg border bg-white px-6 py-2.5 text-sm font-semibold text-gray-900 transition-colors hover:bg-[#f7d0dd]/50 sm:px-8 sm:py-3 sm:text-base"
               >
                 Get Started: Docs
               </a>
@@ -70,7 +72,7 @@
             </div>
           </div>
         </div>
-        <div class="max-w-[300px]">
+        <div class="hidden w-full max-w-[220px] md:block md:max-w-[300px]">
           <img
             src="/kuvitus.png"
             alt="Opinionated Commerce"
@@ -113,7 +115,7 @@
         </div>
 
         <!-- Demo Admin UI Login -->
-        <div class="ml-12 flex flex-col">
+        <div class="flex flex-col">
           <h2 class="mb-8 text-xl font-bold">Admin UI Demo</h2>
 
           <div class="flex flex-1 flex-col rounded-lg border border-gray-300 bg-white p-6">
