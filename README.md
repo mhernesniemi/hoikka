@@ -54,7 +54,6 @@ bun install
 
 # Link to your Vercel project and pull environment variables
 npx vercel link
-npx vercel env pull .env.local
 
 # Run migrations and start dev server
 bun run db:migrate
