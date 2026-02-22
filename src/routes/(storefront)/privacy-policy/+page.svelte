@@ -80,7 +80,16 @@
     </section>
 
     <section>
-      <h2 class="text-xl font-semibold">7. Cookies</h2>
+      <h2 class="text-xl font-semibold">7. Analytics</h2>
+      <p class="mt-2 text-gray-700">
+        We use Vercel Web Analytics to collect anonymous usage data such as page views. This service
+        does not use cookies, does not collect personal data, and does not track individual users
+        (legal basis: legitimate interest).
+      </p>
+    </section>
+
+    <section>
+      <h2 class="text-xl font-semibold">8. Cookies</h2>
       <p class="mt-2 text-gray-700">
         We use essential cookies only: a session cookie for authentication and a cart token cookie
         for maintaining your shopping cart. These are strictly necessary for the site to function
@@ -89,7 +98,7 @@
     </section>
 
     <section>
-      <h2 class="text-xl font-semibold">8. Contact</h2>
+      <h2 class="text-xl font-semibold">9. Contact</h2>
       <p class="mt-2 text-gray-700">
         For any questions about this privacy policy or your personal data, please contact us at
         <a href="mailto:privacy@hoikka.dev" class="text-blue-600 hover:underline"

@@ -98,6 +98,7 @@
 		"@tiptap/extension-placeholder": "^3.18.0",
 		"@tiptap/pm": "^3.18.0",
 		"@tiptap/starter-kit": "^3.18.0",
+		"@vercel/analytics": "^1.6.1",
 		"@vercel/blob": "^2.2.0",
 		"@vercel/otel": "^2.1.1",
 		"bits-ui": "^2.15.4",
