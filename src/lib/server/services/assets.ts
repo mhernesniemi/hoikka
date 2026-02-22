@@ -70,6 +70,14 @@ class AssetService {
 	}
 
 	/**
+	 * Find an existing asset by its source URL
+	 */
+	async getBySource(source: string) {
+		const [asset] = await db.select().from(assets).where(eq(assets.source, source)).limit(1);
+		return asset ?? null;
+	}
+
+	/**
 	 * Create asset record after successful upload
 	 */
 	async create(input: CreateAssetInput) {

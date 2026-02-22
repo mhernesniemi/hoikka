@@ -212,7 +212,10 @@ export const actions: Actions = {
 		}
 
 		try {
-			const asset = await assetService.create({ name, url, width, height, fileSize });
+			// Reuse existing asset if one already exists with this URL
+			const existing = await assetService.getBySource(url);
+			const asset =
+				existing ?? (await assetService.create({ name, url, width, height, fileSize }));
 			await assetService.addToProduct(productId, asset.id);
 
 			// Update alt text if provided
