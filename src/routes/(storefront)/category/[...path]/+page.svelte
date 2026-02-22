@@ -36,7 +36,7 @@
   <nav class="mb-6">
     <ol class="flex items-center gap-2 text-sm">
       <li>
-        <a href="/" class="text-gray-500 hover:text-gray-700">Home</a>
+        <a href="/products" class="text-gray-500 hover:text-gray-700">Products</a>
       </li>
       {#each data.breadcrumbs as crumb, index}
         <li class="flex items-center gap-2">
