@@ -7,6 +7,7 @@
   import ImageIcon from "@lucide/svelte/icons/image";
   import type { ActionData, PageData } from "./$types";
   import { formatDateTime } from "$lib/utils";
+  import { imageUrl } from "$lib/image";
 
   function formatPrice(cents: number): string {
     return (cents / 100).toFixed(2);
@@ -97,7 +98,11 @@
           {#each data.order.lines as line}
             <div class="flex items-center gap-4 px-6 py-4">
               {#if line.imageUrl}
-                <img src={line.imageUrl} alt="" class="h-12 w-12 shrink-0 rounded object-cover" />
+                <img
+                  src={imageUrl(line.imageUrl, 100)}
+                  alt=""
+                  class="h-12 w-12 shrink-0 rounded object-cover"
+                />
               {:else}
                 <div
                   class="flex h-12 w-12 shrink-0 items-center justify-center rounded bg-muted-strong"
