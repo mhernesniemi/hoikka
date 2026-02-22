@@ -43,6 +43,7 @@
   import ExternalLink from "@lucide/svelte/icons/external-link";
   import { cn } from "$lib/utils";
   import { imageUrl } from "$lib/image";
+  import ImageIcon from "@lucide/svelte/icons/image";
   import CategoryCombobox from "$lib/components/admin/CategoryCombobox.svelte";
   import ProductPicker from "$lib/components/admin/ProductPicker.svelte";
   import UnsavedChangesDialog from "$lib/components/admin/UnsavedChangesDialog.svelte";
@@ -559,7 +560,9 @@
                         class="h-8 w-8 rounded object-cover"
                       />
                     {:else}
-                      <div class="h-8 w-8 rounded bg-muted"></div>
+                      <div class="flex h-8 w-8 items-center justify-center rounded bg-muted">
+                        <ImageIcon class="h-4 w-4 text-placeholder" />
+                      </div>
                     {/if}
                   </TableCell>
                   <TableCell class="font-mono text-sm">
