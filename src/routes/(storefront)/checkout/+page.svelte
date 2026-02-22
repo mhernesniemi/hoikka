@@ -4,11 +4,9 @@
   import { Input } from "$lib/components/storefront/ui/input";
   import { Label } from "$lib/components/storefront/ui/label";
   import { Alert } from "$lib/components/storefront/ui/alert";
-  import StripePayment from "$lib/components/storefront/StripePayment.svelte";
   import { formatPrice, cn } from "$lib/utils.js";
   import { imageUrl } from "$lib/image";
   import ShoppingCart from "@lucide/svelte/icons/shopping-cart";
-  import type { Stripe, StripeElements } from "@stripe/stripe-js";
   import type { PageData } from "./$types.js";
 
   let { data, form }: { data: PageData; form: any } = $props();
@@ -16,18 +14,11 @@
   let selectedShippingRate = $state<(typeof data.shippingRates)[0] | null>(null);
   let selectedPaymentMethod = $state<NonNullable<typeof data.paymentMethods>[number] | null>(null);
   let isProcessingPayment = $state(false);
-  let isCompletingOrder = $state(false);
   let promoCode = $state("");
-  let stripeRef = $state<Stripe | null>(null);
-  let elementsRef = $state<StripeElements | null>(null);
-  let stripeError = $state<string | null>(null);
-  let stripeConfirmed = $state(false);
-  let completeOrderForm = $state<HTMLFormElement | null>(null);
 
   // Combine form and data for reactive state
   const currentOrderShipping = $derived(form?.orderShipping ?? data.orderShipping);
   const currentPaymentMethods = $derived(form?.paymentMethods ?? data.paymentMethods);
-  const currentPaymentInfo = $derived(form?.paymentInfo ?? data.paymentInfo);
   const currentCart = $derived(form?.cart ?? data.cart);
   const currentShippingRates = $derived(form?.shippingRates ?? data.shippingRates);
   const isDigitalOnly = $derived(data.isDigitalOnly);
@@ -576,53 +567,30 @@
               {/each}
             </div>
 
-            {#if !currentPaymentInfo}
-              {@const isMockPayment = selectedPaymentMethod?.code !== "stripe"}
-              <form
-                method="POST"
-                action="?/createPayment"
-                use:enhance={() => {
-                  isProcessingPayment = true;
-                  return async ({ update }) => {
-                    isProcessingPayment = false;
-                    await update();
-                  };
-                }}
-                class="mt-4"
+            <form
+              method="POST"
+              action="?/createPayment"
+              use:enhance={() => {
+                isProcessingPayment = true;
+                return async ({ update }) => {
+                  isProcessingPayment = false;
+                  await update();
+                };
+              }}
+              class="mt-4"
+            >
+              <input type="hidden" name="paymentMethodId" value={selectedPaymentMethod?.id ?? ""} />
+              {#if saveAddressForFuture}
+                <input type="hidden" name="saveToAddressBook" value="on" />
+              {/if}
+              <Button
+                type="submit"
+                disabled={!selectedPaymentMethod || isProcessingPayment}
+                class="w-full bg-green-600 text-white hover:bg-green-700"
               >
-                <input
-                  type="hidden"
-                  name="paymentMethodId"
-                  value={selectedPaymentMethod?.id ?? ""}
-                />
-                {#if saveAddressForFuture}
-                  <input type="hidden" name="saveToAddressBook" value="on" />
-                {/if}
-                <Button
-                  type="submit"
-                  disabled={!selectedPaymentMethod || isProcessingPayment}
-                  class={cn("w-full", isMockPayment && "bg-green-600 hover:bg-green-700")}
-                >
-                  {#if isProcessingPayment}
-                    Processing...
-                  {:else if isMockPayment}
-                    Place Order
-                  {:else}
-                    Continue to Payment
-                  {/if}
-                </Button>
-              </form>
-            {:else if currentPaymentInfo?.methodCode === "stripe" && currentPaymentInfo?.clientSecret}
-              <div class="mt-4">
-                <StripePayment
-                  clientSecret={currentPaymentInfo.clientSecret}
-                  onready={(stripe, elements) => {
-                    stripeRef = stripe;
-                    elementsRef = elements;
-                  }}
-                />
-              </div>
-            {/if}
+                {isProcessingPayment ? "Placing Order..." : "Place Order"}
+              </Button>
+            </form>
           </div>
         {:else if !isDigitalOnly && currentCart?.shippingPostalCode && !currentOrderShipping}
           <Alert variant="default">
@@ -632,82 +600,6 @@
           <Alert variant="default">
             <p class="text-sm">Please enter your contact information to see payment options.</p>
           </Alert>
-        {/if}
-
-        <!-- Complete Order (Stripe only) -->
-        {#if currentPaymentInfo?.methodCode === "stripe"}
-          <div>
-            {#if form?.stockErrors?.length}
-              <Alert variant="destructive" class="mb-4">
-                <p class="mb-2 font-medium">Stock Issue</p>
-                <ul class="list-inside list-disc text-sm">
-                  {#each form.stockErrors as stockError}
-                    <li>{stockError}</li>
-                  {/each}
-                </ul>
-                <p class="mt-2 text-sm">Please adjust quantities in your cart.</p>
-              </Alert>
-            {/if}
-            {#if stripeError}
-              <Alert variant="destructive" class="mb-4">
-                <p class="text-sm">{stripeError}</p>
-              </Alert>
-            {/if}
-            <form
-              method="POST"
-              action="?/completeOrder"
-              bind:this={completeOrderForm}
-              use:enhance={({ cancel }) => {
-                isCompletingOrder = true;
-                stripeError = null;
-
-                // For Stripe payments, confirm on client side first (skip if already confirmed)
-                if (stripeRef && elementsRef && !stripeConfirmed) {
-                  cancel();
-
-                  stripeRef
-                    .confirmPayment({
-                      elements: elementsRef,
-                      redirect: "if_required"
-                    })
-                    .then(({ error }) => {
-                      if (error) {
-                        stripeError = error.message ?? "Payment failed";
-                        isCompletingOrder = false;
-                      } else {
-                        // Stripe succeeded, resubmit to let server complete the order
-                        stripeConfirmed = true;
-                        completeOrderForm?.requestSubmit();
-                      }
-                    })
-                    .catch((e: unknown) => {
-                      stripeError = e instanceof Error ? e.message : "Payment failed";
-                      isCompletingOrder = false;
-                    });
-
-                  return;
-                }
-
-                // Stripe already confirmed, submit directly
-                return async ({ update }) => {
-                  isCompletingOrder = false;
-                  stripeConfirmed = false;
-                  await update();
-                };
-              }}
-            >
-              {#if saveAddressForFuture}
-                <input type="hidden" name="saveToAddressBook" value="on" />
-              {/if}
-              <Button
-                type="submit"
-                disabled={isCompletingOrder}
-                class="w-full bg-green-600 hover:bg-green-700"
-              >
-                {isCompletingOrder ? "Completing Order..." : "Complete Order"}
-              </Button>
-            </form>
-          </div>
         {/if}
       </div>
 
