@@ -384,7 +384,7 @@ export class OrderService {
 				taxAmount: lineTax.taxAmount,
 				unitPriceNet: lineTax.unitPriceNet,
 				lineTotalNet: lineTax.lineTotalNet,
-				productName: productTrans?.name || variant.name || "Unknown Product",
+				productName: productTrans?.name || product?.name || "Unknown Product",
 				variantName: variantTrans?.name || variant.name || null,
 				sku: variant.sku
 			})
@@ -1063,7 +1063,7 @@ export class OrderService {
 					(SELECT pv.image_url FROM product_variants pv WHERE pv.product_id = ${products.id} AND pv.image_url IS NOT NULL AND pv.deleted_at IS NULL ORDER BY pv.id ASC LIMIT 1)
 				)`,
 				productId: productVariants.productId,
-				currentProductName: sql<string>`(SELECT name FROM product_translations WHERE product_id = ${products.id} LIMIT 1)`,
+				currentProductName: products.name,
 				currentVariantName: productVariants.name
 			})
 			.from(orderLines)
@@ -1077,8 +1077,8 @@ export class OrderService {
 			lines: linesWithImages.map(
 				({ line, imageUrl, productId, currentProductName, currentVariantName }) => ({
 					...line,
-					productName: line.productName || currentProductName || "",
-					variantName: line.variantName || currentVariantName || null,
+					productName: currentProductName || line.productName || "",
+					variantName: currentVariantName || line.variantName || null,
 					variant: null,
 					imageUrl: imageUrl ?? null,
 					productId: productId ?? null
