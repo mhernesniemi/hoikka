@@ -29,9 +29,9 @@ This also makes Hoikka well-suited for AI-assisted development: the codebase is 
 - [Payments](https://hoikka-docs.vercel.app/features/payments): pluggable payment methods (Stripe ready)
 - [Shipping](https://hoikka-docs.vercel.app/features/shipping): configurable shipping methods with tracking
 - [Tax](https://hoikka-docs.vercel.app/features/tax): VAT calculation with multiple rates per product type
-- [Wishlists](https://hoikka-docs.vercel.app/features/customer-features): for both logged-in and guest users
-- [Reviews](https://hoikka-docs.vercel.app/features/customer-features): customer ratings with moderation and verified purchase badges
-- [Content Pages](https://hoikka-docs.vercel.app/features/customer-features): static pages for policies, FAQs, and more
+- [Wishlists](https://hoikka-docs.vercel.app/features/wishlists): for both logged-in and guest users
+- [Reviews](https://hoikka-docs.vercel.app/features/reviews): customer ratings with moderation and verified purchase badges
+- [Content Pages](https://hoikka-docs.vercel.app/features/content-pages): static pages for policies, FAQs, and more
 - [Multi-Language](https://hoikka-docs.vercel.app/core/localization): translation tables for products, categories, collections, facets, and pages
 - [Asset Management](https://hoikka-docs.vercel.app/features/assets): media library with focal point cropping
 - [Integrations](https://hoikka-docs.vercel.app/integrations/overview): scheduled tasks, sync runner for ERP/PIM, webhooks with signature verification
