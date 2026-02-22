@@ -26,8 +26,9 @@
       } else {
         goto(`/verify-email?email=${encodeURIComponent(email)}`);
       }
-    } catch {
-      error = "Something went wrong. Please try again.";
+    } catch (e) {
+      console.error("[sign-up]", e);
+      error = e instanceof Error ? e.message : "Something went wrong. Please try again.";
     } finally {
       isLoading = false;
     }
