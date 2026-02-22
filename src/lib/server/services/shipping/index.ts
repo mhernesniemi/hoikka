@@ -13,13 +13,10 @@ import type {
 	OrderWithRelations
 } from "$lib/types.js";
 import type { ShippingProvider, ShippingRate, ShipmentInfo } from "./types.js";
-import { PostiProvider, MatkahuoltoProvider } from "./providers/index.js";
+import { FlatRateProvider } from "./providers/index.js";
 
 // Provider registry - maps provider codes to provider instances
-const PROVIDERS = new Map<string, ShippingProvider>([
-	["posti_standard", new PostiProvider()],
-	["matkahuolto_standard", new MatkahuoltoProvider()]
-]);
+const PROVIDERS = new Map<string, ShippingProvider>([["flat_rate", new FlatRateProvider()]]);
 
 export class ShippingService {
 	/**
@@ -254,15 +251,9 @@ export class ShippingService {
 	async initializeDefaultMethods(): Promise<void> {
 		const defaultMethods: NewShippingMethod[] = [
 			{
-				code: "posti_standard",
-				name: "Posti Standard",
-				description: "Standard delivery via Posti",
-				active: true
-			},
-			{
-				code: "matkahuolto_standard",
-				name: "Matkahuolto Standard",
-				description: "Standard delivery via Matkahuolto",
+				code: "flat_rate",
+				name: "Standard Shipping",
+				description: "Flat rate standard delivery",
 				active: true
 			}
 		];

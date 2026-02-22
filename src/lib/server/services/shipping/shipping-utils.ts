@@ -3,8 +3,6 @@
  * No database or environment dependencies
  */
 
-import type { ShipmentStatus } from "./types.js";
-
 export interface OrderLineForWeight {
 	quantity: number;
 	weight?: number; // Weight in grams, optional
@@ -24,38 +22,6 @@ export function estimateOrderWeight(lines: OrderLineForWeight[]): number {
 		const itemWeight = line.weight ?? DEFAULT_ITEM_WEIGHT;
 		return total + line.quantity * itemWeight;
 	}, 0);
-}
-
-/**
- * Map Posti API status to internal shipment status
- */
-export function mapPostiStatus(postiStatus: string): ShipmentStatus {
-	const statusMap: Record<string, ShipmentStatus> = {
-		created: "pending",
-		dispatched: "shipped",
-		in_transit: "in_transit",
-		out_for_delivery: "in_transit",
-		delivered: "delivered",
-		returned: "error",
-		exception: "error",
-		error: "error"
-	};
-	return statusMap[postiStatus] ?? "pending";
-}
-
-/**
- * Map Matkahuolto API status to internal shipment status
- */
-export function mapMatkahuoltoStatus(mhStatus: string): ShipmentStatus {
-	const statusMap: Record<string, ShipmentStatus> = {
-		RECEIVED: "pending",
-		IN_TRANSPORT: "in_transit",
-		OUT_FOR_DELIVERY: "in_transit",
-		DELIVERED: "delivered",
-		RETURNED: "error",
-		CANCELLED: "error"
-	};
-	return statusMap[mhStatus] ?? "pending";
 }
 
 /**

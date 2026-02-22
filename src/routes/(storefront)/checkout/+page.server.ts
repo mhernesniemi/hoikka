@@ -383,7 +383,7 @@ export const actions: Actions = {
 		};
 	},
 
-	createPayment: async ({ request, locals }) => {
+	createPayment: async ({ request, cookies, locals }) => {
 		const cart = await orderService.getActiveCart({
 			customerId: locals.customer?.id,
 			cartToken: locals.cartToken
@@ -408,6 +408,7 @@ export const actions: Actions = {
 
 		const data = await request.formData();
 		const paymentMethodId = data.get("paymentMethodId")?.toString();
+		const saveToAddressBook = data.get("saveToAddressBook") === "on";
 
 		if (!paymentMethodId) {
 			return fail(400, { error: "Payment method required" });
@@ -453,12 +454,98 @@ export const actions: Actions = {
 				});
 			}
 
+			// For mock payments, complete the order immediately
+			if (paymentInfo.methodCode !== "stripe") {
+				// Save address to customer's address book if requested
+				if (
+					saveToAddressBook &&
+					locals.customer?.id &&
+					!isDigitalOnly &&
+					cart.shippingStreetLine1
+				) {
+					try {
+						await customerService.addAddress(locals.customer.id, {
+							fullName: cart.shippingFullName || undefined,
+							streetLine1: cart.shippingStreetLine1,
+							city: cart.shippingCity || "",
+							postalCode: cart.shippingPostalCode || "",
+							country: cart.shippingCountry || "FI",
+							isDefault: false
+						});
+					} catch (e) {
+						console.error("Error saving address to address book:", e);
+					}
+				}
+
+				// Validate stock availability (skip for digital products)
+				if (!isDigitalOnly) {
+					const stockCheck = await orderService.validateStock(cart.id);
+					if (!stockCheck.valid) {
+						return fail(400, {
+							error: "Some items are no longer available in the requested quantity",
+							stockErrors: stockCheck.errors
+						});
+					}
+				}
+
+				// Transition order to payment_pending
+				await orderService.transitionState(cart.id, "payment_pending");
+
+				// Confirm payment
+				const paymentStatus = await paymentService.confirmPayment(payment.id);
+
+				if (isPaymentSuccessful(paymentStatus)) {
+					await orderService.transitionState(cart.id, "paid");
+
+					console.log("[order] completed", {
+						orderId: cart.id,
+						total: cart.total,
+						customerId: locals.customer?.id ?? null,
+						isDigitalOnly
+					});
+
+					const order = await orderService.getById(cart.id);
+					if (order) {
+						if (!isDigitalOnly) {
+							try {
+								await shippingService.createShipment(order);
+							} catch (e) {
+								console.error("Error creating shipment:", e);
+							}
+						}
+
+						try {
+							const deliveryResult = await digitalDeliveryService.deliverOrder(
+								cart.id
+							);
+							if (deliveryResult.errors.length > 0) {
+								console.error("Digital delivery errors:", deliveryResult.errors);
+							}
+						} catch (e) {
+							console.error("Error delivering digital products:", e);
+						}
+					}
+				}
+
+				const finalOrder = await orderService.getById(cart.id);
+				if (!finalOrder) {
+					return fail(500, { error: "Failed to retrieve order" });
+				}
+
+				cookies.delete("cart_token", { path: "/" });
+
+				throw redirect(303, `/checkout/thank-you?order=${finalOrder.code}`);
+			}
+
 			return {
 				success: true,
 				payment,
 				paymentInfo
 			};
 		} catch (error) {
+			if (error && typeof error === "object" && "status" in error && error.status === 303) {
+				throw error; // Re-throw redirect
+			}
 			console.error("[checkout] payment_failed", {
 				orderId: cart.id,
 				error: (error as Error).message

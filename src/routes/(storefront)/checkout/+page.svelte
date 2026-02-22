@@ -577,6 +577,7 @@
             </div>
 
             {#if !currentPaymentInfo}
+              {@const isMockPayment = selectedPaymentMethod?.code !== "stripe"}
               <form
                 method="POST"
                 action="?/createPayment"
@@ -594,12 +595,21 @@
                   name="paymentMethodId"
                   value={selectedPaymentMethod?.id ?? ""}
                 />
+                {#if saveAddressForFuture}
+                  <input type="hidden" name="saveToAddressBook" value="on" />
+                {/if}
                 <Button
                   type="submit"
                   disabled={!selectedPaymentMethod || isProcessingPayment}
-                  class="w-full"
+                  class={cn("w-full", isMockPayment && "bg-green-600 hover:bg-green-700")}
                 >
-                  {isProcessingPayment ? "Processing..." : "Create Payment"}
+                  {#if isProcessingPayment}
+                    Processing...
+                  {:else if isMockPayment}
+                    Place Order
+                  {:else}
+                    Continue to Payment
+                  {/if}
                 </Button>
               </form>
             {:else if currentPaymentInfo?.methodCode === "stripe" && currentPaymentInfo?.clientSecret}
@@ -612,10 +622,6 @@
                   }}
                 />
               </div>
-            {:else}
-              <Alert variant="success" class="mt-4">
-                <p class="text-sm font-medium">Payment created successfully</p>
-              </Alert>
             {/if}
           </div>
         {:else if !isDigitalOnly && currentCart?.shippingPostalCode && !currentOrderShipping}
@@ -628,8 +634,8 @@
           </Alert>
         {/if}
 
-        <!-- Complete Order -->
-        {#if currentPaymentInfo}
+        <!-- Complete Order (Stripe only) -->
+        {#if currentPaymentInfo?.methodCode === "stripe"}
           <div>
             {#if form?.stockErrors?.length}
               <Alert variant="destructive" class="mb-4">
@@ -640,13 +646,6 @@
                   {/each}
                 </ul>
                 <p class="mt-2 text-sm">Please adjust quantities in your cart.</p>
-              </Alert>
-            {:else}
-              <Alert variant="success" class="mb-4">
-                <p class="mb-2 font-medium">Payment Ready</p>
-                <p class="text-sm">
-                  Transaction ID: {currentPaymentInfo.providerTransactionId}
-                </p>
               </Alert>
             {/if}
             {#if stripeError}
@@ -663,12 +662,7 @@
                 stripeError = null;
 
                 // For Stripe payments, confirm on client side first (skip if already confirmed)
-                if (
-                  currentPaymentInfo?.methodCode === "stripe" &&
-                  stripeRef &&
-                  elementsRef &&
-                  !stripeConfirmed
-                ) {
+                if (stripeRef && elementsRef && !stripeConfirmed) {
                   cancel();
 
                   stripeRef
@@ -694,7 +688,7 @@
                   return;
                 }
 
-                // For mock/other providers (or Stripe already confirmed), submit directly
+                // Stripe already confirmed, submit directly
                 return async ({ update }) => {
                   isCompletingOrder = false;
                   stripeConfirmed = false;

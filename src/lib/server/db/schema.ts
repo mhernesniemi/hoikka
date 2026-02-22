@@ -608,8 +608,8 @@ export const shippingMethods = pgTable(
 	"shipping_methods",
 	{
 		id: serial("id").primaryKey(),
-		code: varchar("code", { length: 100 }).notNull().unique(), // 'posti_standard', 'matkahuolto_express'
-		name: varchar("name", { length: 255 }).notNull(), // 'Posti Standard', 'Matkahuolto Express'
+		code: varchar("code", { length: 100 }).notNull().unique(), // 'flat_rate', 'ups_ground'
+		name: varchar("name", { length: 255 }).notNull(), // 'Standard Shipping', 'UPS Ground'
 		description: text("description"),
 		active: boolean("active").default(true).notNull(),
 		createdAt: timestamp("created_at").defaultNow().notNull(),

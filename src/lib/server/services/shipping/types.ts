@@ -1,11 +1,11 @@
 /**
  * Shipping Provider Interface and Types
- * Defines the contract for shipping providers (Posti, Matkahuolto, etc.)
+ * Defines the contract for shipping providers (flat rate, UPS, etc.)
  */
 import type { OrderWithRelations } from "$lib/types.js";
 
 export interface ShippingProvider {
-	code: string; // unique code like 'posti_standard'
+	code: string; // unique code like 'flat_rate'
 
 	getRates: (order: OrderWithRelations) => Promise<ShippingRate[]>;
 	createShipment: (order: OrderWithRelations) => Promise<ShipmentInfo>;

@@ -1,8 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
 	estimateOrderWeight,
-	mapPostiStatus,
-	mapMatkahuoltoStatus,
 	generateTrackingNumber,
 	isValidFinnishPostalCode,
 	calculateShippingByWeight,
@@ -34,65 +32,6 @@ describe("estimateOrderWeight", () => {
 
 	it("returns 0 for empty order", () => {
 		expect(estimateOrderWeight([])).toBe(0);
-	});
-});
-
-describe("mapPostiStatus", () => {
-	it("maps created to pending", () => {
-		expect(mapPostiStatus("created")).toBe("pending");
-	});
-
-	it("maps dispatched to shipped", () => {
-		expect(mapPostiStatus("dispatched")).toBe("shipped");
-	});
-
-	it("maps in_transit to in_transit", () => {
-		expect(mapPostiStatus("in_transit")).toBe("in_transit");
-	});
-
-	it("maps out_for_delivery to in_transit", () => {
-		expect(mapPostiStatus("out_for_delivery")).toBe("in_transit");
-	});
-
-	it("maps delivered to delivered", () => {
-		expect(mapPostiStatus("delivered")).toBe("delivered");
-	});
-
-	it("maps error statuses to error", () => {
-		expect(mapPostiStatus("returned")).toBe("error");
-		expect(mapPostiStatus("exception")).toBe("error");
-		expect(mapPostiStatus("error")).toBe("error");
-	});
-
-	it("maps unknown status to pending", () => {
-		expect(mapPostiStatus("unknown_status")).toBe("pending");
-	});
-});
-
-describe("mapMatkahuoltoStatus", () => {
-	it("maps RECEIVED to pending", () => {
-		expect(mapMatkahuoltoStatus("RECEIVED")).toBe("pending");
-	});
-
-	it("maps IN_TRANSPORT to in_transit", () => {
-		expect(mapMatkahuoltoStatus("IN_TRANSPORT")).toBe("in_transit");
-	});
-
-	it("maps OUT_FOR_DELIVERY to in_transit", () => {
-		expect(mapMatkahuoltoStatus("OUT_FOR_DELIVERY")).toBe("in_transit");
-	});
-
-	it("maps DELIVERED to delivered", () => {
-		expect(mapMatkahuoltoStatus("DELIVERED")).toBe("delivered");
-	});
-
-	it("maps error statuses to error", () => {
-		expect(mapMatkahuoltoStatus("RETURNED")).toBe("error");
-		expect(mapMatkahuoltoStatus("CANCELLED")).toBe("error");
-	});
-
-	it("maps unknown status to pending", () => {
-		expect(mapMatkahuoltoStatus("UNKNOWN")).toBe("pending");
 	});
 });
 
