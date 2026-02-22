@@ -63,6 +63,20 @@ export const load: PageServerLoad = async ({ locals }) => {
 	// Check if shipping method is already set (not needed for digital)
 	const orderShipping = isDigitalOnly ? null : await shippingService.getOrderShipping(cart.id);
 
+	// Check if payment is already created
+	const orderPayments = await paymentService.getByOrderId(cart.id);
+	const existingPayment = orderPayments[0] || null;
+	let paymentInfo = null;
+	if (existingPayment && existingPayment.metadata) {
+		const method = await paymentService.getMethodById(existingPayment.paymentMethodId);
+		paymentInfo = {
+			providerTransactionId: existingPayment.transactionId || "",
+			clientSecret: (existingPayment.metadata as any)?.clientSecret,
+			methodCode: method?.code ?? "",
+			metadata: existingPayment.metadata as Record<string, unknown>
+		};
+	}
+
 	// Get customer data for prefilling (from order or customer record)
 	let customerEmail = cart.customerEmail || null;
 	let customerFullName = cart.shippingFullName || null;
@@ -94,6 +108,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 		shippingRates,
 		paymentMethods,
 		orderShipping,
+		existingPayment,
+		paymentInfo,
 		isDigitalOnly,
 		customerEmail,
 		customerFullName,
@@ -402,9 +418,18 @@ export const actions: Actions = {
 			// Check if payment already exists for this order
 			const existingPayments = await paymentService.getByOrderId(cart.id);
 			let payment;
+			let paymentInfo;
 
 			if (existingPayments.length > 0) {
+				// Payment already exists, return it
 				payment = existingPayments[0];
+				const method = await paymentService.getMethodById(payment.paymentMethodId);
+				paymentInfo = {
+					providerTransactionId: payment.transactionId || "",
+					clientSecret: (payment.metadata as any)?.clientSecret,
+					methodCode: method?.code ?? "",
+					metadata: payment.metadata as Record<string, unknown>
+				};
 			} else {
 				// Load full order relations for payment
 				const order = await orderService.getById(cart.id);
@@ -413,8 +438,13 @@ export const actions: Actions = {
 				}
 
 				// Create payment via provider
+				const method = await paymentService.getMethodById(parseInt(paymentMethodId));
 				const result = await paymentService.createPayment(order, parseInt(paymentMethodId));
 				payment = result.payment;
+				paymentInfo = {
+					...result.paymentInfo,
+					methodCode: method?.code ?? ""
+				};
 
 				console.log("[checkout] payment_created", {
 					orderId: cart.id,
@@ -424,6 +454,156 @@ export const actions: Actions = {
 				});
 			}
 
+			// For mock payments, complete the order immediately
+			if (paymentInfo.methodCode !== "stripe") {
+				// Save address to customer's address book if requested
+				if (
+					saveToAddressBook &&
+					locals.customer?.id &&
+					!isDigitalOnly &&
+					cart.shippingStreetLine1
+				) {
+					try {
+						await customerService.addAddress(locals.customer.id, {
+							fullName: cart.shippingFullName || undefined,
+							streetLine1: cart.shippingStreetLine1,
+							city: cart.shippingCity || "",
+							postalCode: cart.shippingPostalCode || "",
+							country: cart.shippingCountry || "FI",
+							isDefault: false
+						});
+					} catch (e) {
+						console.error("Error saving address to address book:", e);
+					}
+				}
+
+				// Validate stock availability (skip for digital products)
+				if (!isDigitalOnly) {
+					const stockCheck = await orderService.validateStock(cart.id);
+					if (!stockCheck.valid) {
+						return fail(400, {
+							error: "Some items are no longer available in the requested quantity",
+							stockErrors: stockCheck.errors
+						});
+					}
+				}
+
+				// Transition order to payment_pending
+				await orderService.transitionState(cart.id, "payment_pending");
+
+				// Confirm payment
+				const paymentStatus = await paymentService.confirmPayment(payment.id);
+
+				if (isPaymentSuccessful(paymentStatus)) {
+					await orderService.transitionState(cart.id, "paid");
+
+					console.log("[order] completed", {
+						orderId: cart.id,
+						total: cart.total,
+						customerId: locals.customer?.id ?? null,
+						isDigitalOnly
+					});
+
+					const order = await orderService.getById(cart.id);
+					if (order) {
+						if (!isDigitalOnly) {
+							try {
+								await shippingService.createShipment(order);
+							} catch (e) {
+								console.error("Error creating shipment:", e);
+							}
+						}
+
+						try {
+							const deliveryResult = await digitalDeliveryService.deliverOrder(
+								cart.id
+							);
+							if (deliveryResult.errors.length > 0) {
+								console.error("Digital delivery errors:", deliveryResult.errors);
+							}
+						} catch (e) {
+							console.error("Error delivering digital products:", e);
+						}
+					}
+				}
+
+				const finalOrder = await orderService.getById(cart.id);
+				if (!finalOrder) {
+					return fail(500, { error: "Failed to retrieve order" });
+				}
+
+				cookies.delete("cart_token", { path: "/" });
+
+				throw redirect(303, `/checkout/thank-you?order=${finalOrder.code}`);
+			}
+
+			return {
+				success: true,
+				payment,
+				paymentInfo
+			};
+		} catch (error) {
+			if (error && typeof error === "object" && "status" in error && error.status === 303) {
+				throw error; // Re-throw redirect
+			}
+			console.error("[checkout] payment_failed", {
+				orderId: cart.id,
+				error: (error as Error).message
+			});
+			return fail(400, { error: (error as Error).message });
+		}
+	},
+
+	completeOrder: async ({ request, cookies, locals }) => {
+		const cart = await orderService.getActiveCart({
+			customerId: locals.customer?.id,
+			cartToken: locals.cartToken
+		});
+		if (!cart) {
+			return fail(404, { error: "Cart not found" });
+		}
+
+		const data = await request.formData();
+		const saveToAddressBook = data.get("saveToAddressBook") === "on";
+
+		// Check if digital-only order
+		const isDigitalOnly = await isCartDigitalOnly(cart.id);
+
+		// Validate required information based on order type
+		if (isDigitalOnly) {
+			if (!cart.customerEmail) {
+				return fail(400, { error: "Contact information required" });
+			}
+		} else {
+			if (!cart.shippingPostalCode) {
+				return fail(400, { error: "Shipping address required" });
+			}
+
+			// Check if shipping method is set (only for physical products)
+			const orderShipping = await shippingService.getOrderShipping(cart.id);
+			if (!orderShipping) {
+				return fail(400, { error: "Shipping method required" });
+			}
+		}
+
+		// Check if payment exists
+		const orderPayments = await paymentService.getByOrderId(cart.id);
+		if (orderPayments.length === 0) {
+			return fail(400, { error: "Payment required" });
+		}
+
+		// Validate stock availability (skip for digital products)
+		if (!isDigitalOnly) {
+			const stockCheck = await orderService.validateStock(cart.id);
+			if (!stockCheck.valid) {
+				return fail(400, {
+					error: "Some items are no longer available in the requested quantity",
+					stockErrors: stockCheck.errors
+				});
+			}
+		}
+
+		try {
 			// Save address to customer's address book if requested
 			if (
 				saveToAddressBook &&
@@ -442,26 +622,18 @@ export const actions: Actions = {
 					});
 				} catch (e) {
 					console.error("Error saving address to address book:", e);
+					// Don't fail the order if address book save fails
 				}
 			}
 
-			// Validate stock availability (skip for digital products)
-			if (!isDigitalOnly) {
-				const stockCheck = await orderService.validateStock(cart.id);
-				if (!stockCheck.valid) {
-					return fail(400, {
-						error: "Some items are no longer available in the requested quantity",
-						stockErrors: stockCheck.errors
-					});
-				}
-			}
-
-			// Transition order to payment_pending
+			// Transition order to payment_pending (marks cart as inactive)
 			await orderService.transitionState(cart.id, "payment_pending");
 
-			// Confirm payment
+			// Confirm payment (for mock provider, this will mark it as completed)
+			const payment = orderPayments[0];
 			const paymentStatus = await paymentService.confirmPayment(payment.id);
 
+			// If payment is successful, transition order to paid
 			if (isPaymentSuccessful(paymentStatus)) {
 				await orderService.transitionState(cart.id, "paid");
 
@@ -474,14 +646,17 @@ export const actions: Actions = {
 
 				const order = await orderService.getById(cart.id);
 				if (order) {
+					// Create shipment only for physical products
 					if (!isDigitalOnly) {
 						try {
 							await shippingService.createShipment(order);
 						} catch (e) {
 							console.error("Error creating shipment:", e);
+							// Don't fail the order if shipment creation fails
 						}
 					}
 
+					// Deliver digital products via email
 					try {
 						const deliveryResult = await digitalDeliveryService.deliverOrder(cart.id);
 						if (deliveryResult.errors.length > 0) {
@@ -489,23 +664,27 @@ export const actions: Actions = {
 						}
 					} catch (e) {
 						console.error("Error delivering digital products:", e);
+						// Don't fail the order if digital delivery fails
 					}
 				}
 			}
 
+			// Get final order with code for redirect
 			const finalOrder = await orderService.getById(cart.id);
 			if (!finalOrder) {
 				return fail(500, { error: "Failed to retrieve order" });
 			}
 
+			// Clear cart token cookie
 			cookies.delete("cart_token", { path: "/" });
 
+			// Redirect to thank you page
 			throw redirect(303, `/checkout/thank-you?order=${finalOrder.code}`);
 		} catch (error) {
 			if (error && typeof error === "object" && "status" in error && error.status === 303) {
 				throw error; // Re-throw redirect
 			}
-			console.error("[checkout] payment_failed", {
+			console.error("[order] completion_failed", {
 				orderId: cart.id,
 				error: (error as Error).message
 			});
