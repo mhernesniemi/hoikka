@@ -185,12 +185,12 @@
                     });
                     if (result.error) {
                       demoError = result.error.message ?? "Login failed";
+                      demoLoading = false;
                     } else {
                       goto("/admin");
                     }
                   } catch (e) {
                     demoError = e instanceof Error ? e.message : "Login failed";
-                  } finally {
                     demoLoading = false;
                   }
                 }}
