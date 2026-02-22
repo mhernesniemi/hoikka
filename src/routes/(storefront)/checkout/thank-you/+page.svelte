@@ -2,8 +2,14 @@
   import type { PageData } from "./$types.js";
   import Check from "@lucide/svelte/icons/check";
   import { formatPrice } from "$lib/utils.js";
+  import { cartStore } from "$lib/stores/cart.svelte";
+  import { invalidateAll } from "$app/navigation";
 
   let { data }: { data: PageData } = $props();
+
+  // Clear cart after checkout and refresh all server data
+  cartStore.sync(null);
+  invalidateAll();
 </script>
 
 <svelte:head>
