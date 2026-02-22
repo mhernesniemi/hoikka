@@ -23,6 +23,7 @@
   const isLoading = $derived.by(() => cartStore.isLoading);
   const lines = $derived(cart?.lines ?? []);
   const subtotal = $derived(cart?.subtotal ?? 0);
+  const total = $derived(cart?.total ?? 0);
   const discount = $derived(cart?.discount ?? 0);
   const taxTotal = $derived(cart?.taxTotal ?? 0);
   const cartIsTaxExempt = $derived(cart?.isTaxExempt ?? false);
@@ -210,6 +211,11 @@
                 <span>{formatPrice(taxTotal)} EUR</span>
               </div>
             {/if}
+          </div>
+
+          <div class="flex justify-between border-t border-gray-200 pt-2">
+            <span class="font-semibold text-gray-900">Total</span>
+            <span class="font-semibold text-gray-900">{formatPrice(total)} EUR</span>
           </div>
 
           <div class="mb-8">
