@@ -14,21 +14,22 @@ import type {
 	OrderWithRelations
 } from "$lib/types.js";
 import type { PaymentProvider, PaymentInfo, PaymentStatus, RefundInfo } from "./types.js";
-import { StripeProvider, MockProvider } from "./providers/index.js";
+import { MockProvider } from "./providers/index.js";
 import { withSpan } from "../../telemetry.js";
 
 // Provider registry - maps provider codes to provider instances
-const PROVIDERS: Map<string, PaymentProvider> = new Map([
-	["stripe", new StripeProvider()],
-	["mock", new MockProvider()]
-]);
+const PROVIDERS: Map<string, PaymentProvider> = new Map([["mock", new MockProvider()]]);
 
 export class PaymentService {
 	/**
 	 * Get all active payment methods
 	 */
 	async getActiveMethods(): Promise<PaymentMethod[]> {
-		return db.select().from(paymentMethods).where(eq(paymentMethods.active, true));
+		return db
+			.select()
+			.from(paymentMethods)
+			.where(eq(paymentMethods.active, true))
+			.orderBy(paymentMethods.code);
 	}
 
 	/**
@@ -260,15 +261,15 @@ export class PaymentService {
 	async initializeDefaultMethods(): Promise<void> {
 		const defaultMethods: NewPaymentMethod[] = [
 			{
-				code: "stripe",
-				name: "Stripe",
-				description: "Pay with credit card via Stripe",
-				active: true
-			},
-			{
 				code: "mock",
 				name: "Mock Payment",
 				description: "Mock payment for development and testing",
+				active: true
+			},
+			{
+				code: "stripe",
+				name: "Stripe",
+				description: "Pay with credit card via Stripe",
 				active: true
 			}
 		];
