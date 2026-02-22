@@ -54,7 +54,6 @@
     }
   });
 
-
   // Form data for physical products (shipping address)
   let addressFormData = $state({
     fullName: data.customerFullName ?? data.cart?.shippingFullName ?? "",
@@ -578,7 +577,6 @@
             </div>
 
             {#if !currentPaymentInfo}
-              {@const isMockPayment = selectedPaymentMethod?.code !== "stripe"}
               <form
                 method="POST"
                 action="?/createPayment"
@@ -602,15 +600,9 @@
                 <Button
                   type="submit"
                   disabled={!selectedPaymentMethod || isProcessingPayment}
-                  class={cn("w-full", isMockPayment && "bg-green-600 hover:bg-green-700")}
+                  class="w-full"
                 >
-                  {#if isProcessingPayment}
-                    Processing...
-                  {:else if isMockPayment}
-                    Place Order
-                  {:else}
-                    Continue to Payment
-                  {/if}
+                  {isProcessingPayment ? "Processing..." : "Place Order"}
                 </Button>
               </form>
             {:else if currentPaymentInfo?.methodCode === "stripe" && currentPaymentInfo?.clientSecret}
