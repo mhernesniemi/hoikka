@@ -35,10 +35,13 @@
 }
 
 /* Cursor pointer for clickable elements */
+a,
+button,
 [role="button"],
 [onclick],
 label[for],
-summary {
+summary,
+select {
 	cursor: pointer;
 }
 
