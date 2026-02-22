@@ -44,6 +44,8 @@ This provisions a Neon Postgres database and Vercel Blob storage automatically. 
 
 ### Local Development
 
+After deploying to Vercel:
+
 ```bash
 # Clone your new repository and install dependencies
 git clone <your-repo>
