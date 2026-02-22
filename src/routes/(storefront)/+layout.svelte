@@ -58,10 +58,6 @@
   const wishlistCount = $derived.by(() => wishlistStore.count);
 </script>
 
-<!-- TODO: Remove noindex before launch -->
-<svelte:head>
-  <meta name="robots" content="noindex, nofollow" />
-</svelte:head>
 
 <div class="flex min-h-screen flex-col bg-white">
   <!-- Header (hidden on front page) -->

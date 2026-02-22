@@ -1,22 +1,17 @@
 # Hoikka E-commerce Platform
 # https://hoikka.dev
 
-# TEMPORARY: Block all crawlers before launch
-# TODO: Remove this block after launch
 User-agent: *
-Disallow: /
+Allow: /
+Allow: /products
+Allow: /collections
+Allow: /category
+Disallow: /admin
+Disallow: /account
+Disallow: /checkout
+Disallow: /wishlist
+Disallow: /sign-in
+Disallow: /sign-up
+Disallow: /api
 
-# After launch, replace above with:
-# User-agent: *
-# Allow: /
-# Allow: /products
-# Allow: /collections
-# Allow: /category
-# Disallow: /admin
-# Disallow: /account
-# Disallow: /checkout
-# Disallow: /wishlist
-# Disallow: /sign-in
-# Disallow: /sign-up
-# Disallow: /api
-# Sitemap: https://hoikka.dev/sitemap.xml
+Sitemap: https://hoikka.dev/sitemap.xml

@@ -16,6 +16,21 @@
     name="description"
     content="Lightweight but powerful DX-first ecommerce platform built with SvelteKit. 100% customizable and owned by you."
   />
+  <meta property="og:title" content="Hoikka - DX-first ecommerce platform" />
+  <meta
+    property="og:description"
+    content="Lightweight but powerful DX-first ecommerce platform built with SvelteKit. 100% customizable and owned by you."
+  />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://hoikka.dev" />
+  <meta property="og:image" content="https://hoikka.dev/hoikka-screenshot.jpg" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Hoikka - DX-first ecommerce platform" />
+  <meta
+    name="twitter:description"
+    content="Lightweight but powerful DX-first ecommerce platform built with SvelteKit. 100% customizable and owned by you."
+  />
+  <meta name="twitter:image" content="https://hoikka.dev/hoikka-screenshot.jpg" />
 </svelte:head>
 
 <div>
