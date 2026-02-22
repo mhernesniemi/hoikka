@@ -109,6 +109,7 @@
   let reviewComment = $state("");
   let isSubmittingReview = $state(false);
   let hoverRating = $state(0);
+  let showReviewForm = $state(false);
 
   function buildCategoryPath(breadcrumbs: typeof data.breadcrumbs, upToIndex: number): string {
     return (
@@ -405,10 +406,145 @@
 
   <!-- Reviews Section -->
   <div class="mt-12 border-t border-gray-200 pt-8">
+    <!-- Header: title + write a review link -->
     <div class="mb-6 flex items-center justify-between">
       <h2 class="text-xl font-bold">Customer Reviews</h2>
-      {#if data.rating.count > 0}
-        <div class="flex items-center gap-2">
+      {#if data.customerId}
+        {#if data.customerReview}
+          <span class="text-sm text-gray-500">
+            You've reviewed this product
+            {#if data.customerReview.status === "pending"}
+              (pending approval)
+            {/if}
+          </span>
+        {:else}
+          <button
+            type="button"
+            class="text-sm font-medium text-blue-600 hover:underline"
+            onclick={() => (showReviewForm = !showReviewForm)}
+          >
+            Write a review
+          </button>
+        {/if}
+      {:else}
+        <a
+          href="/sign-in?redirect={encodeURIComponent(`/products/${product.id}/${product.slug}`)}"
+          class="text-sm font-medium text-blue-600 hover:underline"
+        >
+          Write a review
+        </a>
+      {/if}
+    </div>
+
+    <!-- Collapsible Review Form -->
+    {#if showReviewForm && data.customerId && !data.customerReview}
+      <div class="mb-8 rounded-lg border bg-gray-50 p-6">
+        {#if form?.reviewError}
+          <Alert variant="destructive" class="mb-4">{form.reviewError}</Alert>
+        {/if}
+
+        {#if form?.reviewSuccess}
+          <Alert variant="success" class="mb-4">
+            Thank you for your review! It will be visible after approval.
+          </Alert>
+        {:else}
+          <form
+            method="POST"
+            action="?/submitReview"
+            use:enhance={() => {
+              isSubmittingReview = true;
+              return async ({ update }) => {
+                await update();
+                isSubmittingReview = false;
+                if (!form?.reviewError) {
+                  reviewNickname = "";
+                  reviewRating = 0;
+                  reviewComment = "";
+                }
+              };
+            }}
+          >
+            <div class="mb-4">
+              <label for="review-nickname" class="mb-2 block text-sm font-medium text-gray-700">
+                Your Nickname <span class="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                id="review-nickname"
+                name="nickname"
+                bind:value={reviewNickname}
+                required
+                maxlength="100"
+                class="w-full rounded-lg border border-gray-300 px-3 py-2"
+                placeholder="Enter a display name for your review"
+              />
+            </div>
+
+            <fieldset class="mb-4">
+              <legend class="mb-2 block text-sm font-medium text-gray-700"
+                >Your Rating <span class="text-red-500">*</span></legend
+              >
+              <div class="flex gap-1" role="radiogroup" aria-label="Rating">
+                {#each [1, 2, 3, 4, 5] as star}
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={reviewRating === star}
+                    aria-label="{star} star{star > 1 ? 's' : ''}"
+                    onclick={() => (reviewRating = star)}
+                    onmouseenter={() => (hoverRating = star)}
+                    onmouseleave={() => (hoverRating = 0)}
+                    class={cn(
+                      "text-3xl transition-colors",
+                      star <= (hoverRating || reviewRating) ? "text-yellow-400" : "text-gray-300"
+                    )}
+                  >
+                    ★
+                  </button>
+                {/each}
+              </div>
+              <input type="hidden" name="rating" value={reviewRating} />
+            </fieldset>
+
+            <div class="mb-4">
+              <label for="review-comment" class="mb-2 block text-sm font-medium text-gray-700">
+                Your Review (optional)
+              </label>
+              <textarea
+                id="review-comment"
+                name="comment"
+                bind:value={reviewComment}
+                rows="4"
+                class="w-full rounded-lg border border-gray-300 px-3 py-2"
+                placeholder="Share your experience with this product..."
+              ></textarea>
+            </div>
+
+            <div class="flex items-center gap-3">
+              <Button
+                type="submit"
+                disabled={isSubmittingReview || reviewRating === 0 || !reviewNickname.trim()}
+              >
+                {isSubmittingReview ? "Submitting..." : "Submit Review"}
+              </Button>
+              <button
+                type="button"
+                class="text-sm text-gray-500 hover:text-gray-700"
+                onclick={() => (showReviewForm = false)}
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        {/if}
+      </div>
+    {/if}
+
+    <!-- Reviews List -->
+    {#if data.reviews.length > 0}
+      <div class="grid grid-cols-1 gap-6 sm:grid-cols-[180px_1fr]">
+        <!-- Left column: aggregate rating -->
+        <div>
           <div class="flex gap-0.5">
             {#each [1, 2, 3, 4, 5] as star}
               {@const fill = Math.min(1, Math.max(0, data.rating.average - (star - 1)))}
@@ -432,163 +568,42 @@
               </svg>
             {/each}
           </div>
-          <span class="text-gray-500"
-            >({data.rating.count} {data.rating.count === 1 ? "review" : "reviews"})</span
-          >
+          <p class="mt-1 text-sm text-gray-500">
+            {data.rating.average.toFixed(1)} out of 5
+          </p>
+          <p class="text-sm text-gray-500">
+            {data.rating.count}
+            {data.rating.count === 1 ? "review" : "reviews"}
+          </p>
         </div>
-      {/if}
-    </div>
 
-    <!-- Review Form -->
-    {#if data.customerId}
-      {#if data.customerReview}
-        <p class="mb-4 text-sm text-gray-500">
-          You have already reviewed this product.
-          {#if data.customerReview.status === "pending"}
-            Your review is pending approval.
-          {/if}
-        </p>
-      {:else}
-        <div class="mb-8 rounded-lg border bg-gray-50 p-6">
-          <h3 class="mb-4 text-lg font-medium">Write a Review</h3>
-
-          {#if form?.reviewError}
-            <Alert variant="destructive" class="mb-4">{form.reviewError}</Alert>
-          {/if}
-
-          {#if form?.reviewSuccess}
-            <Alert variant="success" class="mb-4">
-              Thank you for your review! It will be visible after approval.
-            </Alert>
-          {:else}
-            <form
-              method="POST"
-              action="?/submitReview"
-              use:enhance={() => {
-                isSubmittingReview = true;
-                return async ({ update }) => {
-                  await update();
-                  isSubmittingReview = false;
-                  if (!form?.reviewError) {
-                    reviewNickname = "";
-                    reviewRating = 0;
-                    reviewComment = "";
-                  }
-                };
-              }}
-            >
-              <!-- Nickname -->
-              <div class="mb-4">
-                <label for="review-nickname" class="mb-2 block text-sm font-medium text-gray-700">
-                  Your Nickname <span class="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  id="review-nickname"
-                  name="nickname"
-                  bind:value={reviewNickname}
-                  required
-                  maxlength="100"
-                  class="w-full rounded-lg border border-gray-300 px-3 py-2"
-                  placeholder="Enter a display name for your review"
-                />
-              </div>
-
-              <!-- Star Rating -->
-              <fieldset class="mb-4">
-                <legend class="mb-2 block text-sm font-medium text-gray-700"
-                  >Your Rating <span class="text-red-500">*</span></legend
-                >
-                <div class="flex gap-1" role="radiogroup" aria-label="Rating">
+        <!-- Right column: individual reviews -->
+        <div class="divide-y divide-gray-100">
+          {#each data.reviews as review}
+            <div class="grid grid-cols-1 gap-2 py-4 first:pt-0 sm:grid-cols-[180px_1fr] sm:gap-6">
+              <!-- Reviewer info -->
+              <div>
+                <p class="text-sm font-medium text-gray-900">{review.nickname}</p>
+                {#if review.isVerifiedPurchase}
+                  <p class="text-xs text-green-600">Verified buyer</p>
+                {/if}
+                <div class="flex gap-0.5 text-amber-400">
                   {#each [1, 2, 3, 4, 5] as star}
-                    <button
-                      type="button"
-                      role="radio"
-                      aria-checked={reviewRating === star}
-                      aria-label="{star} star{star > 1 ? 's' : ''}"
-                      onclick={() => (reviewRating = star)}
-                      onmouseenter={() => (hoverRating = star)}
-                      onmouseleave={() => (hoverRating = 0)}
-                      class={cn(
-                        "text-3xl transition-colors",
-                        star <= (hoverRating || reviewRating) ? "text-yellow-400" : "text-gray-300"
-                      )}
-                    >
-                      ★
-                    </button>
+                    <span class="text-sm">{star <= review.rating ? "★" : "☆"}</span>
                   {/each}
                 </div>
-                <input type="hidden" name="rating" value={reviewRating} />
-              </fieldset>
+                <p class="text-xs text-gray-400">{formatDate(review.createdAt)}</p>
+              </div>
 
               <!-- Comment -->
-              <div class="mb-4">
-                <label for="review-comment" class="mb-2 block text-sm font-medium text-gray-700">
-                  Your Review (optional)
-                </label>
-                <textarea
-                  id="review-comment"
-                  name="comment"
-                  bind:value={reviewComment}
-                  rows="4"
-                  class="w-full rounded-lg border border-gray-300 px-3 py-2"
-                  placeholder="Share your experience with this product..."
-                ></textarea>
+              <div>
+                {#if review.comment}
+                  <p class="text-sm text-gray-700">{review.comment}</p>
+                {/if}
               </div>
-
-              <Button
-                type="submit"
-                disabled={isSubmittingReview || reviewRating === 0 || !reviewNickname.trim()}
-              >
-                {isSubmittingReview ? "Submitting..." : "Submit Review"}
-              </Button>
-            </form>
-          {/if}
+            </div>
+          {/each}
         </div>
-      {/if}
-    {:else}
-      <div class="mb-8 rounded-lg border border-gray-200 bg-gray-50 p-4">
-        <p class="text-gray-600">
-          <a href="/sign-in" class="text-blue-600 hover:underline">Sign in</a> to leave a review.
-        </p>
-      </div>
-    {/if}
-
-    <!-- Reviews List -->
-    {#if data.reviews.length === 0}
-      <p class="text-gray-500">No reviews yet. Be the first to review this product!</p>
-    {:else}
-      <div class="divide-y divide-gray-100">
-        {#each data.reviews as review}
-          <div
-            class="grid grid-cols-[200px_1fr_auto] gap-x-6 rounded-lg bg-gray-50 px-6 py-5 max-sm:grid-cols-1 max-sm:gap-y-1"
-          >
-            <!-- Left -->
-            <div>
-              <p class="text-sm font-medium text-gray-900">{review.nickname}</p>
-              {#if review.isVerifiedPurchase}
-                <p class="mt-0.5 text-xs text-green-600">Verified buyer</p>
-              {/if}
-              <div class="flex gap-0.5 text-2xl text-amber-400">
-                {#each [1, 2, 3, 4, 5] as star}
-                  <span>{star <= review.rating ? "★" : "☆"}</span>
-                {/each}
-              </div>
-            </div>
-
-            <!-- Middle -->
-            <div>
-              {#if review.comment}
-                <p class="max-w-prose">{review.comment}</p>
-              {/if}
-            </div>
-
-            <!-- Right -->
-            <span class="text-sm text-gray-500 max-sm:order-first"
-              >{formatDate(review.createdAt)}</span
-            >
-          </div>
-        {/each}
       </div>
     {/if}
   </div>

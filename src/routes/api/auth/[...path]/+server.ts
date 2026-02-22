@@ -29,10 +29,15 @@ async function proxy({ request, params }: Parameters<RequestHandler>[0]) {
 	const userAgent = request.headers.get("user-agent");
 	if (userAgent) headers.set("user-agent", userAgent);
 
-	// Use the Neon Auth base URL as origin for server-to-server calls.
-	// Neon Auth always trusts its own base URL, so this avoids needing to
-	// manually configure trusted domains in the Neon dashboard.
-	headers.set("origin", baseUrl);
+	// For social sign-in, forward the real origin so Neon Auth redirects OAuth
+	// callbacks back to our app. For all other routes, use the Neon Auth base URL
+	// as origin — Neon Auth always trusts its own URL, avoiding the need to
+	// configure trusted domains in the Neon dashboard.
+	const isSocialSignIn = params.path.startsWith("sign-in/social");
+	const origin = isSocialSignIn
+		? request.headers.get("origin") || new URL(request.url).origin
+		: baseUrl;
+	headers.set("origin", origin);
 	headers.set("x-neon-auth-middleware", "true");
 
 	const res = await fetch(url, {
