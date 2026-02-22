@@ -420,7 +420,7 @@
         {:else}
           <button
             type="button"
-            class="text-sm font-medium text-blue-600 hover:underline"
+            class="text-blue-600 hover:underline"
             onclick={() => (showReviewForm = !showReviewForm)}
           >
             Write a review
