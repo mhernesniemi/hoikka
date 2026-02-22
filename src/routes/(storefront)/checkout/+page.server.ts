@@ -63,18 +63,22 @@ export const load: PageServerLoad = async ({ locals }) => {
 	// Check if shipping method is already set (not needed for digital)
 	const orderShipping = isDigitalOnly ? null : await shippingService.getOrderShipping(cart.id);
 
-	// Check if payment is already created
+	// Check if a Stripe payment is already in progress (to resume card entry)
 	const orderPayments = await paymentService.getByOrderId(cart.id);
 	const existingPayment = orderPayments[0] || null;
 	let paymentInfo = null;
 	if (existingPayment && existingPayment.metadata) {
 		const method = await paymentService.getMethodById(existingPayment.paymentMethodId);
-		paymentInfo = {
-			providerTransactionId: existingPayment.transactionId || "",
-			clientSecret: (existingPayment.metadata as any)?.clientSecret,
-			methodCode: method?.code ?? "",
-			metadata: existingPayment.metadata as Record<string, unknown>
-		};
+		// Only set paymentInfo for Stripe (needs client-side confirmation)
+		// Mock payments complete instantly and never need resuming
+		if (method?.code === "stripe") {
+			paymentInfo = {
+				providerTransactionId: existingPayment.transactionId || "",
+				clientSecret: (existingPayment.metadata as any)?.clientSecret,
+				methodCode: method.code,
+				metadata: existingPayment.metadata as Record<string, unknown>
+			};
+		}
 	}
 
 	// Get customer data for prefilling (from order or customer record)
