@@ -13,11 +13,15 @@
   let isLoading = $state(false);
   let isGoogleLoading = $state(false);
 
-  const successMessage = $derived(
-    $page.url.searchParams.get("message") === "password-reset"
-      ? "Password reset successfully. Sign in with your new password."
-      : null
-  );
+  const successMessage = $derived.by(() => {
+    if ($page.url.searchParams.get("verified") === "true") {
+      return "Email verified! Sign in to continue.";
+    }
+    if ($page.url.searchParams.get("message") === "password-reset") {
+      return "Password reset successfully. Sign in with your new password.";
+    }
+    return null;
+  });
 
   async function handleSubmit(e: Event) {
     e.preventDefault();

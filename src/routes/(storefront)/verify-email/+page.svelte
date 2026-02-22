@@ -66,7 +66,8 @@
       if (result.error) {
         error = result.error.message ?? "Invalid verification code";
       } else {
-        goto(redirect);
+        // Redirect to sign-in so the user can log in with their verified account
+        goto(`/sign-in?verified=true&redirect=${encodeURIComponent(redirect)}`);
       }
     } catch {
       error = "Verification failed. Please try again.";
