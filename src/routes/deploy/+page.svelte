@@ -9,7 +9,7 @@
         <p class="font-medium text-amber-800">Important: Enable Neon Auth</p>
         <p class="mt-1 text-amber-700">
           When adding the Neon database during setup, make sure to check the
-          <strong>"Auth"</strong> checkbox. This is required for admin login.
+          <strong>"Auth"</strong> option. This is required for admin login.
         </p>
       </div>
 
