@@ -252,7 +252,10 @@ export class OrderService {
 	 * List all orders with optional state filter
 	 */
 	async list(state?: OrderState, limit = 20, offset = 0): Promise<OrderWithRelations[]> {
-		const conditions = state ? [eq(orders.state, state)] : [];
+		const conditions = [eq(orders.active, false)];
+		if (state) {
+			conditions.push(eq(orders.state, state));
+		}
 
 		const orderList = await db
 			.select()
