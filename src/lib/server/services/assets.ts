@@ -21,10 +21,12 @@ export interface CreateAssetInput {
 	fileSize?: number;
 }
 
-/** Extract original filename from a Vercel Blob URL by stripping the random hash suffix */
+/** Extract original filename from a Vercel Blob URL.
+ *  Vercel Blob's `addRandomSuffix` appends `-<base64>` before the extension.
+ *  e.g. ".../tomato-green-Tkyz2j6VRrYabc.png" → "tomato-green.png" */
 function blobFilename(url: string): string {
-	const segment = url.split("/").pop() || "image";
-	return segment.replace(/-[A-Za-z0-9]{21}(?=\.\w+$)/, "");
+	const segment = decodeURIComponent(url.split("/").pop() || "image");
+	return segment.replace(/-[A-Za-z0-9]{10,}(\.\w+)$/, "$1");
 }
 
 class AssetService {
@@ -216,13 +218,13 @@ class AssetService {
 				.onConflictDoNothing();
 		}
 
-		// Fix existing assets that were backfilled with wrong names (SKU or blob ID)
-		const badAssets = await db
+		// Fix names of previously backfilled assets (width=0 means not from upload)
+		const backfilled = await db
 			.select({ id: assets.id, name: assets.name, source: assets.source })
 			.from(assets)
-			.where(isNotNull(assets.source));
-		for (const asset of badAssets) {
-			if (!asset.source || asset.name.includes(".")) continue;
+			.where(eq(assets.width, 0));
+		for (const asset of backfilled) {
+			if (!asset.source) continue;
 			const correctName = blobFilename(asset.source);
 			if (correctName !== asset.name) {
 				await db.update(assets).set({ name: correctName }).where(eq(assets.id, asset.id));
