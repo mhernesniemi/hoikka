@@ -426,7 +426,7 @@
   <div class="mt-12 border-t border-gray-200 pt-8">
     <!-- Header: title + write a review link -->
     <div class="flex items-center justify-between">
-      <h2 class="text-xl font-bold">Customer Reviews</h2>
+      <h2 class="mb-4 text-xl font-bold">Customer Reviews</h2>
       {#if data.customerId}
         {#if data.customerReview}
           <span class="text-sm text-gray-500">
@@ -447,7 +447,7 @@
       {:else}
         <a
           href="/sign-in?redirect={encodeURIComponent(`/products/${product.id}/${product.slug}`)}"
-          class="text-sm font-medium text-blue-600 hover:underline"
+          class="text-blue-600 hover:underline"
         >
           Write a review
         </a>
@@ -471,14 +471,15 @@
             action="?/submitReview"
             use:enhance={() => {
               isSubmittingReview = true;
-              return async ({ update }) => {
-                await update();
+              return async ({ update, result }) => {
                 isSubmittingReview = false;
-                if (!form?.reviewError) {
+                if (result.type === "success") {
+                  showReviewForm = false;
                   reviewNickname = "";
                   reviewRating = 0;
                   reviewComment = "";
                 }
+                await update({ reset: false });
               };
             }}
           >
@@ -560,7 +561,7 @@
 
     <!-- Reviews List -->
     {#if data.reviews.length > 0}
-      <div class="grid grid-cols-1 gap-6 sm:grid-cols-[180px_1fr]">
+      <div class="grid grid-cols-1 gap-20 sm:grid-cols-[180px_1fr]">
         <!-- Left column: aggregate rating -->
         <div>
           <div class="flex gap-0.5">
@@ -586,10 +587,7 @@
               </svg>
             {/each}
           </div>
-          <p class="mt-1 text-sm text-gray-500">
-            {data.rating.average.toFixed(1)} out of 5
-          </p>
-          <p class="text-sm text-gray-500">
+          <p class="mt-2 text-sm text-gray-500">
             {data.rating.count}
             {data.rating.count === 1 ? "review" : "reviews"}
           </p>
@@ -598,7 +596,7 @@
         <!-- Right column: individual reviews -->
         <div class="divide-y divide-gray-100">
           {#each data.reviews as review}
-            <div class="grid grid-cols-1 gap-2 py-4 first:pt-0 sm:grid-cols-[180px_1fr] sm:gap-6">
+            <div class="grid grid-cols-1 gap-10 py-4 first:pt-0 sm:grid-cols-[180px_1fr] sm:gap-6">
               <!-- Reviewer info -->
               <div>
                 <p class="text-sm font-medium text-gray-900">{review.nickname}</p>
@@ -607,7 +605,7 @@
                 {/if}
                 <div class="flex gap-0.5 text-amber-400">
                   {#each [1, 2, 3, 4, 5] as star}
-                    <span class="text-sm">{star <= review.rating ? "★" : "☆"}</span>
+                    <span class="text-xl">{star <= review.rating ? "★" : "☆"}</span>
                   {/each}
                 </div>
                 <p class="text-xs text-gray-400">{formatDate(review.createdAt)}</p>
@@ -628,7 +626,7 @@
 
   <!-- Related Products -->
   {#if data.relatedProducts.length > 0}
-    <section class="mt-12 border-t border-gray-200 pt-8">
+    <section class="mt-8 border-t border-gray-200 pt-8">
       <h2 class="mb-6 text-xl font-bold">You May Also Like</h2>
       <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         {#each data.relatedProducts as relatedProduct}
