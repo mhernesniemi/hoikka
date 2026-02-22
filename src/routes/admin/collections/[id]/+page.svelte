@@ -31,7 +31,7 @@
   import * as Command from "$lib/components/admin/ui/command";
   import * as DropdownMenu from "$lib/components/admin/ui/dropdown-menu";
   import X from "@lucide/svelte/icons/x";
-  import ImageIcon from "@lucide/svelte/icons/image";
+
   import ChevronLeft from "@lucide/svelte/icons/chevron-left";
   import ExternalLink from "@lucide/svelte/icons/external-link";
   import ChevronsUpDown from "@lucide/svelte/icons/chevrons-up-down";
@@ -276,8 +276,7 @@
       cell: ({ row }) =>
         renderSnippet(productCell, {
           name: getPreviewProductName(row.original),
-          id: row.original.id,
-          image: row.original.featuredAsset?.source ?? null
+          id: row.original.id
         })
     },
     {
@@ -295,15 +294,8 @@
   ];
 </script>
 
-{#snippet productCell({ name, id, image }: { name: string; id: number; image: string | null })}
+{#snippet productCell({ name, id }: { name: string; id: number })}
   <a href="/admin/products/{id}" class="group inline-flex items-center">
-    {#if image}
-      <img src={image} alt="" class="mr-3 h-10 w-10 rounded object-cover" />
-    {:else}
-      <div class="mr-3 flex h-10 w-10 items-center justify-center rounded bg-muted-strong">
-        <ImageIcon class="h-5 w-5 text-placeholder" />
-      </div>
-    {/if}
     <span class="font-medium group-hover:underline">
       {name}
     </span>
