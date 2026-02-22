@@ -6,7 +6,7 @@
 
 [Hoikka](https://hoikka.dev) is an opinionated, full-stack e-commerce platform built with SvelteKit.
 
-It includes the storefront, admin panel, API, and business logic in a single lightweight codebase and is ready to deploy serverless.
+It includes the storefront, admin panel, and business logic in a single lightweight codebase and is ready to deploy serverless.
 
 ## Philosophy: Code Over Configuration
 
@@ -38,7 +38,7 @@ This also makes Hoikka well-suited for AI-assisted development: the codebase is 
 
 ## Quick Start
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fmhernesniemi%2Fsvelte-ecomm&project-name=hoikka&repository-name=hoikka&stores=%5B%7B%22type%22%3A%22integration%22%2C%22productSlug%22%3A%22neon%22%2C%22integrationSlug%22%3A%22neon%22%7D%2C%7B%22type%22%3A%22blob%22%7D%5D&skippable-integrations=1)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fmhernesniemi%2Fhoikka&project-name=hoikka&repository-name=hoikka&stores=%5B%7B%22type%22%3A%22integration%22%2C%22productSlug%22%3A%22neon%22%2C%22integrationSlug%22%3A%22neon%22%7D%2C%7B%22type%22%3A%22blob%22%7D%5D&skippable-integrations=1)
 
 This provisions a Neon Postgres database and Vercel Blob storage automatically. After deploying, enable Neon Auth in your [Neon Console](https://console.neon.tech) and add the auth environment variables to your Vercel project.
 
