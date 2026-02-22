@@ -8,6 +8,7 @@
 
   let { data }: { data: PageData } = $props();
   let demoError = $state<string | null>(null);
+  let demoLoading = $state(false);
 </script>
 
 <svelte:head>
@@ -173,8 +174,10 @@
 
               <Button
                 class="mt-4 w-full"
+                disabled={demoLoading}
                 onclick={async () => {
                   demoError = null;
+                  demoLoading = true;
                   try {
                     const result = await authClient.signIn.email({
                       email: "admin@example.com",
@@ -187,10 +190,12 @@
                     }
                   } catch (e) {
                     demoError = e instanceof Error ? e.message : "Login failed";
+                  } finally {
+                    demoLoading = false;
                   }
                 }}
               >
-                Log in
+                {demoLoading ? "Logging in..." : "Log in"}
               </Button>
             </div>
           </div>
