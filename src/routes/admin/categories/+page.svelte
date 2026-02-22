@@ -155,8 +155,9 @@
 
   function handleKeydown(e: KeyboardEvent) {
     if (e.key === "c" && !e.metaKey && !e.ctrlKey && !createDialogOpen && !editDialogOpen) {
-      const tag = (e.target as HTMLElement).tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      const el = e.target as HTMLElement;
+      const tag = el.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || el.isContentEditable) return;
       e.preventDefault();
       openCreateDialog();
     }

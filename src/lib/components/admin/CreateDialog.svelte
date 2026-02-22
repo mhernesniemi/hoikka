@@ -41,7 +41,11 @@
       !e.metaKey &&
       !e.ctrlKey &&
       !e.altKey &&
-      !(e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement)
+      !(
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        (e.target instanceof HTMLElement && e.target.isContentEditable)
+      )
     ) {
       e.preventDefault();
       open = true;
