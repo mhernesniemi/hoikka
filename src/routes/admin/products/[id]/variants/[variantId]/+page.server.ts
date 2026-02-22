@@ -1,5 +1,6 @@
 import { productService } from "$lib/server/services/products.js";
 import { reindexProduct } from "$lib/server/services/product-search.js";
+import { assetService } from "$lib/server/services/assets.js";
 import { facetService } from "$lib/server/services/facets.js";
 import { customerGroupService } from "$lib/server/services/customerGroups.js";
 import { translationService } from "$lib/server/services/translations.js";
@@ -57,6 +58,10 @@ export const actions: Actions = {
 		const name = formData.get("variant_name") as string;
 		const rawImageUrl = formData.get("imageUrl") as string;
 		const imageUrl = rawImageUrl || null;
+		const imageName = formData.get("imageName") as string | null;
+		const imageWidth = Number(formData.get("imageWidth")) || 0;
+		const imageHeight = Number(formData.get("imageHeight")) || 0;
+		const imageSize = Number(formData.get("imageSize")) || 0;
 		const isFeatured = formData.get("isFeatured") === "on";
 		const facetValueIds = formData
 			.getAll("facetValueIds")
@@ -81,6 +86,17 @@ export const actions: Actions = {
 				imageUrl,
 				isFeatured
 			});
+
+			// Create asset record for new variant image (if not already tracked)
+			if (imageUrl && imageName && !(await assetService.existsByUrl(imageUrl))) {
+				await assetService.create({
+					name: imageName,
+					url: imageUrl,
+					width: imageWidth,
+					height: imageHeight,
+					fileSize: imageSize
+				});
+			}
 
 			// Sync facet values
 			const variant = await productService.getVariantById(variantId);

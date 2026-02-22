@@ -126,6 +126,10 @@
     )
   );
 
+  let imageMeta = $state<{ name: string; width: number; height: number; size: number } | null>(
+    null
+  );
+
   function handleImageSelected(
     files: {
       url: string;
@@ -138,6 +142,12 @@
   ) {
     if (files.length > 0) {
       imageUrl = files[0].url;
+      imageMeta = {
+        name: files[0].name,
+        width: files[0].width,
+        height: files[0].height,
+        size: files[0].size
+      };
     }
   }
 
@@ -203,6 +213,12 @@
         }}
       >
         <input type="hidden" name="imageUrl" value={imageUrl ?? ""} />
+        {#if imageMeta}
+          <input type="hidden" name="imageName" value={imageMeta.name} />
+          <input type="hidden" name="imageWidth" value={imageMeta.width} />
+          <input type="hidden" name="imageHeight" value={imageMeta.height} />
+          <input type="hidden" name="imageSize" value={imageMeta.size} />
+        {/if}
         {#if isFeatured}
           <input type="hidden" name="isFeatured" value="on" />
         {/if}

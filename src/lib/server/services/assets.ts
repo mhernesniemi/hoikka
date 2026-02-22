@@ -33,6 +33,17 @@ class AssetService {
 	}
 
 	/**
+	 * Check if an asset with the given source URL exists
+	 */
+	async existsByUrl(url: string): Promise<boolean> {
+		const result = await db.query.assets.findFirst({
+			where: eq(assets.source, url),
+			columns: { id: true }
+		});
+		return !!result;
+	}
+
+	/**
 	 * Update asset name and/or alt text
 	 */
 	async update(

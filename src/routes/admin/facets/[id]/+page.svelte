@@ -341,7 +341,7 @@
 
     <!-- Sidebar (Right) -->
     <div class="w-full space-y-6 lg:w-80 lg:shrink-0">
-      <AdminCard title="Settings">
+      <AdminCard title="Visibility">
         <div class="flex items-center gap-2">
           <Checkbox id="is_hidden" bind:checked={facetIsHidden} />
           <label for="is_hidden" class="text-sm font-medium text-foreground-secondary">
