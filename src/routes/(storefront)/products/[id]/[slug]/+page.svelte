@@ -425,8 +425,8 @@
   <!-- Reviews Section -->
   <div class="mt-12 border-t border-gray-200 pt-8">
     <!-- Header: title + write a review link -->
-    <div class="flex items-center justify-between">
-      <h2 class="mb-4 text-xl font-bold">Customer Reviews</h2>
+    <div class="mb-5 flex items-center justify-between">
+      <h2 class="text-xl font-bold">Customer Reviews</h2>
       {#if data.customerId}
         {#if data.customerReview}
           <span class="text-sm text-gray-500">
