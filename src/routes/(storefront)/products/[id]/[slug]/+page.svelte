@@ -407,7 +407,7 @@
   <!-- Reviews Section -->
   <div class="mt-12 border-t border-gray-200 pt-8">
     <!-- Header: title + write a review link -->
-    <div class="mb-6 flex items-center justify-between">
+    <div class="flex items-center justify-between">
       <h2 class="text-xl font-bold">Customer Reviews</h2>
       {#if data.customerId}
         {#if data.customerReview}
@@ -438,7 +438,7 @@
 
     <!-- Collapsible Review Form -->
     {#if showReviewForm && data.customerId && !data.customerReview}
-      <div class="mb-8 rounded-lg border bg-gray-50 p-6">
+      <div class="mt-6 mb-8 rounded-lg border bg-gray-50 p-6">
         {#if form?.reviewError}
           <Alert variant="destructive" class="mb-4">{form.reviewError}</Alert>
         {/if}
