@@ -3,8 +3,14 @@
  * Handles image storage with Vercel Blob
  */
 import { db } from "$lib/server/db/index.js";
-import { assets, productAssets, products, collections } from "$lib/server/db/schema.js";
-import { eq, asc, desc } from "drizzle-orm";
+import {
+	assets,
+	productAssets,
+	products,
+	productVariants,
+	collections
+} from "$lib/server/db/schema.js";
+import { eq, asc, desc, isNotNull, isNull, notInArray } from "drizzle-orm";
 import { del } from "@vercel/blob";
 
 export interface CreateAssetInput {
@@ -172,6 +178,37 @@ class AssetService {
 			.where(eq(collections.id, collectionId));
 
 		await this.delete(assetId);
+	}
+
+	/**
+	 * Create asset records for variant images that aren't tracked yet
+	 */
+	async backfillVariantImages() {
+		const existingUrls = db.select({ source: assets.source }).from(assets);
+		const untracked = await db
+			.select({ imageUrl: productVariants.imageUrl, sku: productVariants.sku })
+			.from(productVariants)
+			.where(
+				isNotNull(productVariants.imageUrl) &&
+					isNull(productVariants.deletedAt) &&
+					notInArray(productVariants.imageUrl, existingUrls)
+			);
+
+		for (const row of untracked) {
+			if (!row.imageUrl) continue;
+			await db
+				.insert(assets)
+				.values({
+					name: row.sku || row.imageUrl.split("/").pop() || "variant-image",
+					type: "image",
+					mimeType: "image/jpeg",
+					source: row.imageUrl,
+					width: 0,
+					height: 0,
+					fileSize: 0
+				})
+				.onConflictDoNothing();
+		}
 	}
 
 	/**

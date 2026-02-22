@@ -87,10 +87,10 @@ export const actions: Actions = {
 				isFeatured
 			});
 
-			// Create asset record for new variant image (if not already tracked)
-			if (imageUrl && imageName && !(await assetService.existsByUrl(imageUrl))) {
+			// Create asset record for variant image (if not already tracked)
+			if (imageUrl && !(await assetService.existsByUrl(imageUrl))) {
 				await assetService.create({
-					name: imageName,
+					name: imageName || imageUrl.split("/").pop() || "variant-image",
 					url: imageUrl,
 					width: imageWidth,
 					height: imageHeight,

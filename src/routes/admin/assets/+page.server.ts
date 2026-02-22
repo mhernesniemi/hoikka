@@ -4,6 +4,7 @@ import { fail } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async () => {
+	await assetService.backfillVariantImages();
 	const assets = await assetService.list();
 	return { assets };
 };
