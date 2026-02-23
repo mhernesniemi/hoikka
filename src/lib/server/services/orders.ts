@@ -262,7 +262,8 @@ export class OrderService {
 			.limit(limit)
 			.offset(offset);
 
-		return Promise.all(orderList.map((o) => this.loadOrderRelations(o)));
+		const results = await Promise.all(orderList.map((o) => this.loadOrderRelations(o)));
+		return results.filter((o) => o.lines.length > 0);
 	}
 
 	/**
