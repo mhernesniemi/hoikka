@@ -135,69 +135,79 @@
           <h2 class="mb-8 text-xl font-bold">Admin UI Demo</h2>
 
           <div class="flex flex-1 flex-col rounded-lg border border-gray-300 bg-white p-6">
-            <p class="mb-6 text-sm text-gray-600">
-              Log in to explore the admin dashboard. The credentials have been filled in for you.
-            </p>
+            {#if data.hasAdmin}
+              <p class="mb-6 text-sm text-gray-600">
+                Log in to explore the admin dashboard. The credentials have been filled in for you.
+              </p>
 
-            {#if demoError}
-              <div class="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-600">
-                {demoError}
-              </div>
-            {/if}
+              {#if demoError}
+                <div class="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-600">
+                  {demoError}
+                </div>
+              {/if}
 
-            <div class="space-y-4">
-              <div>
-                <label for="email" class="mb-1 block text-sm font-medium text-gray-700">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  id="email"
-                  readonly
-                  value="admin@example.com"
-                  class="w-full cursor-not-allowed rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-gray-500"
-                />
-              </div>
+              <div class="space-y-4">
+                <div>
+                  <label for="email" class="mb-1 block text-sm font-medium text-gray-700">
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    id="email"
+                    readonly
+                    value="admin@example.com"
+                    class="w-full cursor-not-allowed rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-gray-500"
+                  />
+                </div>
 
-              <div>
-                <label for="password" class="mb-1 block text-sm font-medium text-gray-700">
-                  Password
-                </label>
-                <input
-                  type="password"
-                  id="password"
-                  readonly
-                  value="admin538"
-                  class="w-full cursor-not-allowed rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-gray-500"
-                />
-              </div>
+                <div>
+                  <label for="password" class="mb-1 block text-sm font-medium text-gray-700">
+                    Password
+                  </label>
+                  <input
+                    type="password"
+                    id="password"
+                    readonly
+                    value="admin538"
+                    class="w-full cursor-not-allowed rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-gray-500"
+                  />
+                </div>
 
-              <Button
-                class="mt-4 w-full"
-                disabled={demoLoading}
-                onclick={async () => {
-                  demoError = null;
-                  demoLoading = true;
-                  try {
-                    const result = await authClient.signIn.email({
-                      email: "admin@example.com",
-                      password: "admin538"
-                    });
-                    if (result.error) {
-                      demoError = result.error.message ?? "Login failed";
+                <Button
+                  class="mt-4 w-full"
+                  disabled={demoLoading}
+                  onclick={async () => {
+                    demoError = null;
+                    demoLoading = true;
+                    try {
+                      const result = await authClient.signIn.email({
+                        email: "admin@example.com",
+                        password: "admin538"
+                      });
+                      if (result.error) {
+                        demoError = result.error.message ?? "Login failed";
+                        demoLoading = false;
+                      } else {
+                        goto("/admin");
+                      }
+                    } catch (e) {
+                      demoError = e instanceof Error ? e.message : "Login failed";
                       demoLoading = false;
-                    } else {
-                      goto("/admin");
                     }
-                  } catch (e) {
-                    demoError = e instanceof Error ? e.message : "Login failed";
-                    demoLoading = false;
-                  }
-                }}
-              >
-                {demoLoading ? "Logging in..." : "Log in"}
+                  }}
+                >
+                  {demoLoading ? "Logging in..." : "Log in"}
+                </Button>
+              </div>
+            {:else}
+              <p class="mb-6 text-sm text-gray-600">
+                No admin account has been created yet. Set up your first admin user to get started.
+              </p>
+
+              <Button class="w-full" onclick={() => goto("/admin/setup")}>
+                Set Up Admin Account
               </Button>
-            </div>
+            {/if}
           </div>
         </div>
       </div>

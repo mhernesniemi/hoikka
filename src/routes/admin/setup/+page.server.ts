@@ -89,6 +89,6 @@ export const actions: Actions = {
 			return fail(500, { error: "An unexpected error occurred", name, email });
 		}
 
-		throw redirect(303, "/admin/login");
+		throw redirect(303, "/admin");
 	}
 };
