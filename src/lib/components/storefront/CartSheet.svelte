@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { invalidateAll } from "$app/navigation";
+  import { invalidateAll, goto } from "$app/navigation";
+  import { page } from "$app/stores";
   import { updateCartLineQuantity, removeCartLine } from "$lib/remote/cart.remote";
   import { imageUrl } from "$lib/image";
   import { cartStore } from "$lib/stores/cart.svelte";
@@ -32,6 +33,19 @@
     return (cents / 100).toFixed(2);
   }
 
+  const isOnCheckout = $derived($page.url.pathname === "/checkout");
+
+  async function afterCartChange() {
+    if (isOnCheckout) {
+      await invalidateAll();
+      // If cart is now empty, redirect away
+      if (cartStore.itemCount === 0) {
+        cartStore.close();
+        goto("/products");
+      }
+    }
+  }
+
   async function updateQuantity(lineId: number, newQuantity: number) {
     // Optimistic: update store immediately
     cartStore.updateLineQuantity(lineId, newQuantity);
@@ -39,7 +53,7 @@
     // Server sync
     try {
       await updateCartLineQuantity({ lineId, quantity: newQuantity });
-      // Success - store already has correct state, no need to invalidate
+      await afterCartChange();
     } catch {
       // On error, refetch to restore correct state
       invalidateAll();
@@ -53,6 +67,7 @@
     // Server sync
     try {
       await removeCartLine({ lineId });
+      await afterCartChange();
     } catch {
       // On error, refetch to restore correct state
       invalidateAll();
