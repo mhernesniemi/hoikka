@@ -5,6 +5,7 @@
   import { goto } from "$app/navigation";
   import { authClient } from "$lib/auth-client";
   import ArrowRightIcon from "@lucide/svelte/icons/arrow-right";
+  import GithubIcon from "@lucide/svelte/icons/github";
 
   let { data }: { data: PageData } = $props();
   let demoError = $state<string | null>(null);
@@ -40,9 +41,20 @@
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
       <div class="flex flex-col items-center gap-8 md:flex-row md:gap-16">
         <div class="flex-1">
-          <a href="/" class="mb-6 inline-block bg-[#f7d0dd] text-xl font-bold text-gray-900"
-            >"Hoikka"</a
-          >
+          <div class="mb-6 flex items-center gap-3">
+            <a href="/" class="inline-block bg-[#f7d0dd] text-xl font-bold text-gray-900"
+              >"Hoikka"</a
+            >
+            <a
+              href="https://github.com/mhernesniemi/hoikka"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="flex h-7 w-7 items-center justify-center rounded-full bg-black text-white transition-opacity hover:opacity-70"
+              aria-label="GitHub"
+            >
+              <GithubIcon class="h-4 w-4" />
+            </a>
+          </div>
           <h1 class="mb-4 text-3xl font-bold sm:text-4xl md:text-5xl">Opinionated Commerce</h1>
           <p class="mb-10 text-base leading-[1.75] text-gray-600 sm:text-lg">
             Lightweight but powerful e-commerce platform, designed for developers.<br
