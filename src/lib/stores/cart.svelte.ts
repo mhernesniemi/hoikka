@@ -69,13 +69,15 @@ export const cartStore = {
 			);
 		}
 		const newSubtotal = newLines.reduce((sum, l) => sum + l.lineTotal, 0);
-		cart = { ...cart, lines: newLines, subtotal: newSubtotal };
+		const newTotal = newSubtotal - (cart.discount ?? 0) + (cart.shipping ?? 0);
+		cart = { ...cart, lines: newLines, subtotal: newSubtotal, total: newTotal };
 	},
 
 	removeLine(lineId: number) {
 		if (!cart) return;
 		const newLines = cart.lines.filter((l) => l.id !== lineId);
 		const newSubtotal = newLines.reduce((sum, l) => sum + l.lineTotal, 0);
-		cart = { ...cart, lines: newLines, subtotal: newSubtotal };
+		const newTotal = newSubtotal - (cart.discount ?? 0) + (cart.shipping ?? 0);
+		cart = { ...cart, lines: newLines, subtotal: newSubtotal, total: newTotal };
 	}
 };
