@@ -21,6 +21,7 @@ export class CustomerService {
 		const [customer] = await db
 			.insert(customers)
 			.values({
+				authUserId: input.authUserId,
 				email: input.email,
 				firstName: input.firstName,
 				lastName: input.lastName,
