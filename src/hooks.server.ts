@@ -7,6 +7,7 @@ import type { Handle, HandleServerError } from "@sveltejs/kit";
 import { db } from "$lib/server/db/index.js";
 import { customers } from "$lib/server/db/schema.js";
 import { eq } from "drizzle-orm";
+import { stringify } from "devalue";
 import { env } from "$env/dynamic/private";
 import { orderService } from "$lib/server/services/orders.js";
 import { shippingService, paymentService, wishlistService } from "$lib/server/services/index.js";
@@ -251,8 +252,28 @@ const paymentInit: Handle = async ({ event, resolve }) => {
 	return resolve(event);
 };
 
+// Demo mode — block all admin mutations when DEMO_MODE is set
+const demoGuard: Handle = async ({ event, resolve }) => {
+	if (
+		env.DEMO_MODE === "true" &&
+		event.request.method === "POST" &&
+		event.url.pathname.startsWith("/admin")
+	) {
+		return new Response(
+			JSON.stringify({
+				type: "failure",
+				status: 403,
+				data: stringify({ error: "This is a read-only demo. Changes are not saved." })
+			}),
+			{ status: 403, headers: { "content-type": "application/json" } }
+		);
+	}
+	return resolve(event);
+};
+
 // Combine handlers in sequence
 export const handle = sequence(
+	demoGuard,
 	oauthVerifierHandler,
 	sessionHandler,
 	cartHandler,
