@@ -139,13 +139,15 @@ export function formatDate(date: Date | string): string {
  * Format a date with time (e.g. "23.2.2026, 15:13").
  */
 export function formatDateTime(date: Date | string): string {
-	return new Intl.DateTimeFormat(DATE_LOCALE, {
+	const d = new Date(date);
+	const datePart = new Intl.DateTimeFormat(DATE_LOCALE, {
 		day: "numeric",
 		month: "numeric",
-		year: "numeric",
-		hour: "2-digit",
-		minute: "2-digit"
-	}).format(new Date(date));
+		year: "numeric"
+	}).format(d);
+	const hours = d.getHours().toString().padStart(2, "0");
+	const minutes = d.getMinutes().toString().padStart(2, "0");
+	return `${datePart}, ${hours}:${minutes}`;
 }
 
 /**
