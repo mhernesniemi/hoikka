@@ -2,7 +2,7 @@
   import type { ColumnDef } from "@tanstack/table-core";
   import { DataTable, renderSnippet } from "$lib/components/admin/data-table";
   import { Badge, type BadgeVariant } from "$lib/components/admin/ui/badge";
-  import { cn, formatDate } from "$lib/utils";
+  import { cn, formatDateTime } from "$lib/utils";
   import type { PageData } from "./$types";
 
   let { data }: { data: PageData } = $props();
@@ -54,7 +54,7 @@
     {
       accessorKey: "createdAt",
       header: "Date",
-      cell: ({ row }) => formatDate(row.original.createdAt)
+      cell: ({ row }) => formatDateTime(row.original.createdAt)
     }
   ];
 </script>
