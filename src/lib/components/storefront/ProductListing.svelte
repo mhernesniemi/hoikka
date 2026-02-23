@@ -275,6 +275,12 @@
       <SlidersHorizontal class="h-4 w-4" />
       Filters
     </button>
+    {#if search}
+      <span class="text-sm text-gray-500">
+        Results for "<span class="font-medium text-gray-900">{search}</span>"
+      </span>
+      <a href={basePath} class="text-sm text-blue-600 hover:underline">Clear search</a>
+    {/if}
     {#if hasActiveFilters}
       <a href={clearAllFilters()} class="text-sm text-blue-600 hover:underline">
         Clear all filters
@@ -442,7 +448,14 @@
       </div>
     {:else if searchResult.items.length === 0}
       <div class="py-12 text-center text-gray-500">
-        <p>No products found matching your criteria.</p>
+        {#if search}
+          <p>No products found for "<span class="font-medium text-gray-900">{search}</span>"</p>
+          <a href={basePath} class="mt-2 inline-block text-blue-600 hover:underline">
+            Clear search
+          </a>
+        {:else}
+          <p>No products found matching your criteria.</p>
+        {/if}
         {#if hasActiveFilters}
           <a href={clearAllFilters()} class="mt-2 inline-block text-blue-600 hover:underline">
             Clear filters
