@@ -745,7 +745,7 @@
 
       <!-- Products -->
       <AdminCard title="Preview Products ({previewCount ?? data.productCount})" noPadding>
-        <div class="px-6 pt-4">
+        <div class="px-6 pt-4 pb-8">
           <DataTable
             data={previewProducts ?? data.preview}
             columns={previewColumns}
