@@ -64,20 +64,42 @@ export const cartStore = {
 		if (quantity <= 0) {
 			newLines = cart.lines.filter((l) => l.id !== lineId);
 		} else {
-			newLines = cart.lines.map((l) =>
-				l.id === lineId ? { ...l, quantity, lineTotal: l.unitPrice * quantity } : l
-			);
+			newLines = cart.lines.map((l) => {
+				if (l.id !== lineId) return l;
+				const unitTax = l.quantity > 0 ? Math.round(l.taxAmount / l.quantity) : 0;
+				return {
+					...l,
+					quantity,
+					lineTotal: l.unitPrice * quantity,
+					taxAmount: unitTax * quantity,
+					lineTotalNet: l.unitPrice * quantity - unitTax * quantity
+				};
+			});
 		}
 		const newSubtotal = newLines.reduce((sum, l) => sum + l.lineTotal, 0);
+		const newTaxTotal = newLines.reduce((sum, l) => sum + l.taxAmount, 0);
 		const newTotal = newSubtotal - (cart.discount ?? 0) + (cart.shipping ?? 0);
-		cart = { ...cart, lines: newLines, subtotal: newSubtotal, total: newTotal };
+		cart = {
+			...cart,
+			lines: newLines,
+			subtotal: newSubtotal,
+			total: newTotal,
+			taxTotal: cart.isTaxExempt ? 0 : newTaxTotal
+		};
 	},
 
 	removeLine(lineId: number) {
 		if (!cart) return;
 		const newLines = cart.lines.filter((l) => l.id !== lineId);
 		const newSubtotal = newLines.reduce((sum, l) => sum + l.lineTotal, 0);
+		const newTaxTotal = newLines.reduce((sum, l) => sum + l.taxAmount, 0);
 		const newTotal = newSubtotal - (cart.discount ?? 0) + (cart.shipping ?? 0);
-		cart = { ...cart, lines: newLines, subtotal: newSubtotal, total: newTotal };
+		cart = {
+			...cart,
+			lines: newLines,
+			subtotal: newSubtotal,
+			total: newTotal,
+			taxTotal: cart.isTaxExempt ? 0 : newTaxTotal
+		};
 	}
 };
