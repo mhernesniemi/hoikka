@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { cn } from "$lib/utils";
+  import { cn, orderStateLabel } from "$lib/utils";
   import type { PageData } from "./$types";
 
   let { data }: { data: PageData } = $props();
@@ -59,7 +59,7 @@
             <span
               class={cn("rounded-full px-3 py-1 text-sm font-medium", getStateColor(order.state))}
             >
-              {order.state}
+              {orderStateLabel(order.state)}
             </span>
           </div>
 

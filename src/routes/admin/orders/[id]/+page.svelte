@@ -6,7 +6,7 @@
   import ChevronLeft from "@lucide/svelte/icons/chevron-left";
   import ImageIcon from "@lucide/svelte/icons/image";
   import type { ActionData, PageData } from "./$types";
-  import { formatDateTime } from "$lib/utils";
+  import { formatDateTime, orderStateLabel } from "$lib/utils";
   import { imageUrl } from "$lib/image";
 
   function formatPrice(cents: number): string {
@@ -72,9 +72,8 @@
               : data.order.state === "cancelled"
                 ? "destructive"
                 : "secondary"}
-            class="capitalize"
           >
-            {data.order.state.replace("_", " ")}
+            {orderStateLabel(data.order.state)}
           </Badge>
 
           {#if nextStates.length > 0}
@@ -82,8 +81,8 @@
               {#each nextStates as state}
                 <form method="POST" action="?/transition" class="inline">
                   <input type="hidden" name="state" value={state} />
-                  <Button type="submit" variant="outline" size="sm" class="capitalize">
-                    Mark as {state.replace("_", " ")}
+                  <Button type="submit" variant="outline" size="sm">
+                    Mark as {orderStateLabel(state)}
                   </Button>
                 </form>
               {/each}

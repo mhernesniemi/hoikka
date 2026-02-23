@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { cn } from "$lib/utils";
+  import { cn, orderStateLabel } from "$lib/utils";
   import { imageUrl } from "$lib/image";
   import type { PageData } from "./$types";
   import ArrowLeft from "@lucide/svelte/icons/arrow-left";
@@ -61,7 +61,7 @@
       <span
         class={cn("rounded-full px-3 py-1 text-sm font-medium", getStateColor(data.order.state))}
       >
-        {data.order.state}
+        {orderStateLabel(data.order.state)}
       </span>
     </div>
   </div>

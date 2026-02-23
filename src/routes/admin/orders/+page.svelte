@@ -2,7 +2,7 @@
   import type { ColumnDef } from "@tanstack/table-core";
   import { DataTable, renderSnippet } from "$lib/components/admin/data-table";
   import { Badge, type BadgeVariant } from "$lib/components/admin/ui/badge";
-  import { cn, formatDateTime } from "$lib/utils";
+  import { cn, formatDateTime, orderStateLabel } from "$lib/utils";
   import type { PageData } from "./$types";
 
   let { data }: { data: PageData } = $props();
@@ -67,8 +67,8 @@
 {/snippet}
 
 {#snippet statusCell({ state }: { state: string })}
-  <Badge variant={getStateVariant(state)} class="capitalize">
-    {state.replace("_", " ")}
+  <Badge variant={getStateVariant(state)}>
+    {orderStateLabel(state)}
   </Badge>
 {/snippet}
 
@@ -92,7 +92,7 @@
             : "bg-muted-strong/50 text-foreground-secondary hover:text-black dark:hover:text-white"
         )}
       >
-        {state?.replace("_", " ") ?? "All"}
+        {state ? orderStateLabel(state) : "All"}
       </a>
     {/each}
   </div>

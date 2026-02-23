@@ -125,6 +125,26 @@ export function getCurrencySymbol(currencyCode: string): string {
 }
 
 // ============================================================================
+// ORDER STATE LABELS
+// ============================================================================
+
+const ORDER_STATE_LABELS: Record<string, string> = {
+	created: "Cart",
+	payment_pending: "Payment Pending",
+	paid: "Paid",
+	shipped: "Shipped",
+	delivered: "Delivered",
+	cancelled: "Cancelled"
+};
+
+/**
+ * Get a human-friendly label for an order state.
+ */
+export function orderStateLabel(state: string): string {
+	return ORDER_STATE_LABELS[state] ?? state;
+}
+
+// ============================================================================
 // DATE UTILITIES
 // ============================================================================
 
