@@ -82,21 +82,13 @@
 
   const selectedVariant = $derived(product.variants.find((v) => v.id === selectedVariantId));
 
-  // When a variant is selected and has an image, move it to the front
-  const images = $derived.by(() => {
-    if (selectedVariant?.imageUrl) {
-      const idx = allImages.findIndex((img) => img.source === selectedVariant.imageUrl);
-      if (idx > 0) {
-        return [allImages[idx], ...allImages.slice(0, idx), ...allImages.slice(idx + 1)];
-      }
-    }
-    return allImages;
-  });
+  const images = $derived(allImages);
 
-  // Reset image index when variant changes
+  // When variant changes, jump to its image
   $effect(() => {
-    if (selectedVariantId) {
-      selectedImageIndex = 0;
+    if (selectedVariant?.imageUrl) {
+      const idx = images.findIndex((img) => img.source === selectedVariant.imageUrl);
+      if (idx >= 0) selectedImageIndex = idx;
     }
   });
 
@@ -300,7 +292,11 @@
           {#each images as image, index}
             <button
               type="button"
-              onclick={() => (selectedImageIndex = index)}
+              onclick={() => {
+                selectedImageIndex = index;
+                const matchingVariant = product.variants.find((v) => v.imageUrl === image.source);
+                if (matchingVariant) selectedVariantId = matchingVariant.id;
+              }}
               class={cn(
                 "h-16 w-16 shrink-0 overflow-hidden rounded-lg border-2 transition-colors",
                 selectedImageIndex === index
@@ -371,22 +367,43 @@
 
       <!-- Variant Selection -->
       {#if product.variants.length > 1}
+        {@const hasVariantImages = product.variants.some((v) => v.imageUrl)}
         <div class="mb-8">
           <p class="mb-2 block text-sm font-medium text-gray-700">Select Variant</p>
           <div class="flex flex-wrap gap-2" role="group" aria-label="Product variants">
             {#each product.variants as variant}
-              <button
-                type="button"
-                onclick={() => (selectedVariantId = variant.id)}
-                class={cn(
-                  "rounded-lg border px-3 py-1 text-sm transition-colors",
-                  selectedVariantId === variant.id
-                    ? "border-blue-600 bg-blue-50 text-blue-600"
-                    : "border-gray-300 hover:border-gray-400"
-                )}
-              >
-                {getVariantName(variant)}
-              </button>
+              {#if hasVariantImages && variant.imageUrl}
+                <button
+                  type="button"
+                  onclick={() => (selectedVariantId = variant.id)}
+                  class={cn(
+                    "h-16 w-16 overflow-hidden rounded-lg border-2 transition-colors",
+                    selectedVariantId === variant.id
+                      ? "border-blue-600"
+                      : "border-gray-300 hover:border-gray-400"
+                  )}
+                  title={getVariantName(variant)}
+                >
+                  <img
+                    src={imageUrl(variant.imageUrl, 100)}
+                    alt={getVariantName(variant)}
+                    class="h-full w-full object-cover"
+                  />
+                </button>
+              {:else}
+                <button
+                  type="button"
+                  onclick={() => (selectedVariantId = variant.id)}
+                  class={cn(
+                    "rounded-lg border px-3 py-1 text-sm transition-colors",
+                    selectedVariantId === variant.id
+                      ? "border-blue-600 bg-blue-50 text-blue-600"
+                      : "border-gray-300 hover:border-gray-400"
+                  )}
+                >
+                  {getVariantName(variant)}
+                </button>
+              {/if}
             {/each}
           </div>
         </div>
