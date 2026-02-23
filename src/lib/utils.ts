@@ -136,12 +136,15 @@ export function formatDate(date: Date | string): string {
 }
 
 /**
- * Format a date with time (e.g. "10.2.2026 klo 14.30" with fi-FI locale).
+ * Format a date with time (e.g. "23.2.2026, 15:13").
  */
 export function formatDateTime(date: Date | string): string {
 	return new Intl.DateTimeFormat(DATE_LOCALE, {
-		dateStyle: "short",
-		timeStyle: "short"
+		day: "numeric",
+		month: "numeric",
+		year: "numeric",
+		hour: "2-digit",
+		minute: "2-digit"
 	}).format(new Date(date));
 }
 
