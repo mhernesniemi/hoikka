@@ -49,8 +49,9 @@
               href="https://github.com/mhernesniemi/hoikka"
               target="_blank"
               rel="noopener noreferrer"
-              class="flex h-7 w-7 items-center justify-center rounded-full bg-black text-white transition-opacity hover:opacity-70"
-              aria-label="GitHub"
+              class="flex h-7 w-7 items-center justify-center rounded-full border border-black text-black transition-colors hover:bg-black hover:text-white"
+              aria-label="GitHub repository"
+              title="View on GitHub"
             >
               <GithubIcon class="h-4 w-4" />
             </a>
