@@ -97,5 +97,5 @@
     {/each}
   </div>
 
-  <DataTable data={data.orders} {columns} searchPlaceholder="Filter orders..." />
+  <DataTable data={data.orders} {columns} searchPlaceholder="Filter orders..." pageSize={20} />
 </div>

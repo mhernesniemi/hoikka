@@ -55,10 +55,7 @@
   let sorting = $state<SortingState>([]);
   let globalFilter = $state("");
   let rowSelection = $state<RowSelectionState>({});
-  let pagination = $state<PaginationState>({ pageIndex: 0, pageSize: 20 });
-  $effect(() => {
-    pagination.pageSize = pageSize;
-  });
+  let pagination = $state<PaginationState>({ pageIndex: 0, pageSize });
 
   const table = createSvelteTable({
     get data() {
@@ -192,7 +189,7 @@
 
   <!-- Pagination -->
   {#if pageCount > 1}
-    <div class="mt-4 flex items-center justify-between rounded-lg bg-surface px-6 py-3 shadow">
+    <div class="mt-4 flex items-center justify-end gap-8">
       <div class="text-sm text-muted-foreground">
         Showing {showingFrom} to {showingTo} of {totalFiltered}
       </div>
