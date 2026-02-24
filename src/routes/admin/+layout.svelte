@@ -85,11 +85,11 @@
   }
 </script>
 
-<div class="min-h-screen bg-background font-sans text-foreground antialiased" data-admin class:dark>
+<div class={cn("min-h-screen bg-background font-sans text-foreground antialiased", sidebarOpen && "max-lg:overflow-hidden max-lg:h-screen")} data-admin class:dark>
   <!-- Sidebar -->
   <aside
     class={cn(
-      "fixed inset-y-0 left-0 z-40 w-64 border-r transition-transform duration-200 lg:translate-x-0",
+      "fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r transition-transform duration-200 lg:translate-x-0",
       dark ? "border-gray-800 bg-gray-900 text-white" : "border-gray-200 bg-gray-50 text-gray-900",
       sidebarOpen ? "translate-x-0" : "max-lg:-translate-x-full"
     )}
@@ -106,7 +106,7 @@
       <p class={cn("text-sm", dark ? "text-gray-400" : "text-gray-500")}>Store Dashboard</p>
     </div>
 
-    <nav class="mt-6">
+    <nav class="mt-6 flex-1 overflow-y-auto">
       {#each navItems as item}
         <a
           href={item.href}
@@ -149,7 +149,7 @@
       {/each}
     </nav>
 
-    <div class={cn("absolute right-0 bottom-0 left-0", dark ? "bg-gray-900" : "bg-gray-50")}>
+    <div class="mt-auto">
       <div class={cn("border-t", dark ? "border-gray-800" : "border-gray-200")}>
         <a
           href="/"

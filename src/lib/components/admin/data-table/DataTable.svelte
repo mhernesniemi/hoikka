@@ -150,42 +150,42 @@
   </div>
 
   <TableRoot>
-    <TableHeader>
-      {#each table.getHeaderGroups() as headerGroup (headerGroup.id)}
-        <TableRow class="hover:bg-transparent">
-          {#each headerGroup.headers as header (header.id)}
-            <TableHead colspan={header.colSpan} class={cn(header.id === "select" && "w-10")}>
-              <DataTableColumnHeader {header} />
-            </TableHead>
-          {/each}
-        </TableRow>
-      {/each}
-    </TableHeader>
-    <TableBody>
-      {#each table.getRowModel().rows as row (row.id)}
-        <TableRow data-state={row.getIsSelected() ? "selected" : undefined}>
-          {#each row.getVisibleCells() as cell, i (cell.id)}
-            {@const isFirstDataCol =
-              cell.column.id !== "select" &&
-              (i === 0 || (i === 1 && row.getVisibleCells()[0]?.column.id === "select"))}
-            <TableCell
-              class={isFirstDataCol || cell.column.id === "select"
-                ? ""
-                : "text-foreground-secondary"}
-            >
-              <FlexRender content={cell.column.columnDef.cell} context={cell.getContext()} />
+      <TableHeader>
+        {#each table.getHeaderGroups() as headerGroup (headerGroup.id)}
+          <TableRow class="hover:bg-transparent">
+            {#each headerGroup.headers as header (header.id)}
+              <TableHead colspan={header.colSpan} class={cn(header.id === "select" && "w-10")}>
+                <DataTableColumnHeader {header} />
+              </TableHead>
+            {/each}
+          </TableRow>
+        {/each}
+      </TableHeader>
+      <TableBody>
+        {#each table.getRowModel().rows as row (row.id)}
+          <TableRow data-state={row.getIsSelected() ? "selected" : undefined}>
+            {#each row.getVisibleCells() as cell, i (cell.id)}
+              {@const isFirstDataCol =
+                cell.column.id !== "select" &&
+                (i === 0 || (i === 1 && row.getVisibleCells()[0]?.column.id === "select"))}
+              <TableCell
+                class={isFirstDataCol || cell.column.id === "select"
+                  ? ""
+                  : "text-foreground-secondary"}
+              >
+                <FlexRender content={cell.column.columnDef.cell} context={cell.getContext()} />
+              </TableCell>
+            {/each}
+          </TableRow>
+        {:else}
+          <TableRow class="hover:bg-transparent">
+            <TableCell colspan={columns.length} class="py-12 text-center text-muted-foreground">
+              No results found
             </TableCell>
-          {/each}
-        </TableRow>
-      {:else}
-        <TableRow class="hover:bg-transparent">
-          <TableCell colspan={columns.length} class="py-12 text-center text-muted-foreground">
-            No results found
-          </TableCell>
-        </TableRow>
-      {/each}
-    </TableBody>
-  </TableRoot>
+          </TableRow>
+        {/each}
+      </TableBody>
+    </TableRoot>
 
   <!-- Pagination -->
   {#if pageCount > 1}
