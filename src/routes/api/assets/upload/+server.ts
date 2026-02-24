@@ -7,8 +7,13 @@
 import { json, error } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 import { put } from "@vercel/blob";
+import { env } from "$env/dynamic/private";
 
 export const POST: RequestHandler = async ({ request, locals }) => {
+	if (env.DEMO_MODE === "true") {
+		throw error(403, "Uploads are disabled in demo mode.");
+	}
+
 	// Only admins can upload
 	if (!locals.user || !["admin", "staff"].includes(locals.user.role ?? "")) {
 		throw error(401, "Unauthorized");
