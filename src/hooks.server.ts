@@ -257,7 +257,8 @@ const demoGuard: Handle = async ({ event, resolve }) => {
 	if (
 		env.DEMO_MODE === "true" &&
 		event.request.method === "POST" &&
-		event.url.pathname.startsWith("/admin")
+		event.url.pathname.startsWith("/admin") &&
+		event.url.searchParams.get("/preview") === null
 	) {
 		return new Response(
 			JSON.stringify({
