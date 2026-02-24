@@ -13,6 +13,21 @@ import {
 import { eq, asc, desc, isNotNull, isNull, notInArray } from "drizzle-orm";
 import { del } from "@vercel/blob";
 
+const MIME_TYPES: Record<string, string> = {
+	".jpg": "image/jpeg",
+	".jpeg": "image/jpeg",
+	".png": "image/png",
+	".gif": "image/gif",
+	".webp": "image/webp",
+	".svg": "image/svg+xml",
+	".avif": "image/avif"
+};
+
+function mimeFromFilename(filename: string): string {
+	const ext = filename.slice(filename.lastIndexOf(".")).toLowerCase();
+	return MIME_TYPES[ext] ?? "image/jpeg";
+}
+
 export interface CreateAssetInput {
 	name: string;
 	url: string;
@@ -86,7 +101,7 @@ class AssetService {
 			.values({
 				name: input.name,
 				type: "image",
-				mimeType: "image/jpeg",
+				mimeType: mimeFromFilename(input.name),
 				source: input.url,
 				width: input.width ?? 0,
 				height: input.height ?? 0,
@@ -212,12 +227,13 @@ class AssetService {
 
 		for (const row of untracked) {
 			if (!row.imageUrl) continue;
+			const name = blobFilename(row.imageUrl);
 			await db
 				.insert(assets)
 				.values({
-					name: blobFilename(row.imageUrl),
+					name,
 					type: "image",
-					mimeType: "image/jpeg",
+					mimeType: mimeFromFilename(name),
 					source: row.imageUrl,
 					width: 0,
 					height: 0,

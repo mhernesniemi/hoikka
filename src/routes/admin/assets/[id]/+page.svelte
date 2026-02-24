@@ -146,10 +146,6 @@
             </div>
           {/if}
           <div>
-            <dt class="text-muted-foreground">Type</dt>
-            <dd>{data.asset.mimeType}</dd>
-          </div>
-          <div>
             <dt class="text-muted-foreground">Source URL</dt>
             <dd class="break-all">
               <a
