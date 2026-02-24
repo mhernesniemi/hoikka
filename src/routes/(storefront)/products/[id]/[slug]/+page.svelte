@@ -288,7 +288,7 @@
 
       <!-- Thumbnails -->
       {#if images.length > 1}
-        <div class="mt-4 flex gap-2 overflow-x-auto">
+        <div class="mt-4 mb-6 flex gap-2 overflow-x-auto lg:mb-0">
           {#each images as image, index}
             <button
               type="button"
@@ -317,7 +317,7 @@
     </div>
 
     <!-- Product Info -->
-    <div class="ml-10">
+    <div class="ml-0 md:ml-10">
       <div class="mb-4 flex items-center justify-between">
         <h1 class="text-3xl font-bold">{product.name}</h1>
         <button
