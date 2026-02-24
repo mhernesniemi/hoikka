@@ -4,6 +4,8 @@
 
 - When adding a new feature or data field, always implement it in **both** the admin panel and the storefront. For example, adding an image field to a model means updating the admin edit page, the server actions, **and** the storefront page that renders it (including relevant meta tags).
 - This project uses Svelte 5. Avoid outdated Svelte 4 patterns.
+- Add tests where appropriate when adding a new feature or modifying existing code.
+- Keep the codebase lightweight and easy to understand.
 - When modifying code, remove any functions, variables, imports, or declarations that become unused as a result of the change. Do not leave dead code behind.
 
 ## Tools
