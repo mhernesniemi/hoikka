@@ -6,6 +6,7 @@ import { categoryService } from "$lib/server/services/categories.js";
 import { collectionService } from "$lib/server/services/collections.js";
 import { translationService } from "$lib/server/services/translations.js";
 import { relatedProductService } from "$lib/server/services/related-products.js";
+import { sanitizeHtml } from "$lib/server/sanitize.js";
 import { TRANSLATION_LANGUAGES } from "$lib/config/languages.js";
 import { PRODUCT_TYPES } from "$lib/config/products.js";
 import { dbError } from "$lib/server/db-error.js";
@@ -105,7 +106,7 @@ export const actions: Actions = {
 				visibility,
 				name,
 				slug,
-				description: description || undefined
+				description: description ? sanitizeHtml(description) : undefined
 			});
 
 			// Update facet values
@@ -139,7 +140,7 @@ export const actions: Actions = {
 				await translationService.upsertProductTranslation(id, lang.code, {
 					name: tName || "",
 					slug: tSlug || "",
-					description: tDescription || null
+					description: tDescription ? sanitizeHtml(tDescription) : null
 				});
 			}
 

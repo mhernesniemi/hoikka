@@ -8,6 +8,7 @@ import { TRANSLATION_LANGUAGES } from "$lib/config/languages.js";
 import { dbError } from "$lib/server/db-error.js";
 import { error, fail, redirect, isRedirect } from "@sveltejs/kit";
 import { slugify } from "$lib/utils.js";
+import { sanitizeHtml } from "$lib/server/sanitize.js";
 
 export const load: PageServerLoad = async ({ params }) => {
 	const id = Number(params.id);
@@ -61,7 +62,7 @@ export const actions: Actions = {
 				isPrivate,
 				name,
 				slug: slugify(slug),
-				description: description || undefined
+				description: description ? sanitizeHtml(description) : undefined
 			});
 
 			// Replace filters if provided
@@ -79,7 +80,7 @@ export const actions: Actions = {
 				await translationService.upsertCollectionTranslation(id, lang.code, {
 					name: tName || "",
 					slug: tSlug || "",
-					description: tDescription || null
+					description: tDescription ? sanitizeHtml(tDescription) : null
 				});
 			}
 

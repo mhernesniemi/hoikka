@@ -5,6 +5,7 @@ import { TRANSLATION_LANGUAGES } from "$lib/config/languages.js";
 import { dbError } from "$lib/server/db-error.js";
 import { error, fail, redirect, isRedirect } from "@sveltejs/kit";
 import { slugify } from "$lib/utils.js";
+import { sanitizeHtml } from "$lib/server/sanitize.js";
 
 export const load: PageServerLoad = async ({ params }) => {
 	const id = Number(params.id);
@@ -43,7 +44,7 @@ export const actions: Actions = {
 				published,
 				title,
 				slug: slugify(slug),
-				body: body || undefined,
+				body: body ? sanitizeHtml(body) : undefined,
 				imageUrl: imageUrl || null
 			});
 
@@ -56,7 +57,7 @@ export const actions: Actions = {
 				await translationService.upsertContentPageTranslation(id, lang.code, {
 					title: tTitle || "",
 					slug: tSlug || "",
-					body: tBody || null
+					body: tBody ? sanitizeHtml(tBody) : null
 				});
 			}
 
