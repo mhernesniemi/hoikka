@@ -63,7 +63,7 @@
             <span class="text-gray-900 italic">Built with SvelteKit.</span>
           </p>
           <div class="flex items-start gap-4">
-            <img src="/kuvitus2.png" alt="Svelte" class="h-16 w-auto sm:h-20" />
+            <img src="/kuvitus2.png" alt="Svelte" width="258" height="198" class="h-16 w-auto sm:h-20" />
             <div class="pt-2">
               <a
                 href="https://hoikka-docs.vercel.app"
@@ -103,6 +103,8 @@
           <img
             src="/kuvitus.png"
             alt="Opinionated Commerce"
+            width="406"
+            height="318"
             class="floating h-full w-full object-cover"
           />
         </div>
