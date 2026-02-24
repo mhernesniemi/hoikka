@@ -435,7 +435,7 @@
   <div class="flex-1">
     {#if !productStore.loaded}
       <!-- Skeleton grid while cache streams in -->
-      <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <div class="grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-3">
         {#each Array(6) as _}
           <div class="animate-pulse overflow-hidden rounded-lg border border-gray-200">
             <div class="aspect-square bg-gray-200"></div>
@@ -463,7 +463,7 @@
         {/if}
       </div>
     {:else}
-      <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <div class="grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-3">
         {#each searchResult.items as product (product.id)}
           <ProductCard
             product={toProductCard(product)}
