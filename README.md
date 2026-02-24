@@ -55,8 +55,9 @@ bun install
 # Link to your Vercel project and pull environment variables
 npx vercel link
 
-# Run migrations and start dev server
+# Run migrations, create admin user, and start dev server
 bun run db:migrate
+bun run create:admin
 bun run dev
 ```
 
