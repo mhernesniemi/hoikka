@@ -78,11 +78,16 @@ export const cartStore = {
 		}
 		const newSubtotal = newLines.reduce((sum, l) => sum + l.lineTotal, 0);
 		const newTaxTotal = newLines.reduce((sum, l) => sum + l.taxAmount, 0);
-		const newTotal = newSubtotal - (cart.discount ?? 0) + (cart.shipping ?? 0);
+		const newDiscount =
+			cart.subtotal > 0
+				? Math.round((cart.discount ?? 0) * (newSubtotal / cart.subtotal))
+				: (cart.discount ?? 0);
+		const newTotal = newSubtotal - newDiscount + (cart.shipping ?? 0);
 		cart = {
 			...cart,
 			lines: newLines,
 			subtotal: newSubtotal,
+			discount: newDiscount,
 			total: newTotal,
 			taxTotal: cart.isTaxExempt ? 0 : newTaxTotal
 		};
@@ -93,11 +98,16 @@ export const cartStore = {
 		const newLines = cart.lines.filter((l) => l.id !== lineId);
 		const newSubtotal = newLines.reduce((sum, l) => sum + l.lineTotal, 0);
 		const newTaxTotal = newLines.reduce((sum, l) => sum + l.taxAmount, 0);
-		const newTotal = newSubtotal - (cart.discount ?? 0) + (cart.shipping ?? 0);
+		const newDiscount =
+			cart.subtotal > 0
+				? Math.round((cart.discount ?? 0) * (newSubtotal / cart.subtotal))
+				: (cart.discount ?? 0);
+		const newTotal = newSubtotal - newDiscount + (cart.shipping ?? 0);
 		cart = {
 			...cart,
 			lines: newLines,
 			subtotal: newSubtotal,
+			discount: newDiscount,
 			total: newTotal,
 			taxTotal: cart.isTaxExempt ? 0 : newTaxTotal
 		};
