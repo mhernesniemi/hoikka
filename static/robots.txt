@@ -13,4 +13,4 @@ Disallow: /sign-in
 Disallow: /sign-up
 Disallow: /api
 
-Sitemap: /sitemap.xml
+Sitemap: https://www.hoikka.dev/sitemap.xml
