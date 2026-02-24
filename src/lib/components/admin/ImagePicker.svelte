@@ -147,7 +147,8 @@
         });
 
         if (!uploadResponse.ok) {
-          throw new Error("Upload failed");
+          const msg = await uploadResponse.json().catch(() => null);
+          throw new Error(msg?.message ?? "Upload failed");
         }
 
         const result = await uploadResponse.json();
