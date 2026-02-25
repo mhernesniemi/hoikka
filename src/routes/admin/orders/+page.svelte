@@ -52,9 +52,10 @@
       cell: ({ row }) => `${(row.original.total / 100).toFixed(2)} ${row.original.currencyCode}`
     },
     {
-      accessorKey: "createdAt",
+      accessorFn: (row) => row.orderPlacedAt ?? row.createdAt,
+      id: "date",
       header: "Date",
-      cell: ({ row }) => formatDateTime(row.original.createdAt)
+      cell: ({ row }) => formatDateTime(row.original.orderPlacedAt ?? row.original.createdAt)
     }
   ];
 </script>

@@ -258,7 +258,7 @@ export class OrderService {
 			.select()
 			.from(orders)
 			.where(and(...conditions))
-			.orderBy(desc(orders.createdAt))
+			.orderBy(desc(sql`COALESCE(${orders.orderPlacedAt}, ${orders.createdAt})`))
 			.limit(limit)
 			.offset(offset);
 
