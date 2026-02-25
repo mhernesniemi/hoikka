@@ -604,7 +604,11 @@
                   disabled={!selectedPaymentMethod || isProcessingPayment}
                   class="w-full"
                 >
-                  {isProcessingPayment ? "Processing..." : "Select Payment Method"}
+                  {isProcessingPayment
+                    ? "Processing..."
+                    : selectedPaymentMethod?.code === "mock"
+                      ? "Place order"
+                      : "Select Payment Method"}
                 </Button>
               </form>
             {:else if currentPaymentInfo?.methodCode === "stripe" && currentPaymentInfo?.clientSecret}
