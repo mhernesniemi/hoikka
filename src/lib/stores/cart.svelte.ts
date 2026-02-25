@@ -21,6 +21,7 @@ import type { OrderWithRelations } from "$lib/types";
 
 let isOpen = $state(false);
 let isLoading = $state(false);
+let isUpdating = $state(false);
 let cart = $state<OrderWithRelations | null>(null);
 
 export const cartStore = {
@@ -30,6 +31,9 @@ export const cartStore = {
 	},
 	get isLoading() {
 		return isLoading;
+	},
+	get isUpdating() {
+		return isUpdating;
 	},
 	open() {
 		isOpen = true;
@@ -52,64 +56,29 @@ export const cartStore = {
 		return cart?.lines.reduce((sum, l) => sum + l.quantity, 0) ?? 0;
 	},
 
-	// Sync from server (called by layout)
+	// Sync from server (called by layout) — always authoritative
 	sync(serverCart: OrderWithRelations | null) {
 		cart = serverCart;
+		isUpdating = false;
 	},
 
-	// Optimistic updates
+	// Optimistic line updates — lines update instantly for snappy UX,
+	// but totals are NOT recalculated (footer shows spinner until server responds)
 	updateLineQuantity(lineId: number, quantity: number) {
 		if (!cart) return;
-		let newLines;
-		if (quantity <= 0) {
-			newLines = cart.lines.filter((l) => l.id !== lineId);
-		} else {
-			newLines = cart.lines.map((l) => {
-				if (l.id !== lineId) return l;
-				const unitTax = l.quantity > 0 ? Math.round(l.taxAmount / l.quantity) : 0;
-				return {
-					...l,
-					quantity,
-					lineTotal: l.unitPrice * quantity,
-					taxAmount: unitTax * quantity,
-					lineTotalNet: l.unitPrice * quantity - unitTax * quantity
-				};
-			});
-		}
-		const newSubtotal = newLines.reduce((sum, l) => sum + l.lineTotal, 0);
-		const newTaxTotal = newLines.reduce((sum, l) => sum + l.taxAmount, 0);
-		const newDiscount =
-			cart.subtotal > 0
-				? Math.round((cart.discount ?? 0) * (newSubtotal / cart.subtotal))
-				: (cart.discount ?? 0);
-		const newTotal = newSubtotal - newDiscount + (cart.shipping ?? 0);
-		cart = {
-			...cart,
-			lines: newLines,
-			subtotal: newSubtotal,
-			discount: newDiscount,
-			total: newTotal,
-			taxTotal: cart.isTaxExempt ? 0 : newTaxTotal
-		};
+		isUpdating = true;
+		const newLines =
+			quantity <= 0
+				? cart.lines.filter((l) => l.id !== lineId)
+				: cart.lines.map((l) =>
+						l.id !== lineId ? l : { ...l, quantity, lineTotal: l.unitPrice * quantity }
+					);
+		cart = { ...cart, lines: newLines };
 	},
 
 	removeLine(lineId: number) {
 		if (!cart) return;
-		const newLines = cart.lines.filter((l) => l.id !== lineId);
-		const newSubtotal = newLines.reduce((sum, l) => sum + l.lineTotal, 0);
-		const newTaxTotal = newLines.reduce((sum, l) => sum + l.taxAmount, 0);
-		const newDiscount =
-			cart.subtotal > 0
-				? Math.round((cart.discount ?? 0) * (newSubtotal / cart.subtotal))
-				: (cart.discount ?? 0);
-		const newTotal = newSubtotal - newDiscount + (cart.shipping ?? 0);
-		cart = {
-			...cart,
-			lines: newLines,
-			subtotal: newSubtotal,
-			discount: newDiscount,
-			total: newTotal,
-			taxTotal: cart.isTaxExempt ? 0 : newTaxTotal
-		};
+		isUpdating = true;
+		cart = { ...cart, lines: cart.lines.filter((l) => l.id !== lineId) };
 	}
 };

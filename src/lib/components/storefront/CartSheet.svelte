@@ -16,12 +16,12 @@
   import Minus from "@lucide/svelte/icons/minus";
   import Plus from "@lucide/svelte/icons/plus";
   import Trash2 from "@lucide/svelte/icons/trash-2";
+  import LoaderCircle from "@lucide/svelte/icons/loader-circle";
 
-  // Read cart data from store (enables optimistic updates)
-  // Use getter functions for proper reactivity across modules
   const cart = $derived.by(() => cartStore.cart);
   const itemCount = $derived.by(() => cartStore.itemCount);
   const isLoading = $derived.by(() => cartStore.isLoading);
+  const isUpdating = $derived.by(() => cartStore.isUpdating);
   const lines = $derived(cart?.lines ?? []);
   const subtotal = $derived(cart?.subtotal ?? 0);
   const total = $derived(cart?.total ?? 0);
@@ -35,42 +35,31 @@
 
   const isOnCheckout = $derived($page.url.pathname === "/checkout");
 
-  async function afterCartChange() {
-    if (isOnCheckout) {
-      await invalidateAll();
-      // If cart is now empty, redirect away
-      if (cartStore.itemCount === 0) {
-        cartStore.close();
-        goto("/products");
-      }
-    }
-  }
-
   async function updateQuantity(lineId: number, newQuantity: number) {
-    // Optimistic: update store immediately
     cartStore.updateLineQuantity(lineId, newQuantity);
-
-    // Server sync
     try {
       await updateCartLineQuantity({ lineId, quantity: newQuantity });
-      await afterCartChange();
     } catch {
-      // On error, refetch to restore correct state
-      invalidateAll();
+      // error handled by invalidateAll below
+    }
+    await invalidateAll();
+    if (isOnCheckout && cartStore.itemCount === 0) {
+      cartStore.close();
+      goto("/products");
     }
   }
 
   async function removeLine(lineId: number) {
-    // Optimistic: remove from store immediately
     cartStore.removeLine(lineId);
-
-    // Server sync
     try {
       await removeCartLine({ lineId });
-      await afterCartChange();
     } catch {
-      // On error, refetch to restore correct state
-      invalidateAll();
+      // error handled by invalidateAll below
+    }
+    await invalidateAll();
+    if (isOnCheckout && cartStore.itemCount === 0) {
+      cartStore.close();
+      goto("/products");
     }
   }
 </script>
@@ -210,36 +199,43 @@
     {#if lines.length > 0}
       <SheetFooter class="mt-auto border-t border-gray-200 bg-gray-50/50 px-6 pt-4 pb-2">
         <div class="w-full space-y-4">
-          <div class="space-y-2">
-            <div class="flex justify-between text-sm">
-              <span class="text-gray-500">Subtotal</span>
-              <span class="text-gray-700">{formatPrice(subtotal)} EUR</span>
+          {#if isUpdating}
+            <div class="flex items-center justify-center py-3">
+              <LoaderCircle class="h-4 w-4 animate-spin text-gray-400" />
+              <span class="ml-2 text-sm text-gray-500">Updating...</span>
+            </div>
+          {:else}
+            <div class="space-y-2">
+              <div class="flex justify-between text-sm">
+                <span class="text-gray-500">Subtotal</span>
+                <span class="text-gray-700">{formatPrice(subtotal)} EUR</span>
+              </div>
+
+              {#if discount > 0}
+                <div class="flex justify-between text-sm text-green-600">
+                  <span>Discount</span>
+                  <span>-{formatPrice(discount)} EUR</span>
+                </div>
+              {/if}
+
+              {#if cartIsTaxExempt}
+                <div class="flex justify-between text-sm text-gray-500">
+                  <span>Tax exempt (B2B)</span>
+                  <span>0.00 EUR</span>
+                </div>
+              {:else if taxTotal > 0}
+                <div class="flex justify-between text-sm text-gray-500">
+                  <span>Incl. VAT</span>
+                  <span>{formatPrice(taxTotal)} EUR</span>
+                </div>
+              {/if}
             </div>
 
-            {#if discount > 0}
-              <div class="flex justify-between text-sm text-green-600">
-                <span>Discount</span>
-                <span>-{formatPrice(discount)} EUR</span>
-              </div>
-            {/if}
-
-            {#if cartIsTaxExempt}
-              <div class="flex justify-between text-sm text-gray-500">
-                <span>Tax exempt (B2B)</span>
-                <span>0.00 EUR</span>
-              </div>
-            {:else if taxTotal > 0}
-              <div class="flex justify-between text-sm text-gray-500">
-                <span>Incl. VAT</span>
-                <span>{formatPrice(taxTotal)} EUR</span>
-              </div>
-            {/if}
-          </div>
-
-          <div class="flex justify-between border-t border-gray-200 pt-2">
-            <span class="font-semibold text-gray-900">Total</span>
-            <span class="font-semibold text-gray-900">{formatPrice(total)} EUR</span>
-          </div>
+            <div class="flex justify-between border-t border-gray-200 pt-2">
+              <span class="font-semibold text-gray-900">Total</span>
+              <span class="font-semibold text-gray-900">{formatPrice(total)} EUR</span>
+            </div>
+          {/if}
 
           <div class="mb-8">
             <a
