@@ -55,4 +55,11 @@
   {/if}
 
   <div bind:this={paymentElementContainer}></div>
+
+  {#if env.PUBLIC_STRIPE_PUBLISHABLE_KEY?.startsWith("pk_test_")}
+    <div class="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-800">
+      Test mode: use card <span class="font-mono font-medium">4242 4242 4242 4242</span>, any future
+      expiry, any CVC.
+    </div>
+  {/if}
 </div>

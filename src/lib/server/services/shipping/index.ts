@@ -163,13 +163,12 @@ export class ShippingService {
 		// Create shipment via provider
 		const shipmentInfo = await provider.createShipment(order);
 
-		// Update order shipping with tracking info
+		// Update order shipping with tracking info (stays pending until manually marked as shipped)
 		await db
 			.update(orderShipping)
 			.set({
 				trackingNumber: shipmentInfo.trackingNumber,
-				metadata: shipmentInfo.metadata ?? null,
-				status: "shipped"
+				metadata: shipmentInfo.metadata ?? null
 			})
 			.where(eq(orderShipping.id, shipping.id));
 
