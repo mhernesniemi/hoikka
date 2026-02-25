@@ -9,13 +9,10 @@
     <div class="rounded-lg border border-gray-200 bg-white p-8 shadow-sm">
       <h1 class="text-xl font-bold text-gray-900">Deploy Hoikka</h1>
 
-      <div class="mt-5 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm">
-        <p class="font-medium text-amber-800">Important: Enable Neon Auth</p>
-        <p class="mt-1 text-amber-700">
-          When adding the Neon database during setup, make sure to check the
-          <strong>"Auth"</strong> option. This is required for admin login.
-        </p>
-      </div>
+      <ul class="mt-5 space-y-2 text-sm text-gray-600">
+        <li>Enable <strong>Neon Auth</strong> when adding the database</li>
+        <li>Set Blob store access to <strong>Public</strong></li>
+      </ul>
 
       <a
         href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fmhernesniemi%2Fhoikka&project-name=hoikka&repository-name=hoikka&stores=%5B%7B%22type%22%3A%22integration%22%2C%22productSlug%22%3A%22neon%22%2C%22integrationSlug%22%3A%22neon%22%7D%2C%7B%22type%22%3A%22blob%22%7D%5D&skippable-integrations=1"
