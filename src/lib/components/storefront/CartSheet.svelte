@@ -152,7 +152,15 @@
                 <div class="flex items-start justify-between gap-2">
                   <div class="min-w-0">
                     <h4 class="truncate text-sm font-medium text-gray-900">
-                      {line.productName || "Untitled product"}
+                      {#if line.productId}
+                        <a
+                          href="/products/{line.productId}"
+                          onclick={() => cartStore.close()}
+                          class="hover:underline">{line.productName || "Untitled product"}</a
+                        >
+                      {:else}
+                        {line.productName || "Untitled product"}
+                      {/if}
                     </h4>
                     {#if line.variantName}
                       <p class="text-xs text-gray-500">{line.variantName}</p>
