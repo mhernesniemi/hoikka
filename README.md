@@ -53,7 +53,7 @@ cd <your-repo>
 bun install
 
 # Link to your Vercel project and pull environment variables
-npx vercel link
+bunx vercel link
 
 # Run migrations and start dev server
 bun run db:migrate
