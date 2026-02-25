@@ -28,7 +28,7 @@
     </p>
   </div>
 
-  <div class="mb-6 rounded-lg bg-white p-8 shadow-lg">
+  <div>
     <h2 class="mb-6 text-xl font-semibold">Order Summary</h2>
 
     <div class="mb-6 space-y-4">
@@ -73,25 +73,7 @@
     </div>
   </div>
 
-  {#if data.order.shippingFullName}
-    <div class="mb-6 rounded-lg bg-white p-6 shadow">
-      <h2 class="mb-4 text-lg font-semibold">Shipping Address</h2>
-      <address class="text-gray-600 not-italic">
-        <p class="font-medium text-gray-900">{data.order.shippingFullName}</p>
-        <p>{data.order.shippingStreetLine1}</p>
-        {#if data.order.shippingStreetLine2}
-          <p>{data.order.shippingStreetLine2}</p>
-        {/if}
-        <p>
-          {data.order.shippingPostalCode}
-          {data.order.shippingCity}
-        </p>
-        <p>{data.order.shippingCountry}</p>
-      </address>
-    </div>
-  {/if}
-
-  <div class="space-y-4 text-center">
+  <div class="mt-12 space-y-4 text-center">
     <p class="text-gray-600">
       We've sent a confirmation email with your order details. You'll receive another email when
       your order ships.
