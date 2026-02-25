@@ -694,11 +694,7 @@
               {#if saveAddressForFuture}
                 <input type="hidden" name="saveToAddressBook" value="on" />
               {/if}
-              <Button
-                type="submit"
-                disabled={isCompletingOrder}
-                class="w-full bg-green-600 hover:bg-green-700"
-              >
+              <Button type="submit" disabled={isCompletingOrder} class="w-full">
                 {isCompletingOrder ? "Completing Order..." : "Complete Order"}
               </Button>
             </form>

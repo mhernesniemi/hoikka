@@ -14,11 +14,14 @@ import type {
 	OrderWithRelations
 } from "$lib/types.js";
 import type { PaymentProvider, PaymentInfo, PaymentStatus, RefundInfo } from "./types.js";
-import { MockProvider } from "./providers/index.js";
+import { MockProvider, StripeProvider } from "./providers/index.js";
 import { withSpan } from "../../telemetry.js";
 
 // Provider registry - maps provider codes to provider instances
-const PROVIDERS: Map<string, PaymentProvider> = new Map([["mock", new MockProvider()]]);
+const PROVIDERS: Map<string, PaymentProvider> = new Map([
+	["mock", new MockProvider()],
+	["stripe", new StripeProvider()]
+]);
 
 export class PaymentService {
 	/**
