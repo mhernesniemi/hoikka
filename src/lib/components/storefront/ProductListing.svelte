@@ -31,7 +31,7 @@
     basePath?: string;
   } = $props();
 
-  const limit = 12;
+  const limit = 40;
 
   // Parse URL params reactively
   const search = $derived($page.url.searchParams.get("q") ?? undefined);
