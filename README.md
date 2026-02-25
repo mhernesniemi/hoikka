@@ -40,7 +40,7 @@ This also makes Hoikka well-suited for AI-assisted development: the codebase is 
 
 [![Deploy with Vercel](https://vercel.com/button)](https://www.hoikka.dev/deploy)
 
-This provisions a Neon Postgres database and Vercel Blob storage automatically. After deploying, enable Neon Auth in your [Neon Console](https://console.neon.tech) and add the auth environment variables to your Vercel project.
+This provisions a Neon Postgres database and Vercel Blob storage automatically.
 
 ### Local Development
 
