@@ -574,7 +574,21 @@
                     </span>
                   </TableCell>
                   <TableCell class="text-sm">
-                    {variant.name}
+                    <button
+                      type="button"
+                      class="text-left hover:underline"
+                      onclick={() => {
+                        const url = `/admin/products/${data.product.id}/variants/${variant.id}`;
+                        if (hasUnsavedChanges) {
+                          pendingNavigationUrl = url;
+                          document.querySelector<HTMLFormElement>("#product-form")?.requestSubmit();
+                        } else {
+                          goto(url);
+                        }
+                      }}
+                    >
+                      {variant.name}
+                    </button>
                   </TableCell>
                   <TableCell class="text-sm">{(variant.price / 100).toFixed(2)} EUR</TableCell>
                   <TableCell
