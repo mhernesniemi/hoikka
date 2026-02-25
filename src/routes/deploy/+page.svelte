@@ -9,10 +9,13 @@
     <div class="rounded-lg border border-gray-200 bg-white p-8 shadow-sm">
       <h1 class="text-xl font-bold text-gray-900">Deploy Hoikka</h1>
 
-      <ul class="mt-5 space-y-2 text-sm text-gray-600">
-        <li>Enable <strong>Neon Auth</strong> when adding the database</li>
-        <li>Set Blob store access to <strong>Public</strong></li>
-      </ul>
+      <div class="mt-5 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-700">
+        <p class="font-medium text-blue-800">During setup</p>
+        <ul class="mt-1.5 list-disc space-y-1 pl-4">
+          <li>Enable <strong>Neon Auth</strong> when adding the database</li>
+          <li>Set Blob store access to <strong>Public</strong></li>
+        </ul>
+      </div>
 
       <a
         href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fmhernesniemi%2Fhoikka&project-name=hoikka&repository-name=hoikka&stores=%5B%7B%22type%22%3A%22integration%22%2C%22productSlug%22%3A%22neon%22%2C%22integrationSlug%22%3A%22neon%22%7D%2C%7B%22type%22%3A%22blob%22%7D%5D&skippable-integrations=1"
