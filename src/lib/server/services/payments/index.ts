@@ -32,7 +32,7 @@ export class PaymentService {
 			.select()
 			.from(paymentMethods)
 			.where(eq(paymentMethods.active, true))
-			.orderBy(paymentMethods.code);
+			.orderBy(desc(paymentMethods.code));
 	}
 
 	/**

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tick } from "svelte";
   import { enhance } from "$app/forms";
   import { Button } from "$lib/components/storefront/ui/button";
   import { Input } from "$lib/components/storefront/ui/input";
@@ -27,7 +28,9 @@
   // Combine form and data for reactive state
   const currentOrderShipping = $derived(form?.orderShipping ?? data.orderShipping);
   const currentPaymentMethods = $derived(form?.paymentMethods ?? data.paymentMethods);
-  const currentPaymentInfo = $derived(form?.paymentInfo ?? data.paymentInfo);
+  const serverPaymentInfo = $derived(form?.paymentInfo ?? data.paymentInfo);
+  let paymentInfoCleared = $state(false);
+  const currentPaymentInfo = $derived(paymentInfoCleared ? null : serverPaymentInfo);
   const currentCart = $derived(form?.cart ?? data.cart);
   const currentShippingRates = $derived(form?.shippingRates ?? data.shippingRates);
   const isDigitalOnly = $derived(data.isDigitalOnly);
@@ -53,6 +56,33 @@
       }
     }
   });
+
+  // Pre-select payment method matching existing payment, and allow changing it
+  $effect(() => {
+    if (serverPaymentInfo && currentPaymentMethods?.length > 0 && !selectedPaymentMethod) {
+      const match = currentPaymentMethods.find(
+        (m: (typeof currentPaymentMethods)[number]) => m.code === serverPaymentInfo.methodCode
+      );
+      if (match) {
+        selectedPaymentMethod = match;
+      }
+    }
+  });
+
+  let createPaymentForm = $state<HTMLFormElement | null>(null);
+
+  function selectPaymentMethod(method: NonNullable<typeof data.paymentMethods>[number]) {
+    const previousMethod = selectedPaymentMethod;
+    selectedPaymentMethod = method;
+    // Clear payment info when switching to a different method
+    if (previousMethod && previousMethod.id !== method.id && currentPaymentInfo) {
+      paymentInfoCleared = true;
+    }
+    // Auto-submit for Stripe to load payment elements immediately
+    if (method.code === "stripe") {
+      tick().then(() => createPaymentForm?.requestSubmit());
+    }
+  }
 
   // Form data for physical products (shipping address)
   let addressFormData = $state({
@@ -563,7 +593,7 @@
                     name="paymentMethod"
                     value={method.id}
                     checked={selectedPaymentMethod?.id === method.id}
-                    onchange={() => (selectedPaymentMethod = method)}
+                    onchange={() => selectPaymentMethod(method)}
                     class="mt-1 mr-3"
                   />
                   <div class="flex-1">
@@ -580,11 +610,14 @@
               <form
                 method="POST"
                 action="?/createPayment"
+                bind:this={createPaymentForm}
                 use:enhance={() => {
                   isProcessingPayment = true;
                   return async ({ result, update }) => {
                     if (result.type === "failure" || result.type === "error") {
                       isProcessingPayment = false;
+                    } else {
+                      paymentInfoCleared = false;
                     }
                     await update();
                   };
@@ -599,17 +632,17 @@
                 {#if saveAddressForFuture}
                   <input type="hidden" name="saveToAddressBook" value="on" />
                 {/if}
-                <Button
-                  type="submit"
-                  disabled={!selectedPaymentMethod || isProcessingPayment}
-                  class="w-full"
-                >
-                  {isProcessingPayment
-                    ? "Processing..."
-                    : selectedPaymentMethod?.code === "mock"
-                      ? "Place order"
-                      : "Select Payment Method"}
-                </Button>
+                {#if selectedPaymentMethod?.code === "mock"}
+                  <Button
+                    type="submit"
+                    disabled={!selectedPaymentMethod || isProcessingPayment}
+                    class="w-full"
+                  >
+                    {isProcessingPayment ? "Processing..." : "Place order"}
+                  </Button>
+                {:else if isProcessingPayment}
+                  <p class="text-center text-sm text-gray-500">Loading payment options...</p>
+                {/if}
               </form>
             {:else if currentPaymentInfo?.methodCode === "stripe" && currentPaymentInfo?.clientSecret}
               <div class="mt-4">
