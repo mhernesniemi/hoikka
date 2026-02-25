@@ -14,6 +14,7 @@
 - Run `./scripts/svelte-check.sh --threshold error` for type checking. This wrapper prevents the Vite dev server from crashing by preserving `.svelte-kit/generated/` timestamps that `svelte-check` would otherwise overwrite.
 - After modifying files, run `bunx prettier --write <files>` on the changed files to format them.
 - When making changes to the DB schema, generate a migration with `bun run db:generate` and apply it locally with `bun run db:migrate`. Migrations also run automatically on deploy via the build script. Do **not** use `drizzle-kit push`.
+- **Reverting schema changes**: If a migration is reverted, you must also delete its SQL file (`drizzle/NNNN_*.sql`), its snapshot (`drizzle/meta/NNNN_snapshot.json`), and remove its entry from `drizzle/meta/_journal.json`. Leftover files will cause the next `db:generate` to fail or produce broken migrations.
 
 ## UI Guidelines
 

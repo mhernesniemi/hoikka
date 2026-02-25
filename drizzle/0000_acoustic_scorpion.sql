@@ -14,6 +14,13 @@ CREATE TABLE "addresses" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE "asset_translations" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"asset_id" integer NOT NULL,
+	"language_code" varchar(10) NOT NULL,
+	"alt" text
+);
+--> statement-breakpoint
 CREATE TABLE "assets" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"name" varchar(255) NOT NULL,
@@ -24,6 +31,8 @@ CREATE TABLE "assets" (
 	"file_size" integer DEFAULT 0,
 	"source" varchar(500) NOT NULL,
 	"alt" text,
+	"focal_x" numeric(4, 3) DEFAULT '0.5' NOT NULL,
+	"focal_y" numeric(4, 3) DEFAULT '0.5' NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
@@ -123,7 +132,6 @@ CREATE TABLE "customers" (
 	"last_name" varchar(100) NOT NULL,
 	"phone" varchar(50),
 	"vat_id" varchar(50),
-	"is_admin" boolean DEFAULT false NOT NULL,
 	"deleted_at" timestamp,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
@@ -157,7 +165,7 @@ CREATE TABLE "facets" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"name" varchar(255) DEFAULT '' NOT NULL,
 	"code" varchar(255) NOT NULL,
-	"is_private" boolean DEFAULT false NOT NULL,
+	"is_hidden" boolean DEFAULT false NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "facets_code_unique" UNIQUE("code")
@@ -275,6 +283,23 @@ CREATE TABLE "product_facet_values" (
 	CONSTRAINT "product_facet_values_product_id_facet_value_id_pk" PRIMARY KEY("product_id","facet_value_id")
 );
 --> statement-breakpoint
+CREATE TABLE "product_search" (
+	"product_id" integer PRIMARY KEY NOT NULL,
+	"name" varchar(255) NOT NULL,
+	"slug" varchar(255) NOT NULL,
+	"description" text,
+	"visibility" text NOT NULL,
+	"min_price" integer,
+	"max_price" integer,
+	"in_stock" boolean DEFAULT false NOT NULL,
+	"featured_asset" jsonb,
+	"facets" jsonb DEFAULT '{}'::jsonb NOT NULL,
+	"variant_facet_images" jsonb,
+	"search_vector" "tsvector",
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "product_translations" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"product_id" integer NOT NULL,
@@ -317,6 +342,7 @@ CREATE TABLE "product_variants" (
 	"track_inventory" boolean DEFAULT true NOT NULL,
 	"featured_asset_id" integer,
 	"image_url" varchar(500),
+	"is_featured" boolean DEFAULT false NOT NULL,
 	"deleted_at" timestamp,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL
@@ -444,6 +470,7 @@ CREATE TABLE "wishlists" (
 );
 --> statement-breakpoint
 ALTER TABLE "addresses" ADD CONSTRAINT "addresses_customer_id_customers_id_fk" FOREIGN KEY ("customer_id") REFERENCES "public"."customers"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "asset_translations" ADD CONSTRAINT "asset_translations_asset_id_assets_id_fk" FOREIGN KEY ("asset_id") REFERENCES "public"."assets"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "categories" ADD CONSTRAINT "categories_featured_asset_id_assets_id_fk" FOREIGN KEY ("featured_asset_id") REFERENCES "public"."assets"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "category_translations" ADD CONSTRAINT "category_translations_category_id_categories_id_fk" FOREIGN KEY ("category_id") REFERENCES "public"."categories"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "collection_filters" ADD CONSTRAINT "collection_filters_collection_id_collections_id_fk" FOREIGN KEY ("collection_id") REFERENCES "public"."collections"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -470,6 +497,7 @@ ALTER TABLE "product_categories" ADD CONSTRAINT "product_categories_product_id_p
 ALTER TABLE "product_categories" ADD CONSTRAINT "product_categories_category_id_categories_id_fk" FOREIGN KEY ("category_id") REFERENCES "public"."categories"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "product_facet_values" ADD CONSTRAINT "product_facet_values_product_id_products_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "product_facet_values" ADD CONSTRAINT "product_facet_values_facet_value_id_facet_values_id_fk" FOREIGN KEY ("facet_value_id") REFERENCES "public"."facet_values"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "product_search" ADD CONSTRAINT "product_search_product_id_products_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "product_translations" ADD CONSTRAINT "product_translations_product_id_products_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "product_variant_assets" ADD CONSTRAINT "product_variant_assets_variant_id_product_variants_id_fk" FOREIGN KEY ("variant_id") REFERENCES "public"."product_variants"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "product_variant_assets" ADD CONSTRAINT "product_variant_assets_asset_id_assets_id_fk" FOREIGN KEY ("asset_id") REFERENCES "public"."assets"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -495,6 +523,7 @@ ALTER TABLE "wishlist_items" ADD CONSTRAINT "wishlist_items_product_id_products_
 ALTER TABLE "wishlist_items" ADD CONSTRAINT "wishlist_items_variant_id_product_variants_id_fk" FOREIGN KEY ("variant_id") REFERENCES "public"."product_variants"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "wishlists" ADD CONSTRAINT "wishlists_customer_id_customers_id_fk" FOREIGN KEY ("customer_id") REFERENCES "public"."customers"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "addresses_customer_idx" ON "addresses" USING btree ("customer_id");--> statement-breakpoint
+CREATE UNIQUE INDEX "asset_translations_asset_lang_idx" ON "asset_translations" USING btree ("asset_id","language_code");--> statement-breakpoint
 CREATE UNIQUE INDEX "categories_slug_idx" ON "categories" USING btree ("slug");--> statement-breakpoint
 CREATE INDEX "categories_parent_idx" ON "categories" USING btree ("parent_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "category_translations_category_lang_idx" ON "category_translations" USING btree ("category_id","language_code");--> statement-breakpoint
@@ -536,6 +565,9 @@ CREATE INDEX "product_categories_product_idx" ON "product_categories" USING btre
 CREATE INDEX "product_categories_category_idx" ON "product_categories" USING btree ("category_id");--> statement-breakpoint
 CREATE INDEX "product_facet_values_product_idx" ON "product_facet_values" USING btree ("product_id");--> statement-breakpoint
 CREATE INDEX "product_facet_values_value_idx" ON "product_facet_values" USING btree ("facet_value_id");--> statement-breakpoint
+CREATE INDEX "product_search_vector_idx" ON "product_search" USING gin ("search_vector");--> statement-breakpoint
+CREATE INDEX "product_search_facets_idx" ON "product_search" USING gin ("facets");--> statement-breakpoint
+CREATE INDEX "product_search_visibility_idx" ON "product_search" USING btree ("visibility");--> statement-breakpoint
 CREATE UNIQUE INDEX "product_translations_product_lang_idx" ON "product_translations" USING btree ("product_id","language_code");--> statement-breakpoint
 CREATE INDEX "product_translations_slug_idx" ON "product_translations" USING btree ("slug");--> statement-breakpoint
 CREATE INDEX "product_variant_assets_variant_idx" ON "product_variant_assets" USING btree ("variant_id");--> statement-breakpoint

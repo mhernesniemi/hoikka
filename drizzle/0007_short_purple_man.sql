@@ -1,1 +1,0 @@
-ALTER TABLE "product_search" ADD COLUMN "max_price" integer;

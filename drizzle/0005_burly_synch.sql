@@ -1,1 +1,0 @@
-ALTER TABLE "product_variants" ADD COLUMN "is_featured" boolean DEFAULT false NOT NULL;
