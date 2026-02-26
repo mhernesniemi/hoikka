@@ -158,6 +158,14 @@ export class ProductService {
 		const sortCol = (sortBy && sortColumnMap[sortBy]) || sql`${products.createdAt}`;
 		const dirFn = sortOrder === "asc" ? asc : desc;
 
+		// Fallback: if product has no featuredAssetId, use the first variant's imageUrl
+		const variantImageFallback = sql<string>`(
+			SELECT image_url FROM product_variants
+			WHERE product_id = ${products.id} AND deleted_at IS NULL AND image_url IS NOT NULL
+			ORDER BY is_featured DESC, id ASC
+			LIMIT 1
+		)`;
+
 		// Data query with variant count subquery and featured asset join
 		const items = await db
 			.select({
@@ -166,7 +174,7 @@ export class ProductService {
 				visibility: products.visibility,
 				createdAt: products.createdAt,
 				variantCount: variantCountExpr,
-				featuredAssetSource: assets.source
+				featuredAssetSource: sql<string>`COALESCE(${assets.source}, ${variantImageFallback})`
 			})
 			.from(products)
 			.leftJoin(assets, eq(products.featuredAssetId, assets.id))
