@@ -18,7 +18,7 @@
 
   let createDialogOpen = $state(false);
 
-  type CollectionRow = (typeof data.collections)[0];
+  type CollectionRow = (typeof data.collections)[number];
 
   const columns: ColumnDef<CollectionRow>[] = [
     {
@@ -107,6 +107,11 @@
     emptyIcon={FolderOpen}
     emptyTitle="No collections"
     emptyDescription="Get started by creating a new collection."
+    serverPagination={{
+      total: data.pagination.total,
+      page: data.currentPage,
+      pageSize: 20
+    }}
   >
     {#snippet bulkActions({ selectedRows, table })}
       <Button

@@ -8,7 +8,7 @@
  * - Guest users get a `cartToken` stored in cookies
  * - Logged-in users have carts linked to `customerId`
  */
-import { eq, and, desc, sql, isNull, inArray } from "drizzle-orm";
+import { eq, and, asc, desc, sql, isNull, inArray, exists } from "drizzle-orm";
 import { db } from "../db/index.js";
 import {
 	orders,
@@ -29,9 +29,11 @@ import type {
 	Order,
 	OrderWithRelations,
 	OrderLine,
+	OrderListItem,
 	CreateOrderInput,
 	AddOrderLineInput,
-	OrderState
+	OrderState,
+	PaginatedResult
 } from "$lib/types.js";
 import { nanoid } from "nanoid";
 import { reservationService } from "./reservations.js";
@@ -264,6 +266,82 @@ export class OrderService {
 
 		const results = await Promise.all(orderList.map((o) => this.loadOrderRelations(o)));
 		return results.filter((o) => o.lines.length > 0);
+	}
+
+	/**
+	 * List orders with server-side pagination (optimized for admin list view).
+	 * Uses 2 queries (count + data) instead of N+1.
+	 */
+	async listPaginated(
+		options: {
+			state?: OrderState;
+			limit?: number;
+			offset?: number;
+			search?: string;
+			sortBy?: string;
+			sortOrder?: "asc" | "desc";
+		} = {}
+	): Promise<PaginatedResult<OrderListItem>> {
+		const { state, limit = 20, offset = 0, search, sortBy, sortOrder = "desc" } = options;
+		const conditions = state ? [eq(orders.state, state)] : [];
+
+		if (search) {
+			const pattern = `%${search}%`;
+			conditions.push(
+				sql`(${orders.code} ILIKE ${pattern} OR ${orders.shippingFullName} ILIKE ${pattern})`
+			);
+		}
+
+		// Only include orders that have lines
+		const hasLines = exists(
+			db
+				.select({ one: sql`1` })
+				.from(orderLines)
+				.where(eq(orderLines.orderId, orders.id))
+		);
+
+		// Count query
+		const countResult = await db
+			.select({ count: sql<number>`count(*)` })
+			.from(orders)
+			.where(and(...conditions, hasLines));
+		const total = Number(countResult[0]?.count ?? 0);
+
+		// Resolve sort column
+		const dateFallback = sql`COALESCE(${orders.orderPlacedAt}, ${orders.createdAt})`;
+		const sortColumnMap: Record<string, ReturnType<typeof sql>> = {
+			code: sql`${orders.code}`,
+			customer: sql`${orders.shippingFullName}`,
+			state: sql`${orders.state}`,
+			total: sql`${orders.total}`,
+			date: dateFallback
+		};
+		const sortCol = (sortBy && sortColumnMap[sortBy]) || dateFallback;
+		const dirFn = sortOrder === "asc" ? asc : desc;
+
+		// Data query with line count subquery
+		const items = await db
+			.select({
+				id: orders.id,
+				code: orders.code,
+				state: orders.state,
+				total: orders.total,
+				currencyCode: orders.currencyCode,
+				shippingFullName: orders.shippingFullName,
+				orderPlacedAt: orders.orderPlacedAt,
+				createdAt: orders.createdAt,
+				lineCount: sql<number>`(SELECT count(*) FROM order_lines WHERE order_id = ${orders.id})`
+			})
+			.from(orders)
+			.where(and(...conditions, hasLines))
+			.orderBy(dirFn(sortCol))
+			.limit(limit)
+			.offset(offset);
+
+		return {
+			items: items.map((item) => ({ ...item, lineCount: Number(item.lineCount) })),
+			pagination: { total, limit, offset, hasMore: offset + items.length < total }
+		};
 	}
 
 	/**

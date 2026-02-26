@@ -2,7 +2,7 @@
  * Customer Service
  * Handles customer management and addresses
  */
-import { eq, and, desc, isNull, sql } from "drizzle-orm";
+import { eq, and, asc, desc, isNull, sql } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { customers, addresses } from "../db/schema.js";
 import type {
@@ -71,30 +71,51 @@ export class CustomerService {
 	/**
 	 * List all customers
 	 */
-	async list(limit = 20, offset = 0): Promise<PaginatedResult<Customer>> {
+	async list(
+		options: {
+			limit?: number;
+			offset?: number;
+			search?: string;
+			sortBy?: string;
+			sortOrder?: "asc" | "desc";
+		} = {}
+	): Promise<PaginatedResult<Customer>> {
+		const { limit = 20, offset = 0, search, sortBy, sortOrder = "desc" } = options;
+
+		const conditions = [isNull(customers.deletedAt)];
+		if (search) {
+			const pattern = `%${search}%`;
+			conditions.push(
+				sql`(${customers.firstName} ILIKE ${pattern} OR ${customers.lastName} ILIKE ${pattern} OR ${customers.email} ILIKE ${pattern})` as any
+			);
+		}
+
 		const countResult = await db
 			.select({ count: sql<number>`count(*)` })
 			.from(customers)
-			.where(isNull(customers.deletedAt));
-
+			.where(and(...conditions));
 		const total = Number(countResult[0]?.count ?? 0);
+
+		const sortColumnMap: Record<string, ReturnType<typeof sql>> = {
+			name: sql`${customers.lastName}`,
+			email: sql`${customers.email}`,
+			phone: sql`${customers.phone}`,
+			createdAt: sql`${customers.createdAt}`
+		};
+		const sortCol = (sortBy && sortColumnMap[sortBy]) || sql`${customers.createdAt}`;
+		const dirFn = sortOrder === "asc" ? asc : desc;
 
 		const items = await db
 			.select()
 			.from(customers)
-			.where(isNull(customers.deletedAt))
-			.orderBy(desc(customers.createdAt))
+			.where(and(...conditions))
+			.orderBy(dirFn(sortCol))
 			.limit(limit)
 			.offset(offset);
 
 		return {
 			items,
-			pagination: {
-				total,
-				limit,
-				offset,
-				hasMore: offset + items.length < total
-			}
+			pagination: { total, limit, offset, hasMore: offset + items.length < total }
 		};
 	}
 

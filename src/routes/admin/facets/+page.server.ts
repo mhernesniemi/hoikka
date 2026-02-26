@@ -1,12 +1,25 @@
+import { parsePaginationParams } from "$lib/server/pagination.js";
 import { facetService } from "$lib/server/services/facets.js";
 import { dbError } from "$lib/server/db-error.js";
 import { fail, redirect, isRedirect } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
 
-export const load: PageServerLoad = async () => {
-	const facets = await facetService.list();
+export const load: PageServerLoad = async ({ url }) => {
+	const { search, sortBy, sortOrder, page, limit, offset } = parsePaginationParams(url);
 
-	return { facets };
+	const result = await facetService.listPaginated({
+		limit,
+		offset,
+		search,
+		sortBy,
+		sortOrder
+	});
+
+	return {
+		facets: result.items,
+		pagination: result.pagination,
+		currentPage: page
+	};
 };
 
 export const actions: Actions = {

@@ -2,7 +2,7 @@
  * Collection Service
  * Smart Collections (Vendure/Shopify style) - products derived dynamically from rules
  */
-import { eq, and, desc, sql, inArray, isNull, gte, lte, gt } from "drizzle-orm";
+import { eq, and, asc, desc, sql, inArray, isNull, gte, lte, gt } from "drizzle-orm";
 import { db } from "../db/index.js";
 import {
 	collections,
@@ -18,6 +18,7 @@ import {
 import type {
 	Collection,
 	CollectionWithRelations,
+	CollectionListItem,
 	CollectionFilter,
 	CollectionFilterField,
 	CollectionFilterOperator,
@@ -302,6 +303,73 @@ export class CollectionService {
 		if (!collection[0]) return null;
 
 		return this.loadCollectionRelations(collection[0]);
+	}
+
+	/**
+	 * List collections with server-side pagination for admin list view.
+	 */
+	async listPaginated(
+		options: {
+			limit?: number;
+			offset?: number;
+			search?: string;
+			sortBy?: string;
+			sortOrder?: "asc" | "desc";
+		} = {}
+	): Promise<PaginatedResult<CollectionListItem>> {
+		const { limit = 20, offset = 0, search, sortBy, sortOrder = "desc" } = options;
+
+		const conditions: ReturnType<typeof eq>[] = [];
+		if (search) {
+			const pattern = `%${search}%`;
+			conditions.push(sql`${collections.name} ILIKE ${pattern}` as any);
+		}
+
+		const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+		const [countResult] = await db
+			.select({ count: sql<number>`count(*)` })
+			.from(collections)
+			.where(whereClause);
+		const total = Number(countResult?.count ?? 0);
+
+		const sortColumnMap: Record<string, ReturnType<typeof sql>> = {
+			name: sql`${collections.name}`,
+			status: sql`${collections.isPrivate}`,
+			createdAt: sql`${collections.createdAt}`
+		};
+		const sortCol = sortBy && sortColumnMap[sortBy];
+		const dirFn = sortOrder === "asc" ? asc : desc;
+
+		const items = await db
+			.select({
+				id: collections.id,
+				name: collections.name,
+				isPrivate: collections.isPrivate,
+				createdAt: collections.createdAt
+			})
+			.from(collections)
+			.where(whereClause)
+			.orderBy(
+				...(sortCol
+					? [dirFn(sortCol)]
+					: [asc(collections.position), desc(collections.createdAt)])
+			)
+			.limit(limit)
+			.offset(offset);
+
+		// Compute product counts only for items on this page
+		const itemsWithCounts = await Promise.all(
+			items.map(async (item) => ({
+				...item,
+				productCount: await this.getProductCount(item.id)
+			}))
+		);
+
+		return {
+			items: itemsWithCounts,
+			pagination: { total, limit, offset, hasMore: offset + items.length < total }
+		};
 	}
 
 	/**

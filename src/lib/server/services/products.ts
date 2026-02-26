@@ -19,6 +19,7 @@ import {
 import type {
 	Product,
 	ProductWithRelations,
+	ProductListItem,
 	ProductVariant,
 	ProductVariantWithRelations,
 	ProductListOptions,
@@ -102,6 +103,85 @@ export class ProductService {
 				offset,
 				hasMore: offset + items.length < total
 			}
+		};
+	}
+
+	/**
+	 * List products with lightweight summary data for admin list views.
+	 * Uses 2 queries (count + data) instead of N*M.
+	 */
+	async listSummary(
+		options: ProductListOptions & { sortBy?: string; sortOrder?: "asc" | "desc" } = {}
+	): Promise<PaginatedResult<ProductListItem>> {
+		const {
+			search,
+			visibility = "public",
+			limit = 20,
+			offset = 0,
+			sortBy,
+			sortOrder = "desc"
+		} = options;
+
+		const conditions = [isNull(products.deletedAt)];
+
+		if (visibility !== undefined) {
+			if (Array.isArray(visibility)) {
+				conditions.push(inArray(products.visibility, visibility));
+			} else {
+				conditions.push(eq(products.visibility, visibility));
+			}
+		}
+
+		if (search) {
+			const searchProductIds = await this.searchProductIds(search);
+			if (searchProductIds.length === 0) {
+				return { items: [], pagination: { total: 0, limit, offset, hasMore: false } };
+			}
+			conditions.push(inArray(products.id, searchProductIds));
+		}
+
+		// Count query
+		const countResult = await db
+			.select({ count: sql<number>`count(*)` })
+			.from(products)
+			.where(and(...conditions));
+		const total = Number(countResult[0]?.count ?? 0);
+
+		// Resolve sort column
+		const variantCountExpr = sql<number>`(SELECT count(*) FROM product_variants WHERE product_id = ${products.id} AND deleted_at IS NULL)`;
+		const sortColumnMap: Record<string, ReturnType<typeof sql>> = {
+			name: sql`${products.name}`,
+			variants: variantCountExpr,
+			visibility: sql`${products.visibility}`,
+			createdAt: sql`${products.createdAt}`
+		};
+		const sortCol = (sortBy && sortColumnMap[sortBy]) || sql`${products.createdAt}`;
+		const dirFn = sortOrder === "asc" ? asc : desc;
+
+		// Data query with variant count subquery and featured asset join
+		const items = await db
+			.select({
+				id: products.id,
+				name: products.name,
+				visibility: products.visibility,
+				createdAt: products.createdAt,
+				variantCount: variantCountExpr,
+				featuredAssetSource: assets.source
+			})
+			.from(products)
+			.leftJoin(assets, eq(products.featuredAssetId, assets.id))
+			.where(and(...conditions))
+			.orderBy(dirFn(sortCol))
+			.limit(limit)
+			.offset(offset);
+
+		return {
+			items: items.map((item) => ({
+				...item,
+				variantCount: Number(item.variantCount),
+				featuredAssetSource: item.featuredAssetSource ?? null
+			})),
+			pagination: { total, limit, offset, hasMore: offset + items.length < total }
 		};
 	}
 

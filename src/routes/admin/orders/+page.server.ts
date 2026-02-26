@@ -1,13 +1,24 @@
+import { parsePaginationParams } from "$lib/server/pagination.js";
 import { orderService } from "$lib/server/services/orders.js";
 import type { PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ url }) => {
 	const state = url.searchParams.get("state") as string | undefined;
+	const { search, sortBy, sortOrder, page, limit, offset } = parsePaginationParams(url);
 
-	const orders = await orderService.list(state as any, 1000, 0);
+	const result = await orderService.listPaginated({
+		state: state as any,
+		limit,
+		offset,
+		search,
+		sortBy,
+		sortOrder
+	});
 
 	return {
-		orders,
-		currentState: state
+		orders: result.items,
+		pagination: result.pagination,
+		currentState: state,
+		currentPage: page
 	};
 };

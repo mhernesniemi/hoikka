@@ -17,7 +17,7 @@
   let pendingDeleteIds = $state<number[]>([]);
   let bulkDeleteTable: { resetRowSelection: () => void } | null = null;
 
-  type PromoRow = (typeof data.promotions)[0];
+  type PromoRow = (typeof data.promotions)[number];
 
   function formatPrice(cents: number): string {
     return (cents / 100).toFixed(2);
@@ -179,6 +179,11 @@
     emptyIcon={PercentIcon}
     emptyTitle="No promotions"
     emptyDescription="Get started by creating a new promotion."
+    serverPagination={{
+      total: data.pagination.total,
+      page: data.currentPage,
+      pageSize: 20
+    }}
   >
     {#snippet bulkActions({ selectedRows, table })}
       <form

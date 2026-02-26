@@ -8,6 +8,13 @@
       "when": 1772016563256,
       "tag": "0000_acoustic_scorpion",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1772120898810,
+      "tag": "0001_noisy_ted_forrester",
+      "breakpoints": true
     }
   ]
 }

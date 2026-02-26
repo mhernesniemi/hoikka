@@ -1,11 +1,24 @@
+import { parsePaginationParams } from "$lib/server/pagination.js";
 import { promotionService } from "$lib/server/services/promotions.js";
 import { fail } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
 
-export const load: PageServerLoad = async () => {
-	const result = await promotionService.list();
+export const load: PageServerLoad = async ({ url }) => {
+	const { search, sortBy, sortOrder, page, limit, offset } = parsePaginationParams(url);
 
-	return { promotions: result.items };
+	const result = await promotionService.list({
+		search,
+		limit,
+		offset,
+		sortBy,
+		sortOrder
+	});
+
+	return {
+		promotions: result.items,
+		pagination: result.pagination,
+		currentPage: page
+	};
 };
 
 export const actions: Actions = {

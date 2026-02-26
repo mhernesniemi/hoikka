@@ -17,7 +17,7 @@
 
   let createDialogOpen = $state(false);
 
-  type FacetRow = (typeof data.facets)[0];
+  type FacetRow = (typeof data.facets)[number];
 
   const columns: ColumnDef<FacetRow>[] = [
     {
@@ -52,11 +52,11 @@
       header: "Code"
     },
     {
-      accessorFn: (row) => row.values.length,
+      accessorFn: (row) => row.valueCount,
       id: "values",
       header: "Values",
       cell: ({ row }) =>
-        `${row.original.values.length} value${row.original.values.length !== 1 ? "s" : ""}`
+        `${row.original.valueCount} value${row.original.valueCount !== 1 ? "s" : ""}`
     }
   ];
 </script>
@@ -89,6 +89,11 @@
     emptyIcon={Tag}
     emptyTitle="No facets"
     emptyDescription="Get started by creating a new facet."
+    serverPagination={{
+      total: data.pagination.total,
+      page: data.currentPage,
+      pageSize: 20
+    }}
   >
     {#snippet bulkActions({ selectedRows, table })}
       <Button

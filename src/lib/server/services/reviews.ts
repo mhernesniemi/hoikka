@@ -7,7 +7,7 @@
  * - Moderation (approve/reject)
  * - Calculating average ratings
  */
-import { eq, and, desc, sql, count } from "drizzle-orm";
+import { eq, and, asc, desc, sql, count } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { reviews, products, customers, orders, orderLines, productVariants } from "../db/schema.js";
 import type {
@@ -142,9 +142,20 @@ export class ReviewService {
 			productId?: number;
 			limit?: number;
 			offset?: number;
+			search?: string;
+			sortBy?: string;
+			sortOrder?: "asc" | "desc";
 		} = {}
 	): Promise<PaginatedResult<ReviewWithRelations>> {
-		const { status, productId, limit = 20, offset = 0 } = options;
+		const {
+			status,
+			productId,
+			limit = 20,
+			offset = 0,
+			search,
+			sortBy,
+			sortOrder = "desc"
+		} = options;
 
 		const conditions = [];
 		if (status) {
@@ -153,12 +164,32 @@ export class ReviewService {
 		if (productId) {
 			conditions.push(eq(reviews.productId, productId));
 		}
+		if (search) {
+			const pattern = `%${search}%`;
+			conditions.push(
+				sql`(${reviews.comment} ILIKE ${pattern} OR ${reviews.nickname} ILIKE ${pattern} OR ${products.name} ILIKE ${pattern})`
+			);
+		}
 
 		const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
-		const [countResult] = await db.select({ count: count() }).from(reviews).where(whereClause);
-
+		const [countResult] = await db
+			.select({ count: count() })
+			.from(reviews)
+			.innerJoin(customers, eq(reviews.customerId, customers.id))
+			.innerJoin(products, eq(reviews.productId, products.id))
+			.where(whereClause);
 		const total = countResult?.count ?? 0;
+
+		const sortColumnMap: Record<string, ReturnType<typeof sql>> = {
+			comment: sql`${reviews.comment}`,
+			product: sql`${products.name}`,
+			nickname: sql`${reviews.nickname}`,
+			status: sql`${reviews.status}`,
+			createdAt: sql`${reviews.createdAt}`
+		};
+		const sortCol = (sortBy && sortColumnMap[sortBy]) || sql`${reviews.createdAt}`;
+		const dirFn = sortOrder === "asc" ? asc : desc;
 
 		const items = await db
 			.select({
@@ -170,7 +201,7 @@ export class ReviewService {
 			.innerJoin(customers, eq(reviews.customerId, customers.id))
 			.innerJoin(products, eq(reviews.productId, products.id))
 			.where(whereClause)
-			.orderBy(desc(reviews.createdAt))
+			.orderBy(dirFn(sortCol))
 			.limit(limit)
 			.offset(offset);
 
@@ -180,12 +211,7 @@ export class ReviewService {
 				customer: row.customer,
 				product: row.product
 			})),
-			pagination: {
-				total,
-				limit,
-				offset,
-				hasMore: offset + limit < total
-			}
+			pagination: { total, limit, offset, hasMore: offset + limit < total }
 		};
 	}
 

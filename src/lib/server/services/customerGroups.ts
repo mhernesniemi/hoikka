@@ -2,10 +2,16 @@
  * Customer Groups Service
  * Handles B2B customer group management
  */
-import { eq, desc, sql, and, like } from "drizzle-orm";
+import { eq, asc, desc, sql, and, like } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { customerGroups, customerGroupMembers, customers } from "../db/schema.js";
-import type { CustomerGroup, NewCustomerGroup, Customer } from "$lib/types.js";
+import type {
+	CustomerGroup,
+	CustomerGroupListItem,
+	NewCustomerGroup,
+	Customer,
+	PaginatedResult
+} from "$lib/types.js";
 
 import { slugify } from "$lib/utils.js";
 
@@ -90,6 +96,65 @@ export class CustomerGroupService {
 		);
 
 		return groupsWithCounts;
+	}
+
+	/**
+	 * List customer groups with server-side pagination for admin list view.
+	 */
+	async listPaginated(
+		options: {
+			limit?: number;
+			offset?: number;
+			search?: string;
+			sortBy?: string;
+			sortOrder?: "asc" | "desc";
+		} = {}
+	): Promise<PaginatedResult<CustomerGroupListItem>> {
+		const { limit = 20, offset = 0, search, sortBy, sortOrder = "desc" } = options;
+
+		const conditions: ReturnType<typeof eq>[] = [];
+		if (search) {
+			const pattern = `%${search}%`;
+			conditions.push(
+				sql`(${customerGroups.name} ILIKE ${pattern} OR ${customerGroups.description} ILIKE ${pattern})` as any
+			);
+		}
+
+		const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+		const [countResult] = await db
+			.select({ count: sql<number>`count(*)` })
+			.from(customerGroups)
+			.where(whereClause);
+		const total = Number(countResult?.count ?? 0);
+
+		const sortColumnMap: Record<string, ReturnType<typeof sql>> = {
+			name: sql`${customerGroups.name}`,
+			description: sql`${customerGroups.description}`,
+			customerCount: sql`(SELECT count(*) FROM customer_group_members WHERE group_id = ${customerGroups.id})`,
+			createdAt: sql`${customerGroups.createdAt}`
+		};
+		const sortCol = (sortBy && sortColumnMap[sortBy]) || sql`${customerGroups.createdAt}`;
+		const dirFn = sortOrder === "asc" ? asc : desc;
+
+		const items = await db
+			.select({
+				id: customerGroups.id,
+				name: customerGroups.name,
+				description: customerGroups.description,
+				createdAt: customerGroups.createdAt,
+				customerCount: sql<number>`(SELECT count(*) FROM customer_group_members WHERE group_id = ${customerGroups.id})`
+			})
+			.from(customerGroups)
+			.where(whereClause)
+			.orderBy(dirFn(sortCol))
+			.limit(limit)
+			.offset(offset);
+
+		return {
+			items: items.map((item) => ({ ...item, customerCount: Number(item.customerCount) })),
+			pagination: { total, limit, offset, hasMore: offset + items.length < total }
+		};
 	}
 
 	/**

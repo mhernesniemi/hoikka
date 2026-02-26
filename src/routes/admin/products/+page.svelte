@@ -13,6 +13,7 @@
   import { toast } from "svelte-sonner";
   import { formatDate } from "$lib/utils";
   import { imageUrl } from "$lib/image";
+  import type { ProductListItem } from "$lib/types";
   import type { PageData, ActionData } from "./$types";
 
   let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -27,7 +28,7 @@
 
   let createDialogOpen = $state(false);
 
-  type ProductRow = (typeof data.products)[0];
+  type ProductRow = ProductListItem;
 
   const columns: ColumnDef<ProductRow>[] = [
     {
@@ -55,15 +56,15 @@
         renderSnippet(productCell, {
           name: row.original.name,
           id: row.original.id,
-          image: row.original.featuredAsset?.source ?? null
+          image: row.original.featuredAssetSource
         })
     },
     {
-      accessorFn: (row) => row.variants.length,
+      accessorFn: (row) => row.variantCount,
       id: "variants",
       header: "Variants",
       cell: ({ row }) =>
-        `${row.original.variants.length} variant${row.original.variants.length !== 1 ? "s" : ""}`
+        `${row.original.variantCount} variant${row.original.variantCount !== 1 ? "s" : ""}`
     },
     {
       accessorKey: "visibility",
@@ -123,6 +124,11 @@
     emptyIcon={Package}
     emptyTitle="No products"
     emptyDescription="Get started by creating a new product."
+    serverPagination={{
+      total: data.pagination.total,
+      page: data.currentPage,
+      pageSize: 20
+    }}
   >
     {#snippet bulkActions({ selectedRows, table })}
       <div class="flex gap-2">

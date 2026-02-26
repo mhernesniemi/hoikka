@@ -65,7 +65,10 @@ export const products = pgTable(
 			.$onUpdate(() => new Date())
 			.notNull()
 	},
-	(table) => [index("products_visibility_idx").on(table.visibility)]
+	(table) => [
+		index("products_visibility_idx").on(table.visibility),
+		index("products_created_at_idx").on(table.createdAt)
+	]
 );
 
 export const productTranslations = pgTable(

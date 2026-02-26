@@ -3,11 +3,12 @@
   import { DataTable, renderSnippet } from "$lib/components/admin/data-table";
   import { Badge, type BadgeVariant } from "$lib/components/admin/ui/badge";
   import { cn, formatDateTime, orderStateLabel } from "$lib/utils";
+  import type { OrderListItem } from "$lib/types";
   import type { PageData } from "./$types";
 
   let { data }: { data: PageData } = $props();
 
-  type OrderRow = (typeof data.orders)[0];
+  type OrderRow = OrderListItem;
 
   const states = ["created", "payment_pending", "paid", "shipped", "delivered", "cancelled"];
 
@@ -32,7 +33,7 @@
       cell: ({ row }) =>
         renderSnippet(orderCell, {
           code: row.original.code,
-          itemCount: row.original.lines.length,
+          itemCount: row.original.lineCount,
           id: row.original.id
         })
     },
@@ -98,5 +99,14 @@
     {/each}
   </div>
 
-  <DataTable data={data.orders} {columns} searchPlaceholder="Filter orders..." pageSize={20} />
+  <DataTable
+    data={data.orders}
+    {columns}
+    searchPlaceholder="Filter orders..."
+    serverPagination={{
+      total: data.pagination.total,
+      page: data.currentPage,
+      pageSize: 20
+    }}
+  />
 </div>

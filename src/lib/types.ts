@@ -65,6 +65,42 @@ export type ProductVisibility = Product["visibility"];
 /** Product type - physical or digital */
 export type ProductType = Product["type"];
 
+/** Lightweight product for admin list views */
+export interface ProductListItem {
+	id: number;
+	name: string;
+	visibility: string;
+	createdAt: Date;
+	variantCount: number;
+	featuredAssetSource: string | null;
+}
+
+/** Lightweight collection for admin list views */
+export interface CollectionListItem {
+	id: number;
+	name: string;
+	isPrivate: boolean;
+	createdAt: Date;
+	productCount: number;
+}
+
+/** Lightweight facet for admin list views */
+export interface FacetListItem {
+	id: number;
+	name: string;
+	code: string;
+	valueCount: number;
+}
+
+/** Lightweight customer group for admin list views */
+export interface CustomerGroupListItem {
+	id: number;
+	name: string;
+	description: string | null;
+	createdAt: Date;
+	customerCount: number;
+}
+
 /** Lightweight product for client-side cache (from product_search table) */
 export interface CachedProduct {
 	id: number;
@@ -183,6 +219,19 @@ export type OrderState = Order["state"];
 
 /** Payment state - derived from schema enum */
 export type PaymentState = Payment["state"];
+
+/** Lightweight order for admin list views */
+export interface OrderListItem {
+	id: number;
+	code: string;
+	state: string;
+	total: number;
+	currencyCode: string;
+	shippingFullName: string | null;
+	orderPlacedAt: Date | null;
+	createdAt: Date;
+	lineCount: number;
+}
 
 /** Order with all related data */
 export interface OrderWithRelations extends Order {

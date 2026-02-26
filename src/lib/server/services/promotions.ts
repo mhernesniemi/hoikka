@@ -2,7 +2,7 @@
  * Promotion Service
  * Handles coupon codes and discounts
  */
-import { eq, and, desc, sql, gte, lte, or, isNull, inArray } from "drizzle-orm";
+import { eq, and, asc, desc, sql, gte, lte, or, isNull, inArray } from "drizzle-orm";
 import { db } from "../db/index.js";
 import {
 	promotions,
@@ -158,35 +158,48 @@ export class PromotionService {
 			enabled?: boolean;
 			limit?: number;
 			offset?: number;
+			search?: string;
+			sortBy?: string;
+			sortOrder?: "asc" | "desc";
 		} = {}
 	): Promise<PaginatedResult<Promotion>> {
-		const { enabled, limit = 20, offset = 0 } = options;
+		const { enabled, limit = 20, offset = 0, search, sortBy, sortOrder = "desc" } = options;
 
 		const conditions = enabled !== undefined ? [eq(promotions.enabled, enabled)] : [];
+		if (search) {
+			const pattern = `%${search}%`;
+			conditions.push(
+				sql`(${promotions.code} ILIKE ${pattern} OR ${promotions.title} ILIKE ${pattern})` as any
+			);
+		}
 
 		const countResult = await db
 			.select({ count: sql<number>`count(*)` })
 			.from(promotions)
 			.where(and(...conditions));
-
 		const total = Number(countResult[0]?.count ?? 0);
+
+		const sortColumnMap: Record<string, ReturnType<typeof sql>> = {
+			code: sql`${promotions.code}`,
+			method: sql`${promotions.method}`,
+			promotionType: sql`${promotions.promotionType}`,
+			status: sql`${promotions.enabled}`,
+			createdAt: sql`${promotions.createdAt}`
+		};
+		const sortCol = (sortBy && sortColumnMap[sortBy]) || sql`${promotions.createdAt}`;
+		const dirFn = sortOrder === "asc" ? asc : desc;
 
 		const items = await db
 			.select()
 			.from(promotions)
 			.where(and(...conditions))
-			.orderBy(desc(promotions.createdAt))
+			.orderBy(dirFn(sortCol))
 			.limit(limit)
 			.offset(offset);
 
 		return {
 			items,
-			pagination: {
-				total,
-				limit,
-				offset,
-				hasMore: offset + items.length < total
-			}
+			pagination: { total, limit, offset, hasMore: offset + items.length < total }
 		};
 	}
 

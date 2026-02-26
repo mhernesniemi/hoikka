@@ -19,7 +19,7 @@
   let pendingDeleteIds = $state<number[]>([]);
   let bulkDeleteTable: { resetRowSelection: () => void } | null = null;
 
-  type PageRow = (typeof data.pages)[0];
+  type PageRow = (typeof data.pages)[number];
 
   const columns: ColumnDef<PageRow>[] = [
     {
@@ -101,6 +101,11 @@
     emptyIcon={FileText}
     emptyTitle="No content pages"
     emptyDescription="Get started by creating a new page."
+    serverPagination={{
+      total: data.pagination.total,
+      page: data.currentPage,
+      pageSize: 20
+    }}
   >
     {#snippet bulkActions({ selectedRows, table })}
       <div class="flex gap-2">

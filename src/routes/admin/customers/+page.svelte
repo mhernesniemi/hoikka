@@ -30,8 +30,8 @@
   let pendingGroupDeleteIds = $state<number[]>([]);
   let bulkDeleteGroupTable: { resetRowSelection: () => void } | null = null;
 
-  type CustomerRow = (typeof data.customers)[0];
-  type GroupRow = (typeof data.groups)[0];
+  type CustomerRow = (typeof data.customers)[number];
+  type GroupRow = (typeof data.groups)[number];
 
   $effect(() => {
     if (form?.error) toast.error(form.error);
@@ -195,6 +195,13 @@
       columns={customerColumns}
       searchPlaceholder="Filter customers..."
       enableRowSelection={true}
+      serverPagination={data.tab === "customers"
+        ? {
+            total: data.customerPagination.total,
+            page: data.currentPage,
+            pageSize: 20
+          }
+        : undefined}
     >
       {#snippet bulkActions({ selectedRows, table })}
         <Button
@@ -222,6 +229,13 @@
       emptyIcon={UsersRound}
       emptyTitle="No customer groups"
       emptyDescription="Get started by creating a new customer group."
+      serverPagination={data.tab === "groups"
+        ? {
+            total: data.groupPagination.total,
+            page: data.currentPage,
+            pageSize: 20
+          }
+        : undefined}
     >
       {#snippet bulkActions({ selectedRows, table })}
         <Button

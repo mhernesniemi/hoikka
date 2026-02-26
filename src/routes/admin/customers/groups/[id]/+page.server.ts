@@ -17,7 +17,7 @@ export const load: PageServerLoad = async ({ params }) => {
 
 	const [groupCustomers, allCustomers] = await Promise.all([
 		customerGroupService.getCustomers(id),
-		customerService.list(1000, 0)
+		customerService.list({ limit: 1000 })
 	]);
 
 	return {

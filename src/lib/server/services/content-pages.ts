@@ -2,16 +2,69 @@
  * Content Page Service
  * Simple CMS pages (About, FAQ, Terms, etc.)
  */
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, asc, desc, sql } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { contentPages } from "../db/schema.js";
-import type { ContentPage } from "$lib/types.js";
+import type { ContentPage, PaginatedResult } from "$lib/types.js";
 
 export class ContentPageService {
 	async list(): Promise<ContentPage[]> {
 		return db.query.contentPages.findMany({
 			orderBy: [desc(contentPages.createdAt)]
 		});
+	}
+
+	/**
+	 * List content pages with server-side pagination for admin list view.
+	 */
+	async listPaginated(
+		options: {
+			limit?: number;
+			offset?: number;
+			search?: string;
+			sortBy?: string;
+			sortOrder?: "asc" | "desc";
+		} = {}
+	): Promise<PaginatedResult<ContentPage>> {
+		const { limit = 20, offset = 0, search, sortBy, sortOrder = "desc" } = options;
+
+		const conditions: ReturnType<typeof eq>[] = [];
+		if (search) {
+			const pattern = `%${search}%`;
+			conditions.push(
+				sql`(${contentPages.title} ILIKE ${pattern} OR ${contentPages.slug} ILIKE ${pattern})` as any
+			);
+		}
+
+		const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+		const [countResult] = await db
+			.select({ count: sql<number>`count(*)` })
+			.from(contentPages)
+			.where(whereClause);
+		const total = Number(countResult?.count ?? 0);
+
+		const sortColumnMap: Record<string, ReturnType<typeof sql>> = {
+			title: sql`${contentPages.title}`,
+			slug: sql`${contentPages.slug}`,
+			published: sql`${contentPages.published}`,
+			createdAt: sql`${contentPages.createdAt}`
+		};
+		const sortCol = (sortBy && sortColumnMap[sortBy]) || sql`${contentPages.createdAt}`;
+		const dirFn = sortOrder === "asc" ? asc : desc;
+
+		const items = await db
+			.select()
+			.from(contentPages)
+			.where(whereClause)
+			.orderBy(dirFn(sortCol))
+			.limit(limit)
+			.offset(offset);
+
+		return {
+			items,
+			pagination: { total, limit, offset, hasMore: offset + items.length < total }
+		};
 	}
 
 	async getById(id: number): Promise<ContentPage | null> {

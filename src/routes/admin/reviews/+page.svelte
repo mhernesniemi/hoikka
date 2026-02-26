@@ -16,7 +16,7 @@
   let pendingDeleteIds = $state<number[]>([]);
   let bulkDeleteTable: { resetRowSelection: () => void } | null = null;
 
-  type ReviewRow = (typeof data.reviews)[0];
+  type ReviewRow = (typeof data.reviews)[number];
 
   const statuses = ["pending", "approved", "rejected"];
 
@@ -133,6 +133,11 @@
     {columns}
     searchPlaceholder="Filter reviews..."
     enableRowSelection={true}
+    serverPagination={{
+      total: data.pagination.total,
+      page: data.currentPage,
+      pageSize: 20
+    }}
   >
     {#snippet bulkActions({ selectedRows, table })}
       <div class="flex gap-2">

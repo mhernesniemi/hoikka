@@ -2,10 +2,16 @@
  * Facet Service
  * Handles facets and facet values for product filtering
  */
-import { eq, and, desc, sql } from "drizzle-orm";
+import { eq, and, asc, desc, sql } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { facets, facetValues, productFacetValues } from "../db/schema.js";
-import type { Facet, FacetValue, FacetWithValues, PaginatedResult } from "$lib/types.js";
+import type {
+	Facet,
+	FacetListItem,
+	FacetValue,
+	FacetWithValues,
+	PaginatedResult
+} from "$lib/types.js";
 
 export class FacetService {
 	/**
@@ -53,6 +59,62 @@ export class FacetService {
 		const facetList = await db.select().from(facets).orderBy(facets.code);
 
 		return Promise.all(facetList.map((f: Facet) => this.loadFacetWithValues(f)));
+	}
+
+	/**
+	 * List facets with server-side pagination for admin list view.
+	 */
+	async listPaginated(
+		options: {
+			limit?: number;
+			offset?: number;
+			search?: string;
+			sortBy?: string;
+			sortOrder?: "asc" | "desc";
+		} = {}
+	): Promise<PaginatedResult<FacetListItem>> {
+		const { limit = 20, offset = 0, search, sortBy, sortOrder = "asc" } = options;
+
+		const conditions: ReturnType<typeof eq>[] = [];
+		if (search) {
+			const pattern = `%${search}%`;
+			conditions.push(
+				sql`(${facets.name} ILIKE ${pattern} OR ${facets.code} ILIKE ${pattern})` as any
+			);
+		}
+
+		const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+		const [countResult] = await db
+			.select({ count: sql<number>`count(*)` })
+			.from(facets)
+			.where(whereClause);
+		const total = Number(countResult?.count ?? 0);
+
+		const sortColumnMap: Record<string, ReturnType<typeof sql>> = {
+			name: sql`${facets.name}`,
+			code: sql`${facets.code}`
+		};
+		const sortCol = (sortBy && sortColumnMap[sortBy]) || sql`${facets.code}`;
+		const dirFn = sortOrder === "desc" ? desc : asc;
+
+		const items = await db
+			.select({
+				id: facets.id,
+				name: facets.name,
+				code: facets.code,
+				valueCount: sql<number>`(SELECT count(*) FROM facet_values WHERE facet_id = ${facets.id})`
+			})
+			.from(facets)
+			.where(whereClause)
+			.orderBy(dirFn(sortCol))
+			.limit(limit)
+			.offset(offset);
+
+		return {
+			items: items.map((item) => ({ ...item, valueCount: Number(item.valueCount) })),
+			pagination: { total, limit, offset, hasMore: offset + items.length < total }
+		};
 	}
 
 	/**
