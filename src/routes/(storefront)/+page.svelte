@@ -13,24 +13,24 @@
 </script>
 
 <svelte:head>
-  <title>Hoikka - DX-first ecommerce platform</title>
+  <title>SvelteKit Ecommerce Starter - Hoikka</title>
   <meta
     name="description"
-    content="Lightweight but powerful DX-first ecommerce platform built with SvelteKit. 100% customizable and owned by you."
+    content="Fullstack SvelteKit ecommerce platform. Serverless-ready, monolithic architecture with admin panel and storefront. Deploy on Vercel."
   />
-  <meta property="og:title" content="Hoikka - DX-first ecommerce platform" />
+  <meta property="og:title" content="SvelteKit Ecommerce Starter - Hoikka" />
   <meta
     property="og:description"
-    content="Lightweight but powerful DX-first ecommerce platform built with SvelteKit. 100% customizable and owned by you."
+    content="Fullstack SvelteKit ecommerce platform. Serverless-ready, monolithic architecture with admin panel and storefront. Deploy on Vercel."
   />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://hoikka.dev" />
   <meta property="og:image" content="https://hoikka.dev/hoikka-screenshot.jpg" />
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Hoikka - DX-first ecommerce platform" />
+  <meta name="twitter:title" content="SvelteKit Ecommerce Starter - Hoikka" />
   <meta
     name="twitter:description"
-    content="Lightweight but powerful DX-first ecommerce platform built with SvelteKit. 100% customizable and owned by you."
+    content="Fullstack SvelteKit ecommerce platform. Serverless-ready, monolithic architecture with admin panel and storefront. Deploy on Vercel."
   />
   <meta name="twitter:image" content="https://hoikka.dev/hoikka-screenshot.jpg" />
 </svelte:head>
@@ -63,7 +63,13 @@
             <span class="text-gray-900 italic">Built with SvelteKit.</span>
           </p>
           <div class="flex items-start gap-4">
-            <img src="/kuvitus2.png" alt="Svelte" width="258" height="198" class="h-16 w-auto sm:h-20" />
+            <img
+              src="/kuvitus2.png"
+              alt="Svelte"
+              width="258"
+              height="198"
+              class="h-16 w-auto sm:h-20"
+            />
             <div class="pt-2">
               <a
                 href="https://hoikka-docs.vercel.app"
