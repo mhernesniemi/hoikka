@@ -169,7 +169,7 @@ export class PromotionService {
 		if (search) {
 			const pattern = `%${search}%`;
 			conditions.push(
-				sql`(${promotions.code} ILIKE ${pattern} OR ${promotions.title} ILIKE ${pattern})` as any
+				sql`(${promotions.code} LIKE ${pattern} OR ${promotions.title} LIKE ${pattern})` as any
 			);
 		}
 

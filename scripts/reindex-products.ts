@@ -1,9 +1,10 @@
 /**
- * Reindex all products into the product_search table.
+ * Reindex all products into the FTS5 search table.
  * Run with: bun scripts/reindex-products.ts
  */
-import { neon } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-http";
+import { Database } from "bun:sqlite";
+import { drizzle } from "drizzle-orm/bun-sqlite";
+import * as schema from "../src/lib/server/db/schema.js";
 import { reindexAll } from "../src/lib/server/services/reindex.js";
 
 const DATABASE_URL = process.env.DATABASE_URL;
@@ -12,8 +13,9 @@ if (!DATABASE_URL) {
 	process.exit(1);
 }
 
-const client = neon(DATABASE_URL);
-const db = drizzle(client);
+const sqlite = new Database(DATABASE_URL);
+sqlite.exec("PRAGMA foreign_keys = ON;");
+const db = drizzle(sqlite, { schema });
 
 console.log("Reindexing all products...\n");
 

@@ -1,11 +1,10 @@
 /**
  * Tax Service
- * Handles VAT calculations for Finnish e-commerce
+ * Handles VAT calculations for Finnish e-commerce.
  *
- * Key concepts:
- * - All prices in the system are gross (VAT-inclusive)
- * - Tax is back-calculated from gross price
- * - B2B customers with valid VAT ID are tax-exempt
+ * DB storage convention: tax rates are integer basis points with 4 decimal
+ * digits of precision (0.24 → 2400). Conversion to/from decimals happens at
+ * the DB boundary; all business logic below works with decimals.
  */
 import { eq, and } from "drizzle-orm";
 import { db } from "../db/index.js";
@@ -25,6 +24,10 @@ export interface TaxRateInfo {
 	name: string;
 }
 
+const TAX_RATE_SCALE = 10_000;
+export const taxRateFromDb = (n: number) => n / TAX_RATE_SCALE;
+export const taxRateToDb = (n: number) => Math.round(n * TAX_RATE_SCALE);
+
 // Default tax rates for Finland
 const DEFAULT_TAX_RATES: TaxRateInfo[] = [
 	{ code: "standard", rate: 0.24, name: "Standard VAT (24%)" },
@@ -34,56 +37,32 @@ const DEFAULT_TAX_RATES: TaxRateInfo[] = [
 ];
 
 export class TaxService {
-	/**
-	 * Get tax rate for a given tax code
-	 * Falls back to standard rate (24%) if not found
-	 */
 	async getTaxRate(taxCode: string): Promise<number> {
 		const [rate] = await db.select().from(taxRates).where(eq(taxRates.code, taxCode));
-
-		if (rate) {
-			return parseFloat(rate.rate);
-		}
-
-		// Fallback to default rates
-		const defaultRate = DEFAULT_TAX_RATES.find((r) => r.code === taxCode);
-		return defaultRate?.rate ?? 0.24;
+		if (rate) return taxRateFromDb(rate.rate);
+		return DEFAULT_TAX_RATES.find((r) => r.code === taxCode)?.rate ?? 0.24;
 	}
 
-	/**
-	 * Get all available tax rates
-	 */
 	async getAllTaxRates(): Promise<TaxRateInfo[]> {
 		const rates = await db.select().from(taxRates);
-
 		if (rates.length > 0) {
 			return rates.map((r) => ({
 				code: r.code,
-				rate: parseFloat(r.rate),
+				rate: taxRateFromDb(r.rate),
 				name: r.name
 			}));
 		}
-
 		return DEFAULT_TAX_RATES;
 	}
 
-	/**
-	 * Calculate tax breakdown from a gross price
-	 */
 	calculateTax(grossPrice: number, taxRate: number): TaxCalculation {
 		return calculateTax(grossPrice, taxRate);
 	}
 
-	/**
-	 * Calculate tax-exempt price (for B2B customers)
-	 */
 	calculateTaxExemptPrice(grossPrice: number, taxRate: number): number {
 		return calculateTaxExemptPrice(grossPrice, taxRate);
 	}
 
-	/**
-	 * Calculate tax for a line item
-	 */
 	calculateLineTax(
 		grossUnitPrice: number,
 		quantity: number,
@@ -93,10 +72,6 @@ export class TaxService {
 		return calculateLineTax(grossUnitPrice, quantity, taxRate, isTaxExempt);
 	}
 
-	/**
-	 * Check if a customer is tax-exempt
-	 * A customer is exempt if they belong to any group with isTaxExempt = true
-	 */
 	async isCustomerTaxExempt(customerId: number | null | undefined): Promise<boolean> {
 		if (!customerId) return false;
 
@@ -115,17 +90,13 @@ export class TaxService {
 		return !!result;
 	}
 
-	/**
-	 * Seed default tax rates into the database
-	 * Call this during initialization or migration
-	 */
 	async seedDefaultRates(): Promise<void> {
 		for (const rate of DEFAULT_TAX_RATES) {
 			await db
 				.insert(taxRates)
 				.values({
 					code: rate.code,
-					rate: rate.rate.toString(),
+					rate: taxRateToDb(rate.rate),
 					name: rate.name
 				})
 				.onConflictDoNothing();
@@ -133,5 +104,4 @@ export class TaxService {
 	}
 }
 
-// Export singleton instance
 export const taxService = new TaxService();

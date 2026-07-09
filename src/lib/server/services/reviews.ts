@@ -167,7 +167,7 @@ export class ReviewService {
 		if (search) {
 			const pattern = `%${search}%`;
 			conditions.push(
-				sql`(${reviews.comment} ILIKE ${pattern} OR ${reviews.nickname} ILIKE ${pattern} OR ${products.name} ILIKE ${pattern})`
+				sql`(${reviews.comment} LIKE ${pattern} OR ${reviews.nickname} LIKE ${pattern} OR ${products.name} LIKE ${pattern})`
 			);
 		}
 

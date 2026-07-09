@@ -60,8 +60,8 @@
               fileSize: 0,
               source: v.imageUrl!,
               alt: null,
-              focalX: "0.5",
-              focalY: "0.5",
+              focalX: 0.5,
+              focalY: 0.5,
               createdAt: new Date()
             });
           }

@@ -1,13 +1,15 @@
-import { neon } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-http";
+import { Database } from "bun:sqlite";
+import { drizzle } from "drizzle-orm/bun-sqlite";
 import type { Logger } from "drizzle-orm/logger";
 import * as schema from "./schema.js";
 import { env } from "$env/dynamic/private";
-import { trace, SpanStatusCode } from "@opentelemetry/api";
+import { trace } from "@opentelemetry/api";
 
 if (!env.DATABASE_URL) throw new Error("DATABASE_URL is not set");
 
-const sql = neon(env.DATABASE_URL);
+const sqlite = new Database(env.DATABASE_URL);
+sqlite.exec("PRAGMA foreign_keys = ON;");
+sqlite.exec("PRAGMA journal_mode = WAL;");
 
 const tracer = trace.getTracer("hoikka");
 
@@ -15,7 +17,7 @@ class OTelLogger implements Logger {
 	logQuery(query: string, params: unknown[]): void {
 		const span = tracer.startSpan("db.query", {
 			attributes: {
-				"db.system": "postgresql",
+				"db.system": "sqlite",
 				"db.statement": query,
 				"db.params_count": params.length
 			}
@@ -24,4 +26,4 @@ class OTelLogger implements Logger {
 	}
 }
 
-export const db = drizzle(sql, { schema, logger: new OTelLogger() });
+export const db = drizzle(sqlite, { schema, logger: new OTelLogger() });

@@ -1,18 +1,8 @@
-import { createAuthClient, type VanillaBetterAuthClient } from "@neondatabase/neon-js/auth";
+import { createAuthClient } from "better-auth/svelte";
+import { emailOTPClient } from "better-auth/client/plugins";
 
-let _client: VanillaBetterAuthClient | null = null;
-
-function getClient(): VanillaBetterAuthClient {
-	if (!_client) {
-		_client = createAuthClient(
-			`${window.location.origin}/api/auth`
-		) as unknown as VanillaBetterAuthClient;
-	}
-	return _client;
-}
-
-export const authClient = new Proxy({} as VanillaBetterAuthClient, {
-	get(_, prop) {
-		return (getClient() as any)[prop];
-	}
+export const authClient = createAuthClient({
+	plugins: [emailOTPClient()]
 });
+
+export const { signIn, signUp, signOut, useSession } = authClient;

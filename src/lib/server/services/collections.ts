@@ -322,7 +322,7 @@ export class CollectionService {
 		const conditions: ReturnType<typeof eq>[] = [];
 		if (search) {
 			const pattern = `%${search}%`;
-			conditions.push(sql`${collections.name} ILIKE ${pattern}` as any);
+			conditions.push(sql`${collections.name} LIKE ${pattern}` as any);
 		}
 
 		const whereClause = conditions.length > 0 ? and(...conditions) : undefined;

@@ -1,23 +1,18 @@
-import { dev } from "$app/environment";
-
 /**
- * Generate an image URL with optional Vercel Image Optimization
- *
- * In production, uses /_vercel/image to resize and optimize images served from Vercel Blob.
- * In dev, returns the raw source URL since /_vercel/image is not available locally.
+ * Return an image URL suitable for rendering. No optimization pipeline is
+ * wired up locally — the `width`/`quality` args are accepted for call-site
+ * stability and will be re-used when R2 + a CDN/optimizer are added.
  */
-export function imageUrl(source: string, width: number, quality = 75): string {
-	if (dev) return source;
-	return `/_vercel/image?url=${encodeURIComponent(source)}&w=${width}&q=${quality}`;
+export function imageUrl(source: string, _width: number, _quality = 75): string {
+	return source;
 }
 
 /**
- * Generate a CSS object-position value from focal point coordinates.
- * Focal point values are 0–1 (stored as strings from numeric DB columns).
+ * Generate a CSS object-position value from focal point coordinates (0–1).
  */
 export function focalPosition(
-	focalX: string | number | null | undefined,
-	focalY: string | number | null | undefined
+	focalX: number | null | undefined,
+	focalY: number | null | undefined
 ): string {
-	return `${Number(focalX ?? 0.5) * 100}% ${Number(focalY ?? 0.5) * 100}%`;
+	return `${(focalX ?? 0.5) * 100}% ${(focalY ?? 0.5) * 100}%`;
 }

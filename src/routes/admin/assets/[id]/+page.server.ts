@@ -41,8 +41,8 @@ export const actions: Actions = {
 			await assetService.update(id, {
 				name,
 				alt: alt || "",
-				focalX: focalX || "0.5",
-				focalY: focalY || "0.5"
+				focalX: Number(focalX) || 0.5,
+				focalY: Number(focalY) || 0.5
 			});
 
 			// Save translations

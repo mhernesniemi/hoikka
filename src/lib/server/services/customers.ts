@@ -86,7 +86,7 @@ export class CustomerService {
 		if (search) {
 			const pattern = `%${search}%`;
 			conditions.push(
-				sql`(${customers.firstName} ILIKE ${pattern} OR ${customers.lastName} ILIKE ${pattern} OR ${customers.email} ILIKE ${pattern})` as any
+				sql`(${customers.firstName} LIKE ${pattern} OR ${customers.lastName} LIKE ${pattern} OR ${customers.email} LIKE ${pattern})` as any
 			);
 		}
 

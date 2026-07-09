@@ -1,15 +1,11 @@
 /**
- * Product Search Service
- * Manages the denormalized product_search table for fast storefront queries.
+ * Product search using SQLite FTS5.
+ * The FTS5 virtual table `product_search_fts` is populated by reindex.ts;
+ * this file wraps read queries in a stable, pre-existing public API.
  */
-import { eq, and, sql, isNull, inArray } from "drizzle-orm";
+import { sql, eq, and, isNull, inArray } from "drizzle-orm";
 import { db } from "../db/index.js";
-import {
-	productVariants,
-	productVariantGroupPrices,
-	productSearch,
-	customerGroupMembers
-} from "../db/schema.js";
+import { productVariants, productVariantGroupPrices, customerGroupMembers } from "../db/schema.js";
 import {
 	reindexProduct as reindexProductCore,
 	removeFromIndex as removeFromIndexCore,
@@ -21,24 +17,6 @@ import type {
 	ProductVariantWithRelations,
 	PaginatedResult
 } from "$lib/types.js";
-
-// ============================================================================
-// TYPES
-// ============================================================================
-
-interface FeaturedAssetJson {
-	source: string;
-	focalX: string;
-	focalY: string;
-}
-
-interface FacetValueJson {
-	code: string;
-	name: string;
-	facetValueId: number;
-}
-
-type FacetsJson = Record<string, FacetValueJson[]>;
 
 interface SearchOptions {
 	search?: string;
@@ -55,30 +33,26 @@ interface FacetCountResult {
 	count: number;
 }
 
-// ============================================================================
-// HELPERS
-// ============================================================================
-
-/**
- * Build a SQL condition that checks if a product has any of the given facet value codes
- * for a specific facet. Uses individual equality checks to avoid parameterized `->` key
- * and `ANY()` array issues with the neon driver.
- */
-function buildFacetCondition(facetCode: string, valueCodes: string[]) {
-	// Sanitize facet code to prevent SQL injection (only allow alphanumeric + underscore/hyphen)
-	const safeFacetCode = facetCode.replace(/[^a-zA-Z0-9_-]/g, "");
-	const codeChecks = valueCodes.map((code) => sql`elem->>'code' = ${code}`);
-	// Use sql.raw for the JSONB key literal to avoid -> operator overload ambiguity with parameters
-	const facetKey = sql.raw(`'${safeFacetCode}'`);
-	return sql`EXISTS (
-		SELECT 1 FROM jsonb_array_elements(${productSearch.facets}->${facetKey}) AS elem
-		WHERE (${sql.join(codeChecks, sql` OR `)})
-	)`;
+interface FtsRow {
+	productId: number;
+	name: string;
+	description: string | null;
+	visibility: "public" | "private" | "draft";
+	featured_asset: string | null;
+	facets: string;
+	variant_facet_images: string;
+	min_price: number | null;
+	max_price: number | null;
+	in_stock: number;
 }
 
-// ============================================================================
-// REINDEX FUNCTIONS (delegates to shared reindex.ts)
-// ============================================================================
+interface FeaturedAssetJson {
+	source: string;
+	focalX: number;
+	focalY: number;
+}
+
+type FacetsJson = Record<string, { code: string; name: string; facetValueId: number }[]>;
 
 export function reindexProduct(productId: number): Promise<void> {
 	return reindexProductCore(db, productId);
@@ -92,36 +66,158 @@ export function reindexAll(): Promise<number> {
 	return reindexAllCore(db);
 }
 
-// ============================================================================
-// CACHED PRODUCT CARDS
-// ============================================================================
+// ----------------------------------------------------------------------------
+// Query helpers
+// ----------------------------------------------------------------------------
 
 /**
- * Fetch all public products from product_search as lightweight CachedProduct[].
- * Resolves B2B group prices for the given customer if applicable.
+ * Build an FTS5 MATCH expression from free-text. Strips punctuation, treats each
+ * term as a prefix (`term*`), joins with implicit AND (space).
  */
+function buildMatchExpression(search: string): string | null {
+	const terms = search
+		.trim()
+		.split(/\s+/)
+		.map((t) => t.replace(/["*()]/g, ""))
+		.filter((t) => t.length > 0);
+	if (terms.length === 0) return null;
+	return terms.map((t) => `"${t}"*`).join(" ");
+}
+
+/**
+ * Build a facet-filter SQL fragment. Each facet is AND'd; values within a
+ * facet are OR'd. Uses json_each over the UNINDEXED facets JSON column.
+ */
+function facetConditions(facetFilters: Record<string, string[]> | undefined) {
+	if (!facetFilters) return [];
+	const conds = [];
+	for (const [facetCode, valueCodes] of Object.entries(facetFilters)) {
+		if (valueCodes.length === 0) continue;
+		const safeCode = facetCode.replace(/[^a-zA-Z0-9_-]/g, "");
+		conds.push(sql`EXISTS (
+			SELECT 1 FROM json_each(json_extract(product_search_fts.facets, ${"$." + safeCode}))
+			WHERE json_extract(value, '$.code') IN (${sql.join(
+				valueCodes.map((c) => sql`${c}`),
+				sql`, `
+			)})
+		)`);
+	}
+	return conds;
+}
+
+function mapRow(row: FtsRow): ProductWithRelations {
+	const featured = row.featured_asset
+		? (JSON.parse(row.featured_asset) as FeaturedAssetJson)
+		: null;
+	const facetsJson = JSON.parse(row.facets || "{}") as FacetsJson;
+	const inStock = row.in_stock === 1;
+
+	const featuredAsset = featured
+		? {
+				id: 0,
+				name: "",
+				type: "image" as const,
+				mimeType: "image/jpeg",
+				width: 0,
+				height: 0,
+				fileSize: 0,
+				source: featured.source,
+				alt: null,
+				focalX: featured.focalX,
+				focalY: featured.focalY,
+				createdAt: new Date()
+			}
+		: null;
+
+	const variants: ProductVariantWithRelations[] =
+		row.min_price !== null
+			? [
+					{
+						id: 0,
+						productId: row.productId,
+						name: null,
+						sku: "",
+						price: row.min_price,
+						stock: inStock ? 1 : 0,
+						trackInventory: true,
+						featuredAssetId: null,
+						imageUrl: null,
+						isFeatured: false,
+						deletedAt: null,
+						createdAt: new Date(),
+						updatedAt: new Date(),
+						facetValues: [],
+						assets: [],
+						featuredAsset: null
+					}
+				]
+			: [];
+
+	const facetValuesArray = Object.values(facetsJson).flat();
+
+	return {
+		id: row.productId,
+		name: row.name,
+		slug: "",
+		description: row.description,
+		type: "physical",
+		visibility: row.visibility,
+		taxCode: "standard",
+		featuredAssetId: featuredAsset ? 0 : null,
+		deletedAt: null,
+		createdAt: new Date(),
+		updatedAt: new Date(),
+		variants,
+		facetValues: facetValuesArray.map((fv) => ({
+			id: fv.facetValueId,
+			facetId: 0,
+			name: fv.name,
+			code: fv.code,
+			createdAt: new Date(),
+			updatedAt: new Date()
+		})),
+		assets: [],
+		featuredAsset
+	};
+}
+
+// ----------------------------------------------------------------------------
+// Public API
+// ----------------------------------------------------------------------------
+
 export async function getAllProductCards(customerId: number | null): Promise<CachedProduct[]> {
-	const rows = await db
-		.select()
-		.from(productSearch)
-		.where(eq(productSearch.visibility, "public"))
-		.orderBy(sql`${productSearch.createdAt} DESC`);
+	const rows = (await db.all(sql`
+		SELECT
+			rowid AS productId,
+			name,
+			'' AS slug,
+			description,
+			visibility,
+			featured_asset,
+			facets,
+			variant_facet_images,
+			min_price,
+			max_price,
+			in_stock
+		FROM product_search_fts
+		WHERE visibility = 'public'
+		ORDER BY rowid DESC
+	`)) as (FtsRow & { slug: string })[];
 
 	const products: CachedProduct[] = rows.map((row) => ({
 		id: row.productId,
 		name: row.name,
 		slug: row.slug,
 		description: row.description,
-		minPrice: row.minPrice,
-		maxPrice: row.maxPrice,
-		inStock: row.inStock,
-		featuredAsset: row.featuredAsset as CachedProduct["featuredAsset"],
-		facets: (row.facets ?? {}) as CachedProduct["facets"],
-		variantFacetImages: (row.variantFacetImages as CachedProduct["variantFacetImages"]) ?? null,
-		createdAt: row.createdAt.toISOString()
+		minPrice: row.min_price,
+		maxPrice: row.max_price,
+		inStock: row.in_stock === 1,
+		featuredAsset: row.featured_asset ? JSON.parse(row.featured_asset) : null,
+		facets: JSON.parse(row.facets || "{}"),
+		variantFacetImages: JSON.parse(row.variant_facet_images || "null"),
+		createdAt: new Date().toISOString()
 	}));
 
-	// Resolve group prices if customer is logged in
 	if (customerId) {
 		const memberships = await db
 			.select({ groupId: customerGroupMembers.groupId })
@@ -130,8 +226,6 @@ export async function getAllProductCards(customerId: number | null): Promise<Cac
 
 		if (memberships.length > 0) {
 			const groupIds = memberships.map((m) => m.groupId);
-
-			// Get all group prices for this customer's groups, joined with variant to get productId
 			const groupPriceRows = await db
 				.select({
 					productId: productVariants.productId,
@@ -149,21 +243,14 @@ export async function getAllProductCards(customerId: number | null): Promise<Cac
 					)
 				);
 
-			// Build map: productId → lowest group price
-			const lowestGroupPrice = new Map<number, number>();
-			for (const row of groupPriceRows) {
-				const current = lowestGroupPrice.get(row.productId);
-				if (current === undefined || row.price < current) {
-					lowestGroupPrice.set(row.productId, row.price);
-				}
+			const lowest = new Map<number, number>();
+			for (const r of groupPriceRows) {
+				const cur = lowest.get(r.productId);
+				if (cur === undefined || r.price < cur) lowest.set(r.productId, r.price);
 			}
-
-			// Stamp the effective minPrice
-			for (const product of products) {
-				const gp = lowestGroupPrice.get(product.id);
-				if (gp !== undefined && (product.minPrice === null || gp < product.minPrice)) {
-					product.minPrice = gp;
-				}
+			for (const p of products) {
+				const gp = lowest.get(p.id);
+				if (gp !== undefined && (p.minPrice === null || gp < p.minPrice)) p.minPrice = gp;
 			}
 		}
 	}
@@ -171,242 +258,78 @@ export async function getAllProductCards(customerId: number | null): Promise<Cac
 	return products;
 }
 
-// ============================================================================
-// QUERY FUNCTIONS
-// ============================================================================
-
-/**
- * Search products using the denormalized search table.
- * Returns paginated results.
- */
 export async function searchProducts(
 	options: SearchOptions = {}
 ): Promise<PaginatedResult<ProductWithRelations>> {
 	const { search, facets: facetFilters, visibility = "public", limit = 20, offset = 0 } = options;
 
-	const conditions: ReturnType<typeof eq>[] = [];
+	const conditions = [sql`visibility = ${visibility}`];
 
-	// Visibility filter
-	conditions.push(eq(productSearch.visibility, visibility));
+	const matchExpr = search ? buildMatchExpression(search) : null;
+	if (matchExpr) conditions.push(sql`product_search_fts MATCH ${matchExpr}`);
 
-	// Full-text search
-	let searchCondition: ReturnType<typeof sql> | null = null;
-	if (search && search.trim()) {
-		const terms = search
-			.trim()
-			.split(/\s+/)
-			.map((t) => t.replace(/[^a-zA-Z0-9äöåÄÖÅ]/g, ""))
-			.filter(Boolean);
-		if (terms.length > 0) {
-			const tsquery = terms.map((t) => `${t}:*`).join(" & ");
-			searchCondition = sql`${productSearch.searchVector} @@ to_tsquery('simple', ${tsquery})`;
-		}
-	}
+	for (const c of facetConditions(facetFilters)) conditions.push(c);
 
-	// Facet filters
-	const facetConditions: ReturnType<typeof sql>[] = [];
-	if (facetFilters && Object.keys(facetFilters).length > 0) {
-		for (const [facetCode, valueCodes] of Object.entries(facetFilters)) {
-			if (valueCodes.length === 0) continue;
-			facetConditions.push(buildFacetCondition(facetCode, valueCodes));
-		}
-	}
+	const where = sql.join(conditions, sql` AND `);
+	const orderBy = matchExpr ? sql`rank` : sql`rowid DESC`;
 
-	// Build WHERE clause
-	const allConditions = [
-		...conditions.map((c) => sql`${c}`),
-		...(searchCondition ? [searchCondition] : []),
-		...facetConditions
-	];
+	const countRow = (await db.get(
+		sql`SELECT count(*) AS count FROM product_search_fts WHERE ${where}`
+	)) as { count: number } | undefined;
+	const total = Number(countRow?.count ?? 0);
 
-	const whereClause = allConditions.length > 0 ? sql.join(allConditions, sql` AND `) : sql`TRUE`;
-
-	// Count total
-	const countResult = await db.execute(
-		sql`SELECT count(*) as count FROM ${productSearch} WHERE ${whereClause}`
-	);
-	const total = Number((countResult.rows[0] as { count: string })?.count ?? 0);
-
-	// Fetch results
-	const rows = await db.execute(
-		sql`SELECT * FROM ${productSearch} WHERE ${whereClause} ORDER BY ${productSearch.updatedAt} DESC LIMIT ${limit} OFFSET ${offset}`
-	);
-
-	const items = (rows.rows as unknown as SearchRow[]).map(toProductCard);
+	const rows = (await db.all(sql`
+		SELECT
+			rowid AS productId,
+			name, description, visibility,
+			featured_asset, facets, variant_facet_images,
+			min_price, max_price, in_stock
+		FROM product_search_fts
+		WHERE ${where}
+		ORDER BY ${orderBy}
+		LIMIT ${limit} OFFSET ${offset}
+	`)) as FtsRow[];
 
 	return {
-		items,
-		pagination: {
-			total,
-			limit,
-			offset,
-			hasMore: offset + items.length < total
-		}
+		items: rows.map(mapRow),
+		pagination: { total, limit, offset, hasMore: offset + rows.length < total }
 	};
 }
 
-/**
- * Get facet value counts respecting current filters.
- * Single query using jsonb_each + jsonb_array_elements.
- */
 export async function getFilteredFacetCounts(
 	options: Pick<SearchOptions, "search" | "facets" | "visibility"> = {}
 ): Promise<Record<string, FacetCountResult[]>> {
 	const { search, facets: facetFilters, visibility = "public" } = options;
 
-	const conditions: ReturnType<typeof sql>[] = [sql`${productSearch.visibility} = ${visibility}`];
+	const conditions = [sql`visibility = ${visibility}`];
+	const matchExpr = search ? buildMatchExpression(search) : null;
+	if (matchExpr) conditions.push(sql`product_search_fts MATCH ${matchExpr}`);
+	for (const c of facetConditions(facetFilters)) conditions.push(c);
 
-	// Full-text search
-	if (search && search.trim()) {
-		const terms = search
-			.trim()
-			.split(/\s+/)
-			.map((t) => t.replace(/[^a-zA-Z0-9äöåÄÖÅ]/g, ""))
-			.filter(Boolean);
-		if (terms.length > 0) {
-			const tsquery = terms.map((t) => `${t}:*`).join(" & ");
-			conditions.push(sql`${productSearch.searchVector} @@ to_tsquery('simple', ${tsquery})`);
-		}
-	}
+	const where = sql.join(conditions, sql` AND `);
 
-	// Facet filters (AND between facets)
-	if (facetFilters && Object.keys(facetFilters).length > 0) {
-		for (const [facetCode, valueCodes] of Object.entries(facetFilters)) {
-			if (valueCodes.length === 0) continue;
-			conditions.push(buildFacetCondition(facetCode, valueCodes));
-		}
-	}
-
-	const whereClause = sql.join(conditions, sql` AND `);
-
-	// Extract all facet values with counts in a single query
-	const result = await db.execute(sql`
+	const rows = (await db.all(sql`
 		SELECT
-			facet_key as "facetCode",
-			elem->>'code' as "valueCode",
-			elem->>'name' as "valueName",
-			count(*) as count
-		FROM ${productSearch},
-			jsonb_each(${productSearch.facets}) AS kv(facet_key, facet_arr),
-			jsonb_array_elements(facet_arr) AS elem
-		WHERE ${whereClause}
-		GROUP BY facet_key, elem->>'code', elem->>'name'
-		ORDER BY facet_key, count DESC
-	`);
+			facet_kv.key AS facetCode,
+			json_extract(elem.value, '$.code') AS valueCode,
+			json_extract(elem.value, '$.name') AS valueName,
+			count(DISTINCT product_search_fts.rowid) AS count
+		FROM product_search_fts,
+			json_each(product_search_fts.facets) AS facet_kv,
+			json_each(facet_kv.value) AS elem
+		WHERE ${where}
+		GROUP BY facetCode, valueCode, valueName
+		ORDER BY facetCode, count DESC
+	`)) as { facetCode: string; valueCode: string; valueName: string; count: number }[];
 
 	const counts: Record<string, FacetCountResult[]> = {};
-	for (const row of result.rows as {
-		facetCode: string;
-		valueCode: string;
-		valueName: string;
-		count: string;
-	}[]) {
-		if (!counts[row.facetCode]) {
-			counts[row.facetCode] = [];
-		}
-		counts[row.facetCode].push({
+	for (const row of rows) {
+		(counts[row.facetCode] ??= []).push({
 			facetCode: row.facetCode,
 			valueCode: row.valueCode,
 			valueName: row.valueName,
 			count: Number(row.count)
 		});
 	}
-
 	return counts;
-}
-
-// ============================================================================
-// TYPE MAPPING
-// ============================================================================
-
-interface SearchRow {
-	product_id: number;
-	name: string;
-	slug: string;
-	description: string | null;
-	visibility: "public" | "private" | "draft";
-	min_price: number | null;
-	max_price: number | null;
-	in_stock: boolean;
-	featured_asset: FeaturedAssetJson | null;
-	facets: FacetsJson;
-	variant_facet_images: Record<string, Record<string, string>> | null;
-	created_at: string;
-	updated_at: string;
-}
-
-/**
- * Map a search table row to ProductWithRelations shape
- * so existing ProductCard.svelte works without changes.
- */
-function toProductCard(row: SearchRow): ProductWithRelations {
-	const featuredAsset = row.featured_asset
-		? {
-				id: 0,
-				name: "",
-				type: "image" as const,
-				mimeType: "image/jpeg",
-				width: 0,
-				height: 0,
-				fileSize: 0,
-				source: row.featured_asset.source,
-				alt: null,
-				focalX: row.featured_asset.focalX,
-				focalY: row.featured_asset.focalY,
-				createdAt: new Date(row.created_at)
-			}
-		: null;
-
-	// Build minimal variant for price display
-	const variants: ProductVariantWithRelations[] =
-		row.min_price !== null
-			? [
-					{
-						id: 0,
-						productId: row.product_id,
-						name: null,
-						sku: "",
-						price: row.min_price,
-						stock: row.in_stock ? 1 : 0,
-						trackInventory: true,
-						featuredAssetId: null,
-						imageUrl: null,
-						isFeatured: false,
-						deletedAt: null,
-						createdAt: new Date(row.created_at),
-						updatedAt: new Date(row.updated_at),
-						facetValues: [],
-						assets: [],
-						featuredAsset: null
-					}
-				]
-			: [];
-
-	// Collect all facet values from JSON
-	const facetValuesArray = Object.values(row.facets ?? {}).flat();
-
-	return {
-		id: row.product_id,
-		name: row.name,
-		slug: row.slug,
-		description: row.description,
-		type: "physical",
-		visibility: row.visibility,
-		taxCode: "standard",
-		featuredAssetId: featuredAsset ? 0 : null,
-		deletedAt: null,
-		createdAt: new Date(row.created_at),
-		updatedAt: new Date(row.updated_at),
-		variants,
-		facetValues: facetValuesArray.map((fv) => ({
-			id: fv.facetValueId,
-			facetId: 0,
-			name: fv.name,
-			code: fv.code,
-			createdAt: new Date(row.created_at),
-			updatedAt: new Date(row.updated_at)
-		})),
-		assets: [],
-		featuredAsset
-	};
 }

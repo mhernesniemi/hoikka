@@ -110,7 +110,7 @@ export interface CachedProduct {
 	minPrice: number | null;
 	maxPrice: number | null;
 	inStock: boolean;
-	featuredAsset: { source: string; focalX: string; focalY: string } | null;
+	featuredAsset: { source: string; focalX: number; focalY: number } | null;
 	facets: Record<string, { code: string; name: string; facetValueId: number }[]>;
 	variantFacetImages: Record<string, Record<string, string>> | null;
 	createdAt: string;

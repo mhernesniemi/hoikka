@@ -1,19 +1,19 @@
 {
   "version": "7",
-  "dialect": "postgresql",
+  "dialect": "sqlite",
   "entries": [
     {
       "idx": 0,
-      "version": "7",
-      "when": 1772016563256,
-      "tag": "0000_acoustic_scorpion",
+      "version": "6",
+      "when": 1776275714444,
+      "tag": "0000_perfect_black_crow",
       "breakpoints": true
     },
     {
       "idx": 1,
-      "version": "7",
-      "when": 1772120898810,
-      "tag": "0001_noisy_ted_forrester",
+      "version": "6",
+      "when": 1776275714445,
+      "tag": "0001_product_search_fts",
       "breakpoints": true
     }
   ]

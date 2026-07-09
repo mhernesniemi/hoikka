@@ -1,69 +1,134 @@
 /**
- * Drizzle Schema for Hoikka
+ * Drizzle Schema for Hoikka (SQLite)
+ *
+ * Notes on conventions:
+ * - Timestamps are stored as integer milliseconds via `integer({ mode: "timestamp_ms" })`.
+ *   Defaults and $onUpdate are set in the app layer via Drizzle so behavior matches
+ *   across bun:sqlite (dev) and D1 (prod).
+ * - "Numeric" rates are stored as integer basis points to avoid floating-point drift:
+ *     - tax rates: ×10_000 (e.g. 24%  = 2400)
+ *     - exchange rates: ×1_000_000 (e.g. 1.0 = 1_000_000)
+ *   Focal points are `real` since exact precision is not critical.
+ * - `jsonb` columns map to `text({ mode: "json" })`. Drizzle handles JSON.parse/stringify.
+ * - Full-text search (previously tsvector + `product_search` table) is now an FTS5
+ *   virtual table created via a raw SQL migration — not part of this file.
  */
 import { relations } from "drizzle-orm";
 import {
-	pgTable,
-	serial,
+	sqliteTable,
 	text,
-	boolean,
 	integer,
-	timestamp,
-	varchar,
+	real,
 	primaryKey,
 	index,
-	uniqueIndex,
-	numeric,
-	jsonb,
-	customType
-} from "drizzle-orm/pg-core";
+	uniqueIndex
+} from "drizzle-orm/sqlite-core";
 
-const tsvector = customType<{ data: string }>({
-	dataType() {
-		return "tsvector";
-	}
+// Helpers keep the schema terse and consistent.
+const pk = () => integer("id").primaryKey({ autoIncrement: true });
+const now = () =>
+	integer({ mode: "timestamp_ms" })
+		.$defaultFn(() => new Date())
+		.notNull();
+const updatedNow = () =>
+	integer({ mode: "timestamp_ms" })
+		.$defaultFn(() => new Date())
+		.$onUpdate(() => new Date())
+		.notNull();
+const ts = (name: string) => integer(name, { mode: "timestamp_ms" });
+const bool = (name: string) => integer(name, { mode: "boolean" });
+
+// ============================================================================
+// AUTH (Better Auth)
+// Table names and columns follow Better Auth's default schema. Custom `role`
+// field added for admin detection. Drizzle migration creates these; Better Auth
+// reads/writes them via its drizzleAdapter.
+// ============================================================================
+
+export const user = sqliteTable("user", {
+	id: text("id").primaryKey(),
+	name: text("name").notNull(),
+	email: text("email").notNull().unique(),
+	emailVerified: bool("email_verified").default(false).notNull(),
+	image: text("image"),
+	role: text("role").default("customer").notNull(),
+	createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+	updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull()
+});
+
+export const session = sqliteTable("session", {
+	id: text("id").primaryKey(),
+	expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
+	token: text("token").notNull().unique(),
+	createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+	updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+	ipAddress: text("ip_address"),
+	userAgent: text("user_agent"),
+	userId: text("user_id")
+		.notNull()
+		.references(() => user.id, { onDelete: "cascade" })
+});
+
+export const account = sqliteTable("account", {
+	id: text("id").primaryKey(),
+	accountId: text("account_id").notNull(),
+	providerId: text("provider_id").notNull(),
+	userId: text("user_id")
+		.notNull()
+		.references(() => user.id, { onDelete: "cascade" }),
+	accessToken: text("access_token"),
+	refreshToken: text("refresh_token"),
+	idToken: text("id_token"),
+	accessTokenExpiresAt: integer("access_token_expires_at", { mode: "timestamp_ms" }),
+	refreshTokenExpiresAt: integer("refresh_token_expires_at", { mode: "timestamp_ms" }),
+	scope: text("scope"),
+	password: text("password"),
+	createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+	updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull()
+});
+
+export const verification = sqliteTable("verification", {
+	id: text("id").primaryKey(),
+	identifier: text("identifier").notNull(),
+	value: text("value").notNull(),
+	expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
+	createdAt: integer("created_at", { mode: "timestamp_ms" }),
+	updatedAt: integer("updated_at", { mode: "timestamp_ms" })
 });
 
 // ============================================================================
 // TAX RATES
 // ============================================================================
 
-export const taxRates = pgTable("tax_rates", {
-	code: varchar("code", { length: 20 }).primaryKey(),
-	rate: numeric("rate", { precision: 5, scale: 4 }).notNull(), // 0.24 for 24%
-	name: varchar("name", { length: 100 }).notNull(),
-	createdAt: timestamp("created_at").defaultNow().notNull()
+export const taxRates = sqliteTable("tax_rates", {
+	code: text("code").primaryKey(),
+	rate: integer("rate").notNull(), // basis points: 0.24 stored as 2400
+	name: text("name").notNull(),
+	createdAt: now()
 });
 
 // ============================================================================
 // PRODUCTS
 // ============================================================================
 
-export const products = pgTable(
+export const products = sqliteTable(
 	"products",
 	{
-		id: serial("id").primaryKey(),
-		name: varchar("name", { length: 255 }).default("").notNull(),
-		slug: varchar("slug", { length: 255 }).default("").notNull(),
+		id: pk(),
+		name: text("name").default("").notNull(),
+		slug: text("slug").default("").notNull(),
 		description: text("description"),
-		type: text("type", {
-			enum: ["physical", "digital"]
-		})
+		type: text("type", { enum: ["physical", "digital"] })
 			.default("physical")
 			.notNull(),
-		visibility: text("visibility", {
-			enum: ["public", "private", "draft"]
-		})
+		visibility: text("visibility", { enum: ["public", "private", "draft"] })
 			.default("public")
 			.notNull(),
-		taxCode: varchar("tax_code", { length: 20 }).default("standard").notNull(),
+		taxCode: text("tax_code").default("standard").notNull(),
 		featuredAssetId: integer("featured_asset_id"),
-		deletedAt: timestamp("deleted_at"),
-		createdAt: timestamp("created_at").defaultNow().notNull(),
-		updatedAt: timestamp("updated_at")
-			.defaultNow()
-			.$onUpdate(() => new Date())
-			.notNull()
+		deletedAt: ts("deleted_at"),
+		createdAt: now(),
+		updatedAt: updatedNow()
 	},
 	(table) => [
 		index("products_visibility_idx").on(table.visibility),
@@ -71,16 +136,16 @@ export const products = pgTable(
 	]
 );
 
-export const productTranslations = pgTable(
+export const productTranslations = sqliteTable(
 	"product_translations",
 	{
-		id: serial("id").primaryKey(),
+		id: pk(),
 		productId: integer("product_id")
 			.references(() => products.id, { onDelete: "cascade" })
 			.notNull(),
-		languageCode: varchar("language_code", { length: 10 }).notNull(),
-		name: varchar("name", { length: 255 }).notNull(),
-		slug: varchar("slug", { length: 255 }).notNull(),
+		languageCode: text("language_code").notNull(),
+		name: text("name").notNull(),
+		slug: text("slug").notNull(),
 		description: text("description")
 	},
 	(table) => [
@@ -96,27 +161,24 @@ export const productTranslations = pgTable(
 // PRODUCT VARIANTS
 // ============================================================================
 
-export const productVariants = pgTable(
+export const productVariants = sqliteTable(
 	"product_variants",
 	{
-		id: serial("id").primaryKey(),
+		id: pk(),
 		productId: integer("product_id")
 			.references(() => products.id, { onDelete: "cascade" })
 			.notNull(),
-		name: varchar("name", { length: 255 }),
-		sku: varchar("sku", { length: 255 }).notNull(),
-		price: integer("price").notNull(), // Price in cents
+		name: text("name"),
+		sku: text("sku").notNull(),
+		price: integer("price").notNull(), // cents
 		stock: integer("stock").default(0).notNull(),
-		trackInventory: boolean("track_inventory").default(true).notNull(),
+		trackInventory: bool("track_inventory").default(true).notNull(),
 		featuredAssetId: integer("featured_asset_id"),
-		imageUrl: varchar("image_url", { length: 500 }),
-		isFeatured: boolean("is_featured").default(false).notNull(),
-		deletedAt: timestamp("deleted_at"),
-		createdAt: timestamp("created_at").defaultNow().notNull(),
-		updatedAt: timestamp("updated_at")
-			.defaultNow()
-			.$onUpdate(() => new Date())
-			.notNull()
+		imageUrl: text("image_url"),
+		isFeatured: bool("is_featured").default(false).notNull(),
+		deletedAt: ts("deleted_at"),
+		createdAt: now(),
+		updatedAt: updatedNow()
 	},
 	(table) => [
 		uniqueIndex("product_variants_sku_idx").on(table.sku),
@@ -124,15 +186,15 @@ export const productVariants = pgTable(
 	]
 );
 
-export const productVariantTranslations = pgTable(
+export const productVariantTranslations = sqliteTable(
 	"product_variant_translations",
 	{
-		id: serial("id").primaryKey(),
+		id: pk(),
 		variantId: integer("variant_id")
 			.references(() => productVariants.id, { onDelete: "cascade" })
 			.notNull(),
-		languageCode: varchar("language_code", { length: 10 }).notNull(),
-		name: varchar("name", { length: 255 })
+		languageCode: text("language_code").notNull(),
+		name: text("name")
 	},
 	(table) => [
 		uniqueIndex("product_variant_translations_variant_lang_idx").on(
@@ -142,21 +204,18 @@ export const productVariantTranslations = pgTable(
 	]
 );
 
-// B2B Group Pricing - groupId references customerGroups (defined later in file)
-export const productVariantGroupPrices = pgTable(
+// B2B Group Pricing
+export const productVariantGroupPrices = sqliteTable(
 	"product_variant_group_prices",
 	{
-		id: serial("id").primaryKey(),
+		id: pk(),
 		variantId: integer("variant_id")
 			.references(() => productVariants.id, { onDelete: "cascade" })
 			.notNull(),
 		groupId: integer("group_id").notNull(),
 		price: integer("price").notNull(),
-		createdAt: timestamp("created_at").defaultNow().notNull(),
-		updatedAt: timestamp("updated_at")
-			.defaultNow()
-			.$onUpdate(() => new Date())
-			.notNull()
+		createdAt: now(),
+		updatedAt: updatedNow()
 	},
 	(table) => [
 		uniqueIndex("variant_group_price_unique").on(table.variantId, table.groupId),
@@ -169,47 +228,41 @@ export const productVariantGroupPrices = pgTable(
 // FACETS & FACET VALUES
 // ============================================================================
 
-export const facets = pgTable("facets", {
-	id: serial("id").primaryKey(),
-	name: varchar("name", { length: 255 }).default("").notNull(),
-	code: varchar("code", { length: 255 }).notNull().unique(),
-	isHidden: boolean("is_hidden").default(false).notNull(),
-	createdAt: timestamp("created_at").defaultNow().notNull(),
-	updatedAt: timestamp("updated_at")
-		.defaultNow()
-		.$onUpdate(() => new Date())
-		.notNull()
+export const facets = sqliteTable("facets", {
+	id: pk(),
+	name: text("name").default("").notNull(),
+	code: text("code").notNull().unique(),
+	isHidden: bool("is_hidden").default(false).notNull(),
+	createdAt: now(),
+	updatedAt: updatedNow()
 });
 
-export const facetTranslations = pgTable(
+export const facetTranslations = sqliteTable(
 	"facet_translations",
 	{
-		id: serial("id").primaryKey(),
+		id: pk(),
 		facetId: integer("facet_id")
 			.references(() => facets.id, { onDelete: "cascade" })
 			.notNull(),
-		languageCode: varchar("language_code", { length: 10 }).notNull(),
-		name: varchar("name", { length: 255 }).notNull()
+		languageCode: text("language_code").notNull(),
+		name: text("name").notNull()
 	},
 	(table) => [
 		uniqueIndex("facet_translations_facet_lang_idx").on(table.facetId, table.languageCode)
 	]
 );
 
-export const facetValues = pgTable(
+export const facetValues = sqliteTable(
 	"facet_values",
 	{
-		id: serial("id").primaryKey(),
+		id: pk(),
 		facetId: integer("facet_id")
 			.references(() => facets.id, { onDelete: "cascade" })
 			.notNull(),
-		name: varchar("name", { length: 255 }).default("").notNull(),
-		code: varchar("code", { length: 255 }).notNull(),
-		createdAt: timestamp("created_at").defaultNow().notNull(),
-		updatedAt: timestamp("updated_at")
-			.defaultNow()
-			.$onUpdate(() => new Date())
-			.notNull()
+		name: text("name").default("").notNull(),
+		code: text("code").notNull(),
+		createdAt: now(),
+		updatedAt: updatedNow()
 	},
 	(table) => [
 		uniqueIndex("facet_values_facet_code_idx").on(table.facetId, table.code),
@@ -217,15 +270,15 @@ export const facetValues = pgTable(
 	]
 );
 
-export const facetValueTranslations = pgTable(
+export const facetValueTranslations = sqliteTable(
 	"facet_value_translations",
 	{
-		id: serial("id").primaryKey(),
+		id: pk(),
 		facetValueId: integer("facet_value_id")
 			.references(() => facetValues.id, { onDelete: "cascade" })
 			.notNull(),
-		languageCode: varchar("language_code", { length: 10 }).notNull(),
-		name: varchar("name", { length: 255 }).notNull()
+		languageCode: text("language_code").notNull(),
+		name: text("name").notNull()
 	},
 	(table) => [
 		uniqueIndex("facet_value_translations_value_lang_idx").on(
@@ -235,8 +288,7 @@ export const facetValueTranslations = pgTable(
 	]
 );
 
-// Product-FacetValue many-to-many join
-export const productFacetValues = pgTable(
+export const productFacetValues = sqliteTable(
 	"product_facet_values",
 	{
 		productId: integer("product_id")
@@ -253,8 +305,7 @@ export const productFacetValues = pgTable(
 	]
 );
 
-// Variant-FacetValue many-to-many join (for variant-specific facets like size/color)
-export const variantFacetValues = pgTable(
+export const variantFacetValues = sqliteTable(
 	"variant_facet_values",
 	{
 		variantId: integer("variant_id")
@@ -275,29 +326,29 @@ export const variantFacetValues = pgTable(
 // ASSETS
 // ============================================================================
 
-export const assets = pgTable("assets", {
-	id: serial("id").primaryKey(),
-	name: varchar("name", { length: 255 }).notNull(),
+export const assets = sqliteTable("assets", {
+	id: pk(),
+	name: text("name").notNull(),
 	type: text("type", { enum: ["image", "video", "document", "other"] }).notNull(),
-	mimeType: varchar("mime_type", { length: 100 }).notNull(),
+	mimeType: text("mime_type").notNull(),
 	width: integer("width").default(0),
 	height: integer("height").default(0),
 	fileSize: integer("file_size").default(0),
-	source: varchar("source", { length: 500 }).notNull(), // Vercel Blob URL
-	alt: text("alt"), // Alt text for accessibility
-	focalX: numeric("focal_x", { precision: 4, scale: 3 }).default("0.5").notNull(), // 0–1 horizontal focal point
-	focalY: numeric("focal_y", { precision: 4, scale: 3 }).default("0.5").notNull(), // 0–1 vertical focal point
-	createdAt: timestamp("created_at").defaultNow().notNull()
+	source: text("source").notNull(),
+	alt: text("alt"),
+	focalX: real("focal_x").default(0.5).notNull(),
+	focalY: real("focal_y").default(0.5).notNull(),
+	createdAt: now()
 });
 
-export const assetTranslations = pgTable(
+export const assetTranslations = sqliteTable(
 	"asset_translations",
 	{
-		id: serial("id").primaryKey(),
+		id: pk(),
 		assetId: integer("asset_id")
 			.references(() => assets.id, { onDelete: "cascade" })
 			.notNull(),
-		languageCode: varchar("language_code", { length: 10 }).notNull(),
+		languageCode: text("language_code").notNull(),
 		alt: text("alt")
 	},
 	(table) => [
@@ -305,7 +356,7 @@ export const assetTranslations = pgTable(
 	]
 );
 
-export const productAssets = pgTable(
+export const productAssets = sqliteTable(
 	"product_assets",
 	{
 		productId: integer("product_id")
@@ -322,7 +373,7 @@ export const productAssets = pgTable(
 	]
 );
 
-export const productVariantAssets = pgTable(
+export const productVariantAssets = sqliteTable(
 	"product_variant_assets",
 	{
 		variantId: integer("variant_id")
@@ -343,25 +394,21 @@ export const productVariantAssets = pgTable(
 // CUSTOMER GROUPS (B2B)
 // ============================================================================
 
-export const customerGroups = pgTable(
+export const customerGroups = sqliteTable(
 	"customer_groups",
 	{
-		id: serial("id").primaryKey(),
-		code: varchar("code", { length: 100 }).notNull().unique(),
-		name: varchar("name", { length: 255 }).notNull(),
+		id: pk(),
+		code: text("code").notNull().unique(),
+		name: text("name").notNull(),
 		description: text("description"),
-		isTaxExempt: boolean("is_tax_exempt").default(false).notNull(),
-		createdAt: timestamp("created_at").defaultNow().notNull(),
-		updatedAt: timestamp("updated_at")
-			.defaultNow()
-			.$onUpdate(() => new Date())
-			.notNull()
+		isTaxExempt: bool("is_tax_exempt").default(false).notNull(),
+		createdAt: now(),
+		updatedAt: updatedNow()
 	},
 	(table) => [uniqueIndex("customer_groups_code_idx").on(table.code)]
 );
 
-// Customer-Group many-to-many join
-export const customerGroupMembers = pgTable(
+export const customerGroupMembers = sqliteTable(
 	"customer_group_members",
 	{
 		customerId: integer("customer_id")
@@ -370,7 +417,7 @@ export const customerGroupMembers = pgTable(
 		groupId: integer("group_id")
 			.references(() => customerGroups.id, { onDelete: "cascade" })
 			.notNull(),
-		createdAt: timestamp("created_at").defaultNow().notNull()
+		createdAt: now()
 	},
 	(table) => [
 		primaryKey({ columns: [table.customerId, table.groupId] }),
@@ -383,22 +430,19 @@ export const customerGroupMembers = pgTable(
 // CUSTOMERS
 // ============================================================================
 
-export const customers = pgTable(
+export const customers = sqliteTable(
 	"customers",
 	{
-		id: serial("id").primaryKey(),
-		authUserId: varchar("auth_user_id", { length: 255 }).unique(),
-		email: varchar("email", { length: 255 }).notNull(),
-		firstName: varchar("first_name", { length: 100 }).notNull(),
-		lastName: varchar("last_name", { length: 100 }).notNull(),
-		phone: varchar("phone", { length: 50 }),
-		vatId: varchar("vat_id", { length: 50 }), // B2B VAT ID for tax exemption
-		deletedAt: timestamp("deleted_at"),
-		createdAt: timestamp("created_at").defaultNow().notNull(),
-		updatedAt: timestamp("updated_at")
-			.defaultNow()
-			.$onUpdate(() => new Date())
-			.notNull()
+		id: pk(),
+		authUserId: text("auth_user_id").unique(),
+		email: text("email").notNull(),
+		firstName: text("first_name").notNull(),
+		lastName: text("last_name").notNull(),
+		phone: text("phone"),
+		vatId: text("vat_id"),
+		deletedAt: ts("deleted_at"),
+		createdAt: now(),
+		updatedAt: updatedNow()
 	},
 	(table) => [
 		uniqueIndex("customers_email_idx").on(table.email),
@@ -407,27 +451,24 @@ export const customers = pgTable(
 	]
 );
 
-export const addresses = pgTable(
+export const addresses = sqliteTable(
 	"addresses",
 	{
-		id: serial("id").primaryKey(),
+		id: pk(),
 		customerId: integer("customer_id")
 			.references(() => customers.id, { onDelete: "cascade" })
 			.notNull(),
-		fullName: varchar("full_name", { length: 255 }),
-		company: varchar("company", { length: 255 }),
-		streetLine1: varchar("street_line_1", { length: 255 }).notNull(),
-		streetLine2: varchar("street_line_2", { length: 255 }),
-		city: varchar("city", { length: 100 }).notNull(),
-		postalCode: varchar("postal_code", { length: 20 }).notNull(),
-		country: varchar("country", { length: 100 }).notNull(),
-		phoneNumber: varchar("phone_number", { length: 50 }),
-		isDefault: boolean("is_default").default(false).notNull(),
-		createdAt: timestamp("created_at").defaultNow().notNull(),
-		updatedAt: timestamp("updated_at")
-			.defaultNow()
-			.$onUpdate(() => new Date())
-			.notNull()
+		fullName: text("full_name"),
+		company: text("company"),
+		streetLine1: text("street_line_1").notNull(),
+		streetLine2: text("street_line_2"),
+		city: text("city").notNull(),
+		postalCode: text("postal_code").notNull(),
+		country: text("country").notNull(),
+		phoneNumber: text("phone_number"),
+		isDefault: bool("is_default").default(false).notNull(),
+		createdAt: now(),
+		updatedAt: updatedNow()
 	},
 	(table) => [index("addresses_customer_idx").on(table.customerId)]
 );
@@ -436,46 +477,42 @@ export const addresses = pgTable(
 // ORDERS
 // ============================================================================
 
-export const orders = pgTable(
+export const orders = sqliteTable(
 	"orders",
 	{
-		id: serial("id").primaryKey(),
-		code: varchar("code", { length: 50 }).notNull().unique(), // Customer-facing order reference
+		id: pk(),
+		code: text("code").notNull().unique(),
 		customerId: integer("customer_id").references(() => customers.id, { onDelete: "set null" }),
-		cartToken: varchar("cart_token", { length: 64 }).unique(), // For guest cart tracking via cookies
-		active: boolean("active").default(true).notNull(), // true = cart, false = completed order
+		cartToken: text("cart_token").unique(),
+		active: bool("active").default(true).notNull(),
 		state: text("state", {
 			enum: ["created", "payment_pending", "paid", "shipped", "delivered", "cancelled"]
 		})
 			.notNull()
 			.default("created"),
-		// Pricing (all in cents)
+		// Pricing (cents)
 		subtotal: integer("subtotal").default(0).notNull(),
 		shipping: integer("shipping").default(0).notNull(),
 		discount: integer("discount").default(0).notNull(),
 		total: integer("total").default(0).notNull(),
-		// Tax fields
+		// Tax
 		taxTotal: integer("tax_total").default(0).notNull(),
-		totalNet: integer("total_net").default(0).notNull(), // total minus tax
-		isTaxExempt: boolean("is_tax_exempt").default(false).notNull(),
-		currencyCode: varchar("currency_code", { length: 3 }).default("EUR").notNull(),
-		exchangeRate: numeric("exchange_rate", { precision: 10, scale: 6 }).default("1").notNull(), // Rate from base currency (EUR) at order time
+		totalNet: integer("total_net").default(0).notNull(),
+		isTaxExempt: bool("is_tax_exempt").default(false).notNull(),
+		currencyCode: text("currency_code").default("EUR").notNull(),
+		// Basis points with 6 decimals: 1.0 = 1_000_000
+		exchangeRate: integer("exchange_rate").default(1_000_000).notNull(),
 		// Shipping address snapshot
-		shippingFullName: varchar("shipping_full_name", { length: 255 }),
-		shippingStreetLine1: varchar("shipping_street_line_1", { length: 255 }),
-		shippingStreetLine2: varchar("shipping_street_line_2", { length: 255 }),
-		shippingCity: varchar("shipping_city", { length: 100 }),
-		shippingPostalCode: varchar("shipping_postal_code", { length: 20 }),
-		shippingCountry: varchar("shipping_country", { length: 100 }),
-		// Contact email (for order confirmations and digital delivery)
-		customerEmail: varchar("customer_email", { length: 255 }),
-		// Timestamps
-		orderPlacedAt: timestamp("order_placed_at"),
-		createdAt: timestamp("created_at").defaultNow().notNull(),
-		updatedAt: timestamp("updated_at")
-			.defaultNow()
-			.$onUpdate(() => new Date())
-			.notNull()
+		shippingFullName: text("shipping_full_name"),
+		shippingStreetLine1: text("shipping_street_line_1"),
+		shippingStreetLine2: text("shipping_street_line_2"),
+		shippingCity: text("shipping_city"),
+		shippingPostalCode: text("shipping_postal_code"),
+		shippingCountry: text("shipping_country"),
+		customerEmail: text("customer_email"),
+		orderPlacedAt: ts("order_placed_at"),
+		createdAt: now(),
+		updatedAt: updatedNow()
 	},
 	(table) => [
 		index("orders_customer_idx").on(table.customerId),
@@ -486,10 +523,10 @@ export const orders = pgTable(
 	]
 );
 
-export const orderLines = pgTable(
+export const orderLines = sqliteTable(
 	"order_lines",
 	{
-		id: serial("id").primaryKey(),
+		id: pk(),
 		orderId: integer("order_id")
 			.references(() => orders.id, { onDelete: "cascade" })
 			.notNull(),
@@ -497,20 +534,18 @@ export const orderLines = pgTable(
 			.references(() => productVariants.id)
 			.notNull(),
 		quantity: integer("quantity").notNull(),
-		// Price snapshot at time of order (in cents) - unitPrice and lineTotal are gross (VAT-inclusive)
 		unitPrice: integer("unit_price").notNull(),
 		lineTotal: integer("line_total").notNull(),
-		// Tax fields
-		taxCode: varchar("tax_code", { length: 20 }).default("standard").notNull(),
-		taxRate: numeric("tax_rate", { precision: 5, scale: 4 }).default("0.24").notNull(), // 0.24 for 24%
+		taxCode: text("tax_code").default("standard").notNull(),
+		// Basis points with 4 decimals: 0.24 = 2400
+		taxRate: integer("tax_rate").default(2400).notNull(),
 		taxAmount: integer("tax_amount").default(0).notNull(),
 		unitPriceNet: integer("unit_price_net").default(0).notNull(),
 		lineTotalNet: integer("line_total_net").default(0).notNull(),
-		// Product info snapshot
-		productName: varchar("product_name", { length: 255 }).notNull(),
-		variantName: varchar("variant_name", { length: 255 }),
-		sku: varchar("sku", { length: 255 }).notNull(),
-		createdAt: timestamp("created_at").defaultNow().notNull()
+		productName: text("product_name").notNull(),
+		variantName: text("variant_name"),
+		sku: text("sku").notNull(),
+		createdAt: now()
 	},
 	(table) => [
 		index("order_lines_order_idx").on(table.orderId),
@@ -522,10 +557,10 @@ export const orderLines = pgTable(
 // STOCK RESERVATIONS
 // ============================================================================
 
-export const stockReservations = pgTable(
+export const stockReservations = sqliteTable(
 	"stock_reservations",
 	{
-		id: serial("id").primaryKey(),
+		id: pk(),
 		variantId: integer("variant_id")
 			.references(() => productVariants.id, { onDelete: "cascade" })
 			.notNull(),
@@ -536,8 +571,8 @@ export const stockReservations = pgTable(
 			.references(() => orderLines.id, { onDelete: "cascade" })
 			.notNull(),
 		quantity: integer("quantity").notNull(),
-		expiresAt: timestamp("expires_at").notNull(),
-		createdAt: timestamp("created_at").defaultNow().notNull()
+		expiresAt: ts("expires_at").notNull(),
+		createdAt: now()
 	},
 	(table) => [
 		index("stock_reservations_variant_idx").on(table.variantId),
@@ -551,19 +586,16 @@ export const stockReservations = pgTable(
 // PAYMENTS
 // ============================================================================
 
-export const paymentMethods = pgTable(
+export const paymentMethods = sqliteTable(
 	"payment_methods",
 	{
-		id: serial("id").primaryKey(),
-		code: varchar("code", { length: 100 }).notNull().unique(), // 'stripe', 'paypal', 'klarna'
-		name: varchar("name", { length: 255 }).notNull(), // 'Stripe', 'PayPal', 'Klarna'
+		id: pk(),
+		code: text("code").notNull().unique(),
+		name: text("name").notNull(),
 		description: text("description"),
-		active: boolean("active").default(true).notNull(),
-		createdAt: timestamp("created_at").defaultNow().notNull(),
-		updatedAt: timestamp("updated_at")
-			.defaultNow()
-			.$onUpdate(() => new Date())
-			.notNull()
+		active: bool("active").default(true).notNull(),
+		createdAt: now(),
+		updatedAt: updatedNow()
 	},
 	(table) => [
 		uniqueIndex("payment_methods_code_idx").on(table.code),
@@ -571,29 +603,28 @@ export const paymentMethods = pgTable(
 	]
 );
 
-export const payments = pgTable(
+export const payments = sqliteTable(
 	"payments",
 	{
-		id: serial("id").primaryKey(),
+		id: pk(),
 		orderId: integer("order_id")
 			.references(() => orders.id, { onDelete: "cascade" })
 			.notNull(),
 		paymentMethodId: integer("payment_method_id")
 			.references(() => paymentMethods.id)
 			.notNull(),
-		method: varchar("method", { length: 100 }).notNull(), // Legacy: kept for backward compatibility
-		amount: integer("amount").notNull(), // Amount in cents
-		state: text("state", { enum: ["pending", "authorized", "settled", "declined", "refunded"] })
+		method: text("method").notNull(),
+		amount: integer("amount").notNull(),
+		state: text("state", {
+			enum: ["pending", "authorized", "settled", "declined", "refunded"]
+		})
 			.notNull()
 			.default("pending"),
-		transactionId: varchar("transaction_id", { length: 255 }), // External gateway ID
+		transactionId: text("transaction_id"),
 		errorMessage: text("error_message"),
-		metadata: jsonb("metadata"), // Store provider-specific data (changed from text to jsonb)
-		createdAt: timestamp("created_at").defaultNow().notNull(),
-		updatedAt: timestamp("updated_at")
-			.defaultNow()
-			.$onUpdate(() => new Date())
-			.notNull()
+		metadata: text("metadata", { mode: "json" }),
+		createdAt: now(),
+		updatedAt: updatedNow()
 	},
 	(table) => [
 		index("payments_order_idx").on(table.orderId),
@@ -607,19 +638,16 @@ export const payments = pgTable(
 // SHIPPING
 // ============================================================================
 
-export const shippingMethods = pgTable(
+export const shippingMethods = sqliteTable(
 	"shipping_methods",
 	{
-		id: serial("id").primaryKey(),
-		code: varchar("code", { length: 100 }).notNull().unique(), // 'flat_rate', 'ups_ground'
-		name: varchar("name", { length: 255 }).notNull(), // 'Standard Shipping', 'UPS Ground'
+		id: pk(),
+		code: text("code").notNull().unique(),
+		name: text("name").notNull(),
 		description: text("description"),
-		active: boolean("active").default(true).notNull(),
-		createdAt: timestamp("created_at").defaultNow().notNull(),
-		updatedAt: timestamp("updated_at")
-			.defaultNow()
-			.$onUpdate(() => new Date())
-			.notNull()
+		active: bool("active").default(true).notNull(),
+		createdAt: now(),
+		updatedAt: updatedNow()
 	},
 	(table) => [
 		uniqueIndex("shipping_methods_code_idx").on(table.code),
@@ -627,27 +655,24 @@ export const shippingMethods = pgTable(
 	]
 );
 
-export const orderShipping = pgTable(
+export const orderShipping = sqliteTable(
 	"order_shipping",
 	{
-		id: serial("id").primaryKey(),
+		id: pk(),
 		orderId: integer("order_id")
 			.references(() => orders.id, { onDelete: "cascade" })
 			.notNull(),
 		shippingMethodId: integer("shipping_method_id")
 			.references(() => shippingMethods.id)
 			.notNull(),
-		trackingNumber: varchar("tracking_number", { length: 255 }),
+		trackingNumber: text("tracking_number"),
 		status: text("status", { enum: ["pending", "shipped", "in_transit", "delivered", "error"] })
 			.default("pending")
 			.notNull(),
-		price: integer("price").notNull(), // Price in cents
-		metadata: jsonb("metadata"), // Store provider-specific data
-		createdAt: timestamp("created_at").defaultNow().notNull(),
-		updatedAt: timestamp("updated_at")
-			.defaultNow()
-			.$onUpdate(() => new Date())
-			.notNull()
+		price: integer("price").notNull(),
+		metadata: text("metadata", { mode: "json" }),
+		createdAt: now(),
+		updatedAt: updatedNow()
 	},
 	(table) => [
 		index("order_shipping_order_idx").on(table.orderId),
@@ -661,43 +686,40 @@ export const orderShipping = pgTable(
 // PROMOTIONS
 // ============================================================================
 
-export const promotions = pgTable(
+export const promotions = sqliteTable(
 	"promotions",
 	{
-		id: serial("id").primaryKey(),
+		id: pk(),
 		method: text("method", { enum: ["code", "automatic"] })
 			.default("code")
 			.notNull(),
-		code: varchar("code", { length: 50 }).unique(),
-		title: varchar("title", { length: 255 }),
+		code: text("code").unique(),
+		title: text("title"),
 		promotionType: text("promotion_type", { enum: ["order", "product", "free_shipping"] })
 			.default("order")
 			.notNull(),
 		discountType: text("discount_type", { enum: ["percentage", "fixed_amount"] }).notNull(),
-		discountValue: integer("discount_value").notNull(), // Percentage (0-100) or amount in cents
+		discountValue: integer("discount_value").notNull(),
 		appliesTo: text("applies_to", {
 			enum: ["all", "specific_products", "specific_collections"]
 		})
 			.default("all")
 			.notNull(),
-		minOrderAmount: integer("min_order_amount"), // Minimum order amount for promotion
-		usageLimit: integer("usage_limit"), // Max number of times this can be used
+		minOrderAmount: integer("min_order_amount"),
+		usageLimit: integer("usage_limit"),
 		usageCount: integer("usage_count").default(0).notNull(),
 		usageLimitPerCustomer: integer("usage_limit_per_customer"),
-		combinesWithOtherPromotions: boolean("combines_with_other_promotions")
+		combinesWithOtherPromotions: bool("combines_with_other_promotions")
 			.default(false)
 			.notNull(),
-		enabled: boolean("enabled").default(true).notNull(),
+		enabled: bool("enabled").default(true).notNull(),
 		customerGroupId: integer("customer_group_id").references(() => customerGroups.id, {
 			onDelete: "set null"
 		}),
-		startsAt: timestamp("starts_at"),
-		endsAt: timestamp("ends_at"),
-		createdAt: timestamp("created_at").defaultNow().notNull(),
-		updatedAt: timestamp("updated_at")
-			.defaultNow()
-			.$onUpdate(() => new Date())
-			.notNull()
+		startsAt: ts("starts_at"),
+		endsAt: ts("ends_at"),
+		createdAt: now(),
+		updatedAt: updatedNow()
 	},
 	(table) => [
 		index("promotions_code_idx").on(table.code),
@@ -705,8 +727,7 @@ export const promotions = pgTable(
 	]
 );
 
-// Promotion-Product junction table (for product-specific promotions)
-export const promotionProducts = pgTable(
+export const promotionProducts = sqliteTable(
 	"promotion_products",
 	{
 		promotionId: integer("promotion_id")
@@ -719,8 +740,7 @@ export const promotionProducts = pgTable(
 	(table) => [primaryKey({ columns: [table.promotionId, table.productId] })]
 );
 
-// Promotion-Collection junction table (for collection-specific promotions)
-export const promotionCollections = pgTable(
+export const promotionCollections = sqliteTable(
 	"promotion_collections",
 	{
 		promotionId: integer("promotion_id")
@@ -733,8 +753,7 @@ export const promotionCollections = pgTable(
 	(table) => [primaryKey({ columns: [table.promotionId, table.collectionId] })]
 );
 
-// Applied promotions to orders
-export const orderPromotions = pgTable(
+export const orderPromotions = sqliteTable(
 	"order_promotions",
 	{
 		orderId: integer("order_id")
@@ -743,7 +762,7 @@ export const orderPromotions = pgTable(
 		promotionId: integer("promotion_id")
 			.references(() => promotions.id)
 			.notNull(),
-		discountAmount: integer("discount_amount").notNull(), // Actual discount applied (in cents)
+		discountAmount: integer("discount_amount").notNull(),
 		type: text("type", { enum: ["order", "product", "shipping"] })
 			.default("order")
 			.notNull()
@@ -755,34 +774,31 @@ export const orderPromotions = pgTable(
 );
 
 // ============================================================================
-// COLLECTIONS (Smart Collections - Vendure/Shopify style)
+// COLLECTIONS
 // ============================================================================
 
-export const collections = pgTable("collections", {
-	id: serial("id").primaryKey(),
-	name: varchar("name", { length: 255 }).default("").notNull(),
-	slug: varchar("slug", { length: 255 }).default("").notNull(),
+export const collections = sqliteTable("collections", {
+	id: pk(),
+	name: text("name").default("").notNull(),
+	slug: text("slug").default("").notNull(),
 	description: text("description"),
-	isPrivate: boolean("is_private").default(false).notNull(),
+	isPrivate: bool("is_private").default(false).notNull(),
 	featuredAssetId: integer("featured_asset_id").references(() => assets.id),
 	position: integer("position").default(0).notNull(),
-	createdAt: timestamp("created_at").defaultNow().notNull(),
-	updatedAt: timestamp("updated_at")
-		.defaultNow()
-		.$onUpdate(() => new Date())
-		.notNull()
+	createdAt: now(),
+	updatedAt: updatedNow()
 });
 
-export const collectionTranslations = pgTable(
+export const collectionTranslations = sqliteTable(
 	"collection_translations",
 	{
-		id: serial("id").primaryKey(),
+		id: pk(),
 		collectionId: integer("collection_id")
 			.references(() => collections.id, { onDelete: "cascade" })
 			.notNull(),
-		languageCode: varchar("language_code", { length: 10 }).notNull(),
-		name: varchar("name", { length: 255 }).notNull(),
-		slug: varchar("slug", { length: 255 }).notNull(),
+		languageCode: text("language_code").notNull(),
+		name: text("name").notNull(),
+		slug: text("slug").notNull(),
 		description: text("description")
 	},
 	(table) => [
@@ -794,11 +810,10 @@ export const collectionTranslations = pgTable(
 	]
 );
 
-// Collection filters - rules stored as rows, products derived dynamically
-export const collectionFilters = pgTable(
+export const collectionFilters = sqliteTable(
 	"collection_filters",
 	{
-		id: serial("id").primaryKey(),
+		id: pk(),
 		collectionId: integer("collection_id")
 			.references(() => collections.id, { onDelete: "cascade" })
 			.notNull(),
@@ -808,31 +823,28 @@ export const collectionFilters = pgTable(
 		operator: text("operator", {
 			enum: ["eq", "in", "gte", "lte", "gt", "contains"]
 		}).notNull(),
-		value: jsonb("value").notNull(), // flexible payload
-		createdAt: timestamp("created_at").defaultNow().notNull()
+		value: text("value", { mode: "json" }).notNull(),
+		createdAt: now()
 	},
 	(table) => [index("collection_filters_collection_idx").on(table.collectionId)]
 );
 
 // ============================================================================
-// CATEGORIES (Hierarchical navigation tree)
+// CATEGORIES (Hierarchical)
 // ============================================================================
 
-export const categories = pgTable(
+export const categories = sqliteTable(
 	"categories",
 	{
-		id: serial("id").primaryKey(),
-		name: varchar("name", { length: 255 }).default("").notNull(),
+		id: pk(),
+		name: text("name").default("").notNull(),
 		parentId: integer("parent_id"),
-		slug: varchar("slug", { length: 255 }).notNull().unique(),
+		slug: text("slug").notNull().unique(),
 		position: integer("position").default(0).notNull(),
 		featuredAssetId: integer("featured_asset_id").references(() => assets.id),
-		taxCode: varchar("tax_code", { length: 20 }).default("standard").notNull(),
-		createdAt: timestamp("created_at").defaultNow().notNull(),
-		updatedAt: timestamp("updated_at")
-			.defaultNow()
-			.$onUpdate(() => new Date())
-			.notNull()
+		taxCode: text("tax_code").default("standard").notNull(),
+		createdAt: now(),
+		updatedAt: updatedNow()
 	},
 	(table) => [
 		uniqueIndex("categories_slug_idx").on(table.slug),
@@ -840,15 +852,15 @@ export const categories = pgTable(
 	]
 );
 
-export const categoryTranslations = pgTable(
+export const categoryTranslations = sqliteTable(
 	"category_translations",
 	{
-		id: serial("id").primaryKey(),
+		id: pk(),
 		categoryId: integer("category_id")
 			.references(() => categories.id, { onDelete: "cascade" })
 			.notNull(),
-		languageCode: varchar("language_code", { length: 10 }).notNull(),
-		name: varchar("name", { length: 255 }).notNull()
+		languageCode: text("language_code").notNull(),
+		name: text("name").notNull()
 	},
 	(table) => [
 		uniqueIndex("category_translations_category_lang_idx").on(
@@ -858,7 +870,7 @@ export const categoryTranslations = pgTable(
 	]
 );
 
-export const productCategories = pgTable(
+export const productCategories = sqliteTable(
 	"product_categories",
 	{
 		productId: integer("product_id")
@@ -879,7 +891,7 @@ export const productCategories = pgTable(
 // RELATED PRODUCTS
 // ============================================================================
 
-export const relatedProducts = pgTable(
+export const relatedProducts = sqliteTable(
 	"related_products",
 	{
 		productId: integer("product_id")
@@ -889,7 +901,7 @@ export const relatedProducts = pgTable(
 			.references(() => products.id, { onDelete: "cascade" })
 			.notNull(),
 		position: integer("position").default(0).notNull(),
-		createdAt: timestamp("created_at").defaultNow().notNull()
+		createdAt: now()
 	},
 	(table) => [
 		primaryKey({ columns: [table.productId, table.relatedProductId] }),
@@ -902,28 +914,25 @@ export const relatedProducts = pgTable(
 // REVIEWS
 // ============================================================================
 
-export const reviews = pgTable(
+export const reviews = sqliteTable(
 	"reviews",
 	{
-		id: serial("id").primaryKey(),
+		id: pk(),
 		productId: integer("product_id")
 			.references(() => products.id, { onDelete: "cascade" })
 			.notNull(),
 		customerId: integer("customer_id")
 			.references(() => customers.id, { onDelete: "cascade" })
 			.notNull(),
-		nickname: varchar("nickname", { length: 100 }).notNull(),
+		nickname: text("nickname").notNull(),
 		rating: integer("rating").notNull(),
 		comment: text("comment"),
-		isVerifiedPurchase: boolean("is_verified_purchase").default(false).notNull(),
+		isVerifiedPurchase: bool("is_verified_purchase").default(false).notNull(),
 		status: text("status", { enum: ["pending", "approved", "rejected"] })
 			.default("pending")
 			.notNull(),
-		createdAt: timestamp("created_at").defaultNow().notNull(),
-		updatedAt: timestamp("updated_at")
-			.defaultNow()
-			.$onUpdate(() => new Date())
-			.notNull()
+		createdAt: now(),
+		updatedAt: updatedNow()
 	},
 	(table) => [
 		index("reviews_product_idx").on(table.productId),
@@ -937,17 +946,14 @@ export const reviews = pgTable(
 // WISHLISTS
 // ============================================================================
 
-export const wishlists = pgTable(
+export const wishlists = sqliteTable(
 	"wishlists",
 	{
-		id: serial("id").primaryKey(),
+		id: pk(),
 		customerId: integer("customer_id").references(() => customers.id, { onDelete: "cascade" }),
-		guestToken: varchar("guest_token", { length: 64 }).unique(),
-		createdAt: timestamp("created_at").defaultNow().notNull(),
-		updatedAt: timestamp("updated_at")
-			.defaultNow()
-			.$onUpdate(() => new Date())
-			.notNull()
+		guestToken: text("guest_token").unique(),
+		createdAt: now(),
+		updatedAt: updatedNow()
 	},
 	(table) => [
 		index("wishlists_customer_idx").on(table.customerId),
@@ -955,10 +961,10 @@ export const wishlists = pgTable(
 	]
 );
 
-export const wishlistItems = pgTable(
+export const wishlistItems = sqliteTable(
 	"wishlist_items",
 	{
-		id: serial("id").primaryKey(),
+		id: pk(),
 		wishlistId: integer("wishlist_id")
 			.references(() => wishlists.id, { onDelete: "cascade" })
 			.notNull(),
@@ -968,7 +974,7 @@ export const wishlistItems = pgTable(
 		variantId: integer("variant_id").references(() => productVariants.id, {
 			onDelete: "cascade"
 		}),
-		addedAt: timestamp("added_at").defaultNow().notNull()
+		addedAt: now()
 	},
 	(table) => [
 		index("wishlist_items_wishlist_idx").on(table.wishlistId),
@@ -978,47 +984,43 @@ export const wishlistItems = pgTable(
 );
 
 // ============================================================================
-// PRODUCT SEARCH (Denormalized search table)
+// CONTENT PAGES
 // ============================================================================
 
-export const productSearch = pgTable(
-	"product_search",
+export const contentPages = sqliteTable("content_pages", {
+	id: pk(),
+	title: text("title").default("").notNull(),
+	slug: text("slug").default("").notNull(),
+	body: text("body"),
+	imageUrl: text("image_url"),
+	published: bool("published").default(false).notNull(),
+	createdAt: now(),
+	updatedAt: updatedNow()
+});
+
+export const contentPageTranslations = sqliteTable(
+	"content_page_translations",
 	{
-		productId: integer("product_id")
-			.primaryKey()
-			.references(() => products.id, { onDelete: "cascade" }),
-		name: varchar("name", { length: 255 }).notNull(),
-		slug: varchar("slug", { length: 255 }).notNull(),
-		description: text("description"),
-		visibility: text("visibility", {
-			enum: ["public", "private", "draft"]
-		}).notNull(),
-		minPrice: integer("min_price"),
-		maxPrice: integer("max_price"),
-		inStock: boolean("in_stock").default(false).notNull(),
-		featuredAsset: jsonb("featured_asset"),
-		facets: jsonb("facets").default({}).notNull(),
-		variantFacetImages: jsonb("variant_facet_images"),
-		searchVector: tsvector("search_vector"),
-		createdAt: timestamp("created_at").defaultNow().notNull(),
-		updatedAt: timestamp("updated_at")
-			.defaultNow()
-			.$onUpdate(() => new Date())
-			.notNull()
+		id: pk(),
+		contentPageId: integer("content_page_id")
+			.references(() => contentPages.id, { onDelete: "cascade" })
+			.notNull(),
+		languageCode: text("language_code").notNull(),
+		title: text("title").notNull(),
+		slug: text("slug").notNull(),
+		body: text("body")
 	},
 	(table) => [
-		index("product_search_vector_idx").using("gin", table.searchVector),
-		index("product_search_facets_idx").using("gin", table.facets),
-		index("product_search_visibility_idx").on(table.visibility)
+		uniqueIndex("content_page_translations_page_lang_idx").on(
+			table.contentPageId,
+			table.languageCode
+		),
+		index("content_page_translations_slug_idx").on(table.slug)
 	]
 );
 
 // ============================================================================
 // RELATIONS
-// These define the relationship graph for Drizzle's relational query API
-// (db.query.*.findFirst/findMany with `with: { ... }`). They have no effect
-// on the database or on standard select/insert/update/delete queries.
-// Currently only productCategoriesRelations is actively used (with: { category }).
 // ============================================================================
 
 export const productsRelations = relations(products, ({ one, many }) => ({
@@ -1031,13 +1033,6 @@ export const productsRelations = relations(products, ({ one, many }) => ({
 	featuredAsset: one(assets, {
 		fields: [products.featuredAssetId],
 		references: [assets.id]
-	})
-}));
-
-export const productSearchRelations = relations(productSearch, ({ one }) => ({
-	product: one(products, {
-		fields: [productSearch.productId],
-		references: [products.id]
 	})
 }));
 
@@ -1406,47 +1401,6 @@ export const wishlistItemsRelations = relations(wishlistItems, ({ one }) => ({
 		references: [productVariants.id]
 	})
 }));
-
-// Admin users and sessions are now managed by Neon Auth (neon_auth schema)
-
-// ============================================================================
-// CONTENT PAGES
-// ============================================================================
-
-export const contentPages = pgTable("content_pages", {
-	id: serial("id").primaryKey(),
-	title: varchar("title", { length: 255 }).default("").notNull(),
-	slug: varchar("slug", { length: 255 }).default("").notNull(),
-	body: text("body"),
-	imageUrl: varchar("image_url", { length: 500 }),
-	published: boolean("published").default(false).notNull(),
-	createdAt: timestamp("created_at").defaultNow().notNull(),
-	updatedAt: timestamp("updated_at")
-		.defaultNow()
-		.$onUpdate(() => new Date())
-		.notNull()
-});
-
-export const contentPageTranslations = pgTable(
-	"content_page_translations",
-	{
-		id: serial("id").primaryKey(),
-		contentPageId: integer("content_page_id")
-			.references(() => contentPages.id, { onDelete: "cascade" })
-			.notNull(),
-		languageCode: varchar("language_code", { length: 10 }).notNull(),
-		title: varchar("title", { length: 255 }).notNull(),
-		slug: varchar("slug", { length: 255 }).notNull(),
-		body: text("body")
-	},
-	(table) => [
-		uniqueIndex("content_page_translations_page_lang_idx").on(
-			table.contentPageId,
-			table.languageCode
-		),
-		index("content_page_translations_slug_idx").on(table.slug)
-	]
-);
 
 export const contentPagesRelations = relations(contentPages, ({ many }) => ({
 	translations: many(contentPageTranslations)

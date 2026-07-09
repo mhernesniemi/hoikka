@@ -14,10 +14,6 @@ describe("focalPosition", () => {
 		expect(focalPosition(0.3, 0.7)).toBe("30% 70%");
 	});
 
-	it("handles string values", () => {
-		expect(focalPosition("0.25", "0.75")).toBe("25% 75%");
-	});
-
 	it("handles 0 values (top-left corner)", () => {
 		expect(focalPosition(0, 0)).toBe("0% 0%");
 	});

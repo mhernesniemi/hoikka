@@ -1,6 +1,6 @@
 /**
  * Asset Service
- * Handles image storage with Vercel Blob
+ * Handles image storage on the local filesystem (static/uploads/).
  */
 import { db } from "$lib/server/db/index.js";
 import {
@@ -11,7 +11,7 @@ import {
 	collections
 } from "$lib/server/db/schema.js";
 import { eq, asc, desc, isNotNull, isNull, notInArray } from "drizzle-orm";
-import { del } from "@vercel/blob";
+import { remove as removeFile } from "$lib/server/storage.js";
 
 const MIME_TYPES: Record<string, string> = {
 	".jpg": "image/jpeg",
@@ -36,10 +36,10 @@ export interface CreateAssetInput {
 	fileSize?: number;
 }
 
-/** Extract original filename from a Vercel Blob URL.
- *  Vercel Blob's `addRandomSuffix` appends `-<base64>` before the extension.
- *  e.g. ".../tomato-green-Tkyz2j6VRrYabc.png" → "tomato-green.png" */
-function blobFilename(url: string): string {
+/** Extract the original filename from a storage URL.
+ *  Both the new local storage and the legacy Vercel Blob format append
+ *  `-<id>` before the extension; strip it to recover the original name. */
+function storedFilename(url: string): string {
 	const segment = decodeURIComponent(url.split("/").pop() || "image");
 	return segment.replace(/-[A-Za-z0-9]{10,}(\.\w+)$/, "$1");
 }
@@ -77,7 +77,7 @@ class AssetService {
 	 */
 	async update(
 		id: number,
-		data: { name?: string; alt?: string; focalX?: string; focalY?: string }
+		data: { name?: string; alt?: string; focalX?: number; focalY?: number }
 	) {
 		const [asset] = await db.update(assets).set(data).where(eq(assets.id, id)).returning();
 
@@ -227,7 +227,7 @@ class AssetService {
 
 		for (const row of untracked) {
 			if (!row.imageUrl) continue;
-			const name = blobFilename(row.imageUrl);
+			const name = storedFilename(row.imageUrl);
 			await db
 				.insert(assets)
 				.values({
@@ -249,7 +249,7 @@ class AssetService {
 			.where(eq(assets.width, 0));
 		for (const asset of backfilled) {
 			if (!asset.source) continue;
-			const correctName = blobFilename(asset.source);
+			const correctName = storedFilename(asset.source);
 			if (correctName !== asset.name) {
 				await db.update(assets).set({ name: correctName }).where(eq(assets.id, asset.id));
 			}
@@ -266,9 +266,9 @@ class AssetService {
 
 		if (asset?.source) {
 			try {
-				await del(asset.source);
+				await removeFile(asset.source);
 			} catch {
-				// Blob may already be deleted — continue with DB cleanup
+				// File may already be deleted — continue with DB cleanup
 			}
 		}
 

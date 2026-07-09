@@ -118,7 +118,7 @@
         if (!facetImages) continue;
         for (const code of valueCodes) {
           if (facetImages[code]) {
-            effectiveAsset = { source: facetImages[code], focalX: "0.5", focalY: "0.5" };
+            effectiveAsset = { source: facetImages[code], focalX: 0.5, focalY: 0.5 };
             break outer;
           }
         }

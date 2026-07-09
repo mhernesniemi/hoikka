@@ -612,8 +612,8 @@ export class ProductService {
 					fileSize: 0,
 					source: fallbackUrl,
 					alt: null,
-					focalX: "0.500",
-					focalY: "0.500",
+					focalX: 0.5,
+					focalY: 0.5,
 					createdAt: product.createdAt
 				};
 			}
@@ -698,7 +698,7 @@ export class ProductService {
 			.select({ id: products.id })
 			.from(products)
 			.where(
-				sql`(${products.name} ILIKE ${searchPattern} OR ${products.description} ILIKE ${searchPattern})`
+				sql`(${products.name} LIKE ${searchPattern} OR ${products.description} LIKE ${searchPattern})`
 			);
 
 		return matches.map((m) => m.id);

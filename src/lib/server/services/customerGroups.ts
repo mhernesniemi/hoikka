@@ -116,7 +116,7 @@ export class CustomerGroupService {
 		if (search) {
 			const pattern = `%${search}%`;
 			conditions.push(
-				sql`(${customerGroups.name} ILIKE ${pattern} OR ${customerGroups.description} ILIKE ${pattern})` as any
+				sql`(${customerGroups.name} LIKE ${pattern} OR ${customerGroups.description} LIKE ${pattern})` as any
 			);
 		}
 

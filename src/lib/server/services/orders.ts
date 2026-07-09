@@ -37,7 +37,7 @@ import type {
 } from "$lib/types.js";
 import { nanoid } from "nanoid";
 import { reservationService } from "./reservations.js";
-import { taxService } from "./tax.js";
+import { taxService, taxRateFromDb, taxRateToDb } from "./tax.js";
 import { STATE_TRANSITIONS, isValidTransition } from "./order-utils.js";
 import { promotionService } from "./promotions.js";
 import { calculateDiscount, calculateProductDiscount } from "./promotion-utils.js";
@@ -288,7 +288,7 @@ export class OrderService {
 		if (search) {
 			const pattern = `%${search}%`;
 			conditions.push(
-				sql`(${orders.code} ILIKE ${pattern} OR ${orders.shippingFullName} ILIKE ${pattern})`
+				sql`(${orders.code} LIKE ${pattern} OR ${orders.shippingFullName} LIKE ${pattern})`
 			);
 		}
 
@@ -459,7 +459,7 @@ export class OrderService {
 				unitPrice: effectivePrice,
 				lineTotal: lineTax.lineTotalGross,
 				taxCode,
-				taxRate: taxRate.toString(),
+				taxRate: taxRateToDb(taxRate),
 				taxAmount: lineTax.taxAmount,
 				unitPriceNet: lineTax.unitPriceNet,
 				lineTotalNet: lineTax.lineTotalNet,
@@ -515,7 +515,7 @@ export class OrderService {
 		}
 
 		// Recalculate tax for new quantity
-		const taxRate = parseFloat(line.taxRate);
+		const taxRate = taxRateFromDb(line.taxRate);
 		const isTaxExempt = await taxService.isCustomerTaxExempt(order.customerId);
 		const lineTax = taxService.calculateLineTax(line.unitPrice, quantity, taxRate, isTaxExempt);
 

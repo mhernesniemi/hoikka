@@ -32,7 +32,7 @@ export class ContentPageService {
 		if (search) {
 			const pattern = `%${search}%`;
 			conditions.push(
-				sql`(${contentPages.title} ILIKE ${pattern} OR ${contentPages.slug} ILIKE ${pattern})` as any
+				sql`(${contentPages.title} LIKE ${pattern} OR ${contentPages.slug} LIKE ${pattern})` as any
 			);
 		}
 

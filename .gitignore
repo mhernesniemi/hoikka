@@ -37,3 +37,12 @@ docs/
 /playwright/.cache/
 
 .env*.local
+
+# Local SQLite
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Local uploads
+/static/uploads/

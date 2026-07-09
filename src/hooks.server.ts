@@ -1,9 +1,10 @@
 /**
- * Server hooks for authentication, customer sync, and cart handling
- * Uses Neon Auth for authentication
+ * Server hooks for authentication, customer sync, and cart handling.
+ * Uses Better Auth for authentication.
  */
 import { sequence } from "@sveltejs/kit/hooks";
 import type { Handle, HandleServerError } from "@sveltejs/kit";
+import { auth } from "$lib/server/auth.js";
 import { db } from "$lib/server/db/index.js";
 import { customers } from "$lib/server/db/schema.js";
 import { eq } from "drizzle-orm";
@@ -14,111 +15,35 @@ import { shippingService, paymentService, wishlistService } from "$lib/server/se
 import { withSpan } from "$lib/server/telemetry.js";
 
 const CART_COOKIE_NAME = "cart_token";
-const CART_COOKIE_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
+const CART_COOKIE_MAX_AGE = 60 * 60 * 24 * 30;
 
 const WISHLIST_COOKIE_NAME = "wishlist_token";
-const WISHLIST_COOKIE_MAX_AGE = 60 * 60 * 24 * 365; // 1 year
+const WISHLIST_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 
-const isProduction = env.NODE_ENV === "production" || !!env.VERCEL;
+const isProduction = env.NODE_ENV === "production";
 
-// Extract only Neon Auth cookies (prefixed __Secure-neon-auth) from a cookie header
-function extractNeonAuthCookies(cookieHeader: string): string {
-	return cookieHeader
-		.split(";")
-		.map((c) => c.trim())
-		.filter((c) => c.startsWith("__Secure-neon-auth"))
-		.join("; ");
-}
-
-// OAuth verifier handler — exchanges neon_auth_session_verifier for a session cookie
-// After Google OAuth, Neon Auth redirects here with ?neon_auth_session_verifier=xxx
-const oauthVerifierHandler: Handle = async ({ event, resolve }) => {
-	const verifier = event.url.searchParams.get("neon_auth_session_verifier");
-	if (!verifier) return resolve(event);
-
-	const neonAuthUrl = env.NEON_AUTH_BASE_URL;
-	if (!neonAuthUrl) return resolve(event);
-
-	const cookieHeader = event.request.headers.get("cookie") ?? "";
-	const neonCookies = extractNeonAuthCookies(cookieHeader);
-	if (!neonCookies) return resolve(event);
-
-	try {
-		// Pass the verifier as a query param to get-session (matches the official SDK)
-		const upstreamUrl = new URL(`${neonAuthUrl}/get-session`);
-		upstreamUrl.searchParams.set("neon_auth_session_verifier", verifier);
-
-		const sessionRes = await fetch(upstreamUrl.toString(), {
-			method: "GET",
-			headers: {
-				cookie: neonCookies,
-				origin: neonAuthUrl,
-				"x-neon-auth-middleware": "true"
-			}
-		});
-
-		const redirectUrl = new URL(event.url);
-		redirectUrl.searchParams.delete("neon_auth_session_verifier");
-
-		const response = new Response(null, {
-			status: 302,
-			headers: { Location: redirectUrl.toString() }
-		});
-
-		if (sessionRes.ok) {
-			for (const sc of sessionRes.headers.getSetCookie()) {
-				response.headers.append("set-cookie", sc);
-			}
-		}
-
-		return response;
-	} catch (error) {
-		console.error("[hooks] Failed to exchange OAuth session verifier:", error);
-		return resolve(event);
-	}
-};
-
-// Session handler — validates session via Neon Auth API and syncs customer record
+// Session handler — validates session via Better Auth and syncs customer record.
 const sessionHandler: Handle = async ({ event, resolve }) => {
 	event.locals.user = null;
 
-	const neonAuthUrl = env.NEON_AUTH_BASE_URL;
-	if (!neonAuthUrl) {
-		console.error("[hooks] NEON_AUTH_BASE_URL is not set — auth is disabled");
-	} else {
-		const cookie = event.request.headers.get("cookie") ?? "";
-		if (cookie) {
-			try {
-				const user = await withSpan("auth.validate_session", async () => {
-					const sessionRes = await event.fetch(`${neonAuthUrl}/get-session`, {
-						headers: { cookie }
-					});
-					if (sessionRes.ok) {
-						const data = await sessionRes.json();
-						if (data?.user) {
-							return {
-								...data.user,
-								emailVerified: data.user.emailVerified ?? false
-							};
-						}
-					} else if (sessionRes.status !== 401) {
-						// 401 is expected for expired/invalid sessions, log anything else
-						console.error(
-							"[hooks] Session validation failed:",
-							sessionRes.status,
-							sessionRes.statusText
-						);
-					}
-					return null;
-				});
-				event.locals.user = user;
-			} catch (error) {
-				console.error("[hooks] Failed to validate session:", error);
-			}
+	try {
+		const result = await withSpan("auth.validate_session", () =>
+			auth.api.getSession({ headers: event.request.headers })
+		);
+		if (result?.user) {
+			event.locals.user = {
+				id: result.user.id,
+				name: result.user.name,
+				email: result.user.email,
+				role: (result.user as { role?: string }).role,
+				emailVerified: result.user.emailVerified
+			};
 		}
+	} catch (error) {
+		console.error("[hooks] Failed to validate session:", error);
 	}
 
-	// Sync to customer record (for non-admin users)
+	// Sync to customer record (for non-admin users).
 	if (event.locals.user) {
 		const isAdmin = event.locals.user.role === "admin" || event.locals.user.role === "staff";
 
@@ -156,27 +81,22 @@ const sessionHandler: Handle = async ({ event, resolve }) => {
 	return resolve(event);
 };
 
-// Cart handler - manages cart token for guest users and cart transfer on login
 const cartHandler: Handle = async ({ event, resolve }) => {
-	// Read cart token from cookie
 	const cartToken = event.cookies.get(CART_COOKIE_NAME) ?? null;
 	event.locals.cartToken = cartToken;
 
-	// If logged-in customer has a guest cart token, transfer the cart
 	if (event.locals.customer && cartToken) {
 		try {
 			await orderService.transferCartToCustomer(cartToken, event.locals.customer.id);
-			// Clear the guest cart cookie after transfer
 			event.cookies.delete(CART_COOKIE_NAME, { path: "/" });
 			event.locals.cartToken = null;
-		} catch (error) {
-			// Transfer failed, likely no guest cart exists - ignore
+		} catch {
+			// Transfer failed, likely no guest cart exists — ignore
 		}
 	}
 
 	const response = await resolve(event);
 
-	// If a new cart token was set during the request, set the cookie
 	if (event.locals.newCartToken) {
 		response.headers.append(
 			"Set-Cookie",
@@ -187,12 +107,10 @@ const cartHandler: Handle = async ({ event, resolve }) => {
 	return response;
 };
 
-// Wishlist handler - manages wishlist token for guests and transfer on login
 const wishlistHandler: Handle = async ({ event, resolve }) => {
 	const wishlistToken = event.cookies.get(WISHLIST_COOKIE_NAME) ?? null;
 	event.locals.wishlistToken = wishlistToken;
 
-	// Transfer guest wishlist to customer on login
 	if (event.locals.customer && wishlistToken) {
 		try {
 			await wishlistService.transferToCustomer(wishlistToken, event.locals.customer.id);
@@ -205,7 +123,6 @@ const wishlistHandler: Handle = async ({ event, resolve }) => {
 
 	const response = await resolve(event);
 
-	// Set new wishlist token cookie if created
 	if (event.locals.newWishlistToken) {
 		response.headers.append(
 			"Set-Cookie",
@@ -216,43 +133,34 @@ const wishlistHandler: Handle = async ({ event, resolve }) => {
 	return response;
 };
 
-// Shipping initialization handler - initializes default shipping methods on first startup
 let shippingMethodsInitialized = false;
 
 const shippingInit: Handle = async ({ event, resolve }) => {
-	// Initialize shipping methods once on first request
 	if (!shippingMethodsInitialized) {
 		try {
 			await shippingService.initializeDefaultMethods();
 			shippingMethodsInitialized = true;
 		} catch (error) {
 			console.error("[hooks] Failed to initialize shipping methods:", error);
-			// Don't block requests if initialization fails
 		}
 	}
-
 	return resolve(event);
 };
 
-// Payment initialization handler - initializes default payment methods on first startup
 let paymentMethodsInitialized = false;
 
 const paymentInit: Handle = async ({ event, resolve }) => {
-	// Initialize payment methods once on first request
 	if (!paymentMethodsInitialized) {
 		try {
 			await paymentService.initializeDefaultMethods();
 			paymentMethodsInitialized = true;
 		} catch (error) {
 			console.error("[hooks] Failed to initialize payment methods:", error);
-			// Don't block requests if initialization fails
 		}
 	}
-
 	return resolve(event);
 };
 
-// Demo mode — block all admin mutations when DEMO_MODE is set
 const demoGuard: Handle = async ({ event, resolve }) => {
 	if (
 		env.DEMO_MODE === "true" &&
@@ -272,10 +180,8 @@ const demoGuard: Handle = async ({ event, resolve }) => {
 	return resolve(event);
 };
 
-// Combine handlers in sequence
 export const handle = sequence(
 	demoGuard,
-	oauthVerifierHandler,
 	sessionHandler,
 	cartHandler,
 	wishlistHandler,
@@ -283,7 +189,6 @@ export const handle = sequence(
 	paymentInit
 );
 
-// Handle uncaught server errors
 export const handleError: HandleServerError = async ({ error, event, status, message }) => {
 	const errorId = crypto.randomUUID();
 

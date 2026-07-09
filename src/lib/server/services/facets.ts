@@ -79,7 +79,7 @@ export class FacetService {
 		if (search) {
 			const pattern = `%${search}%`;
 			conditions.push(
-				sql`(${facets.name} ILIKE ${pattern} OR ${facets.code} ILIKE ${pattern})` as any
+				sql`(${facets.name} LIKE ${pattern} OR ${facets.code} LIKE ${pattern})` as any
 			);
 		}
 
