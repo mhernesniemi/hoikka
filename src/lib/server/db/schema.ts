@@ -484,9 +484,8 @@ export const orders = sqliteTable(
 		code: text("code").notNull().unique(),
 		customerId: integer("customer_id").references(() => customers.id, { onDelete: "set null" }),
 		// Identifies a draft checkout (active=true, state=created) for the
-		// checkout_token cookie. Column keeps its legacy name to avoid a rename
-		// migration across both migration systems (drizzle journal + wrangler d1).
-		checkoutToken: text("cart_token").unique(),
+		// checkout_token cookie
+		checkoutToken: text("checkout_token").unique(),
 		active: bool("active").default(true).notNull(),
 		state: text("state", {
 			enum: ["created", "payment_pending", "paid", "shipped", "delivered", "cancelled"]
@@ -522,7 +521,7 @@ export const orders = sqliteTable(
 		index("orders_state_idx").on(table.state),
 		index("orders_placed_at_idx").on(table.orderPlacedAt),
 		index("orders_active_idx").on(table.active),
-		index("orders_cart_token_idx").on(table.checkoutToken)
+		index("orders_checkout_token_idx").on(table.checkoutToken)
 	]
 );
 

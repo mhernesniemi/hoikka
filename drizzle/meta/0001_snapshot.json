@@ -1,6 +1,6 @@
 {
-  "id": "40dc2b05-ac2f-4ed6-ab2a-a3d0ee5215fd",
-  "prevId": "07b0a71f-4263-4932-8574-b9733a6005d9",
+  "id": "07b0a71f-4263-4932-8574-b9733a6005d9",
+  "prevId": "9f566379-ca67-4b08-8178-1214a288f2db",
   "version": "6",
   "dialect": "sqlite",
   "tables": {

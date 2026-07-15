@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "4c85f9c6-582b-41a7-86e4-d56dc4205e91",
+  "id": "9f566379-ca67-4b08-8178-1214a288f2db",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "account": {
@@ -1905,8 +1905,8 @@
           "notNull": false,
           "autoincrement": false
         },
-        "cart_token": {
-          "name": "cart_token",
+        "checkout_token": {
+          "name": "checkout_token",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
@@ -2079,10 +2079,10 @@
           ],
           "isUnique": true
         },
-        "orders_cart_token_unique": {
-          "name": "orders_cart_token_unique",
+        "orders_checkout_token_unique": {
+          "name": "orders_checkout_token_unique",
           "columns": [
-            "cart_token"
+            "checkout_token"
           ],
           "isUnique": true
         },
@@ -2114,10 +2114,10 @@
           ],
           "isUnique": false
         },
-        "orders_cart_token_idx": {
-          "name": "orders_cart_token_idx",
+        "orders_checkout_token_idx": {
+          "name": "orders_checkout_token_idx",
           "columns": [
-            "cart_token"
+            "checkout_token"
           ],
           "isUnique": false
         }

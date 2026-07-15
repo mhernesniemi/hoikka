@@ -276,7 +276,7 @@ CREATE TABLE `orders` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`code` text NOT NULL,
 	`customer_id` integer,
-	`cart_token` text,
+	`checkout_token` text,
 	`active` integer DEFAULT true NOT NULL,
 	`state` text DEFAULT 'created' NOT NULL,
 	`subtotal` integer DEFAULT 0 NOT NULL,
@@ -302,12 +302,12 @@ CREATE TABLE `orders` (
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `orders_code_unique` ON `orders` (`code`);--> statement-breakpoint
-CREATE UNIQUE INDEX `orders_cart_token_unique` ON `orders` (`cart_token`);--> statement-breakpoint
+CREATE UNIQUE INDEX `orders_checkout_token_unique` ON `orders` (`checkout_token`);--> statement-breakpoint
 CREATE INDEX `orders_customer_idx` ON `orders` (`customer_id`);--> statement-breakpoint
 CREATE INDEX `orders_state_idx` ON `orders` (`state`);--> statement-breakpoint
 CREATE INDEX `orders_placed_at_idx` ON `orders` (`order_placed_at`);--> statement-breakpoint
 CREATE INDEX `orders_active_idx` ON `orders` (`active`);--> statement-breakpoint
-CREATE INDEX `orders_cart_token_idx` ON `orders` (`cart_token`);--> statement-breakpoint
+CREATE INDEX `orders_checkout_token_idx` ON `orders` (`checkout_token`);--> statement-breakpoint
 CREATE TABLE `payment_methods` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`code` text NOT NULL,
