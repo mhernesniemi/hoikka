@@ -4,7 +4,6 @@
   import { imageUrl, focalPosition } from "$lib/image";
   import { addToCart } from "$lib/remote/cart.remote";
   import { toggleWishlist } from "$lib/remote/wishlist.remote";
-  import { invalidateAll } from "$app/navigation";
   import { cartStore } from "$lib/stores/cart.svelte";
   import { wishlistStore } from "$lib/stores/wishlist.svelte";
   import { formatPrice, stripHtml } from "$lib/utils";
@@ -22,6 +21,39 @@
   let { data, form }: { data: PageData; form: ActionData } = $props();
 
   const product = $derived(data.product);
+
+  // JSON-LD structured data, built here as a string because a template literal
+  // containing <script> in the markup breaks the eslint Svelte parser.
+  const jsonLd = $derived(
+    `<script type="application/ld+json">${JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "Product",
+      name: product.name,
+      description: stripHtml(product.description),
+      image: product.featuredAsset?.source,
+      sku: product.variants[0]?.sku,
+      offers: {
+        "@type": "AggregateOffer",
+        priceCurrency: "EUR",
+        lowPrice: (Math.min(...product.variants.map((v) => v.price)) / 100).toFixed(2),
+        highPrice: (Math.max(...product.variants.map((v) => v.price)) / 100).toFixed(2),
+        offerCount: product.variants.length,
+        availability: product.variants.some((v) => !v.trackInventory || v.stock > 0)
+          ? "https://schema.org/InStock"
+          : "https://schema.org/OutOfStock"
+      },
+      ...(data.rating.count > 0
+        ? {
+            aggregateRating: {
+              "@type": "AggregateRating",
+              ratingValue: data.rating.average.toFixed(1),
+              reviewCount: data.rating.count
+            }
+          }
+        : {})
+      // closing tag written via concatenation — the literal would end this script block
+    })}${"</scr" + "ipt>"}`
+  );
 
   let selectedVariantId = $state<number | null>(null);
   let quantity = $state(1);
@@ -143,17 +175,17 @@
     if (!selectedVariantId) return;
     message = null;
 
-    // Open cart immediately with loading state
-    cartStore.setLoading(true);
     cartStore.open();
 
     try {
+      // Single-flight mutation: the refreshed cart rides back on this response
       await addToCart({ variantId: selectedVariantId, quantity });
-      await invalidateAll();
-    } catch {
-      message = { type: "error", text: "Failed to add item to cart" };
-    } finally {
-      cartStore.setLoading(false);
+    } catch (error) {
+      cartStore.close();
+      message = {
+        type: "error",
+        text: error instanceof Error ? error.message : "Failed to add item to cart"
+      };
     }
   }
 
@@ -205,33 +237,7 @@
   {/if}
 
   <!-- JSON-LD Structured Data -->
-  {@html `<script type="application/ld+json">${JSON.stringify({
-    "@context": "https://schema.org",
-    "@type": "Product",
-    name: product.name,
-    description: stripHtml(product.description),
-    image: product.featuredAsset?.source,
-    sku: product.variants[0]?.sku,
-    offers: {
-      "@type": "AggregateOffer",
-      priceCurrency: "EUR",
-      lowPrice: (Math.min(...product.variants.map((v) => v.price)) / 100).toFixed(2),
-      highPrice: (Math.max(...product.variants.map((v) => v.price)) / 100).toFixed(2),
-      offerCount: product.variants.length,
-      availability: product.variants.some((v) => !v.trackInventory || v.stock > 0)
-        ? "https://schema.org/InStock"
-        : "https://schema.org/OutOfStock"
-    },
-    ...(data.rating.count > 0
-      ? {
-          aggregateRating: {
-            "@type": "AggregateRating",
-            ratingValue: data.rating.average.toFixed(1),
-            reviewCount: data.rating.count
-          }
-        }
-      : {})
-  })}</script>`}
+  {@html jsonLd}
 </svelte:head>
 
 <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">

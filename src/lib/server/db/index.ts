@@ -1,29 +1,51 @@
-import { Database } from "bun:sqlite";
-import { drizzle } from "drizzle-orm/bun-sqlite";
-import type { Logger } from "drizzle-orm/logger";
+/**
+ * Database client seam for both deployment targets.
+ *
+ * - Node: a lazily created better-sqlite3 singleton (migrates on first use).
+ * - Cloudflare: a per-request drizzle client over the D1 binding
+ *   (`platform.env.DB`), cached on `event.locals`.
+ *
+ * `db` is a Proxy so that module-scope consumers (e.g. Better Auth's
+ * drizzleAdapter) can hold a stable reference while the actual backend is
+ * resolved per call.
+ */
+import { getRequestEvent } from "$app/server";
+import { drizzle as drizzleD1 } from "drizzle-orm/d1";
 import * as schema from "./schema.js";
 import { env } from "$env/dynamic/private";
-import { trace } from "@opentelemetry/api";
+// $lib specifier (not "./node.js") so the cloudflare build can alias this
+// module to node-stub.ts — see resolve.alias in vite.config.ts
+import { createNodeDb, type NodeDb } from "$lib/server/db/node.js";
 
-if (!env.DATABASE_URL) throw new Error("DATABASE_URL is not set");
+export type Db = NodeDb;
 
-const sqlite = new Database(env.DATABASE_URL);
-sqlite.exec("PRAGMA foreign_keys = ON;");
-sqlite.exec("PRAGMA journal_mode = WAL;");
+let nodeDb: NodeDb | null = null;
 
-const tracer = trace.getTracer("hoikka");
-
-class OTelLogger implements Logger {
-	logQuery(query: string, params: unknown[]): void {
-		const span = tracer.startSpan("db.query", {
-			attributes: {
-				"db.system": "sqlite",
-				"db.statement": query,
-				"db.params_count": params.length
-			}
-		});
-		span.end();
+function currentDb(): Db {
+	try {
+		const event = getRequestEvent();
+		const d1 = event.platform?.env?.DB;
+		if (d1) {
+			const locals = event.locals as { __db?: Db };
+			locals.__db ??= drizzleD1(d1, { schema }) as unknown as Db;
+			return locals.__db;
+		}
+	} catch {
+		// Outside request scope (startup, tests) — fall through to the Node db.
 	}
+	if (!nodeDb) {
+		if (!env.DATABASE_URL) {
+			throw new Error("No database: set DATABASE_URL (node) or bind D1 as DB (cloudflare)");
+		}
+		nodeDb = createNodeDb(env.DATABASE_URL);
+	}
+	return nodeDb;
 }
 
-export const db = drizzle(sqlite, { schema, logger: new OTelLogger() });
+export const db = new Proxy({} as Db, {
+	get(_target, prop) {
+		const real = currentDb() as unknown as Record<string | symbol, unknown>;
+		const value = real[prop];
+		return typeof value === "function" ? value.bind(real) : value;
+	}
+});

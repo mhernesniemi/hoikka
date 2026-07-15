@@ -1,7 +1,12 @@
 /**
- * Checkout page server actions
+ * Checkout page server actions.
+ *
+ * The cart lives in a cookie until this page: `load` calls
+ * `orderService.startCheckout`, which creates (or reconciles) a draft order
+ * from the cookie lines and reserves stock for 15 minutes. All actions then
+ * operate on that draft, identified by the `checkout_token` cookie.
  */
-import { fail, redirect } from "@sveltejs/kit";
+import { fail, redirect, type Cookies } from "@sveltejs/kit";
 import {
 	orderService,
 	shippingService,
@@ -11,48 +16,172 @@ import {
 } from "$lib/server/services/index.js";
 import { digitalDeliveryService } from "$lib/server/services/digitalDelivery.js";
 import { db } from "$lib/server/db/index.js";
-import { orderLines, productVariants, products, customers } from "$lib/server/db/schema.js";
+import { orderLines, productVariants, products } from "$lib/server/db/schema.js";
 import { eq } from "drizzle-orm";
+import {
+	CART_COOKIE,
+	CHECKOUT_COOKIE,
+	CHECKOUT_COOKIE_OPTIONS,
+	parseCartCookie
+} from "$lib/server/cart-cookie.js";
+import type { OrderWithRelations, Payment } from "$lib/types.js";
 import type { PageServerLoad, Actions } from "./$types.js";
 
 /**
- * Check if all items in the cart are digital products
+ * Check if all items in the order are digital products
  */
-async function isCartDigitalOnly(cartId: number): Promise<boolean> {
+async function isOrderDigitalOnly(orderId: number): Promise<boolean> {
 	const lines = await db
 		.select({ productType: products.type })
 		.from(orderLines)
 		.innerJoin(productVariants, eq(orderLines.variantId, productVariants.id))
 		.innerJoin(products, eq(productVariants.productId, products.id))
-		.where(eq(orderLines.orderId, cartId));
+		.where(eq(orderLines.orderId, orderId));
 
 	if (lines.length === 0) return false;
 	return lines.every((line) => line.productType === "digital");
 }
 
-export const load: PageServerLoad = async ({ locals }) => {
-	// Use locals.cartToken and locals.customer?.id (set by hooks.server.ts)
-	const cart = await orderService.getActiveCart({
-		customerId: locals.customer?.id,
-		cartToken: locals.cartToken
-	});
-	if (!cart) {
+function getDraft(cookies: Cookies) {
+	return orderService.getDraftByToken(cookies.get(CHECKOUT_COOKIE));
+}
+
+/**
+ * Shared completion path for both mock payments (instant) and Stripe
+ * (client-confirmed): address-book save, final stock check, state
+ * transitions, shipment + digital delivery, cookie cleanup, redirect.
+ */
+async function completeCheckout(opts: {
+	order: OrderWithRelations;
+	payment: Payment;
+	cookies: Cookies;
+	customerId: number | null;
+	saveToAddressBook: boolean;
+}): Promise<never | ReturnType<typeof fail>> {
+	const { order, payment, cookies, customerId, saveToAddressBook } = opts;
+	const isDigitalOnly = await isOrderDigitalOnly(order.id);
+
+	// Save address to the customer's address book if requested
+	if (saveToAddressBook && customerId && !isDigitalOnly && order.shippingStreetLine1) {
+		try {
+			await customerService.addAddress(customerId, {
+				fullName: order.shippingFullName || undefined,
+				streetLine1: order.shippingStreetLine1,
+				city: order.shippingCity || "",
+				postalCode: order.shippingPostalCode || "",
+				country: order.shippingCountry || "FI",
+				isDefault: false
+			});
+		} catch (e) {
+			console.error("Error saving address to address book:", e);
+			// Don't fail the order if address book save fails
+		}
+	}
+
+	// Final stock validation (skip for digital products)
+	if (!isDigitalOnly) {
+		const stockCheck = await orderService.validateStock(order.id);
+		if (!stockCheck.valid) {
+			return fail(400, {
+				error: "Some items are no longer available in the requested quantity",
+				stockErrors: stockCheck.errors
+			});
+		}
+	}
+
+	// The draft becomes a real order
+	await orderService.transitionState(order.id, "payment_pending");
+
+	const paymentStatus = await paymentService.confirmPayment(payment.id);
+
+	if (isPaymentSuccessful(paymentStatus)) {
+		await orderService.transitionState(order.id, "paid");
+
+		console.log("[order] completed", {
+			orderId: order.id,
+			total: order.total,
+			customerId,
+			isDigitalOnly
+		});
+
+		const paidOrder = await orderService.getById(order.id);
+		if (paidOrder) {
+			if (!isDigitalOnly) {
+				try {
+					await shippingService.createShipment(paidOrder);
+				} catch (e) {
+					console.error("Error creating shipment:", e);
+					// Don't fail the order if shipment creation fails
+				}
+			}
+
+			try {
+				const deliveryResult = await digitalDeliveryService.deliverOrder(order.id);
+				if (deliveryResult.errors.length > 0) {
+					console.error("Digital delivery errors:", deliveryResult.errors);
+				}
+			} catch (e) {
+				console.error("Error delivering digital products:", e);
+				// Don't fail the order if digital delivery fails
+			}
+		}
+	}
+
+	const finalOrder = await orderService.getById(order.id);
+	if (!finalOrder) {
+		return fail(500, { error: "Failed to retrieve order" });
+	}
+
+	// The cart and the draft are done — clear both cookies
+	cookies.delete(CART_COOKIE, { path: "/" });
+	cookies.delete(CHECKOUT_COOKIE, { path: "/" });
+
+	throw redirect(303, `/checkout/thank-you?order=${finalOrder.code}`);
+}
+
+export const load: PageServerLoad = async ({ locals, cookies }) => {
+	const cartLines = parseCartCookie(cookies.get(CART_COOKIE));
+	if (cartLines.length === 0) {
 		return {
 			cart: null,
+			stockErrors: [] as string[],
+			shippingRates: [],
+			isDigitalOnly: false
+		};
+	}
+
+	// First DB write of the shopping flow: create/reconcile the draft order
+	const { order, checkoutToken, isNew, stockErrors } = await orderService.startCheckout(
+		cartLines,
+		{
+			customerId: locals.customer?.id,
+			checkoutToken: cookies.get(CHECKOUT_COOKIE)
+		}
+	);
+	if (isNew) {
+		cookies.set(CHECKOUT_COOKIE, checkoutToken, CHECKOUT_COOKIE_OPTIONS);
+	}
+
+	if (order.lines.length === 0) {
+		return {
+			cart: null,
+			stockErrors,
 			shippingRates: [],
 			isDigitalOnly: false
 		};
 	}
 
 	console.log("[checkout] started", {
-		orderId: cart.id,
-		total: cart.total,
-		itemCount: cart.lines?.length ?? 0,
+		orderId: order.id,
+		total: order.total,
+		itemCount: order.lines.length,
 		customerId: locals.customer?.id ?? null
 	});
 
+	const cart = order;
+
 	// Check if cart contains only digital products
-	const isDigitalOnly = await isCartDigitalOnly(cart.id);
+	const isDigitalOnly = await isOrderDigitalOnly(cart.id);
 
 	// Get available shipping rates (only for physical products)
 	const shippingRates = isDigitalOnly ? [] : await shippingService.getAvailableRates(cart);
@@ -74,7 +203,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		if (method?.code === "stripe") {
 			paymentInfo = {
 				providerTransactionId: existingPayment.transactionId || "",
-				clientSecret: (existingPayment.metadata as any)?.clientSecret,
+				clientSecret: (existingPayment.metadata as { clientSecret?: string })?.clientSecret,
 				methodCode: method.code,
 				metadata: existingPayment.metadata as Record<string, unknown>
 			};
@@ -109,6 +238,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 	return {
 		cart,
+		stockErrors,
 		shippingRates,
 		paymentMethods,
 		orderShipping,
@@ -124,11 +254,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 };
 
 export const actions: Actions = {
-	applyPromotion: async ({ request, locals }) => {
-		const cart = await orderService.getActiveCart({
-			customerId: locals.customer?.id,
-			cartToken: locals.cartToken
-		});
+	applyPromotion: async ({ request, locals, cookies }) => {
+		const cart = await getDraft(cookies);
 		if (!cart) {
 			return fail(404, { error: "Cart not found" });
 		}
@@ -150,10 +277,7 @@ export const actions: Actions = {
 			return fail(400, { promoError: result.message });
 		}
 
-		const updatedCart = await orderService.getActiveCart({
-			customerId: locals.customer?.id,
-			cartToken: locals.cartToken
-		});
+		const updatedCart = await getDraft(cookies);
 		const appliedPromotions = updatedCart
 			? await orderService.getAppliedPromotions(updatedCart.id)
 			: [];
@@ -166,21 +290,15 @@ export const actions: Actions = {
 		};
 	},
 
-	removePromotion: async ({ locals }) => {
-		const cart = await orderService.getActiveCart({
-			customerId: locals.customer?.id,
-			cartToken: locals.cartToken
-		});
+	removePromotion: async ({ cookies }) => {
+		const cart = await getDraft(cookies);
 		if (!cart) {
 			return fail(404, { error: "Cart not found" });
 		}
 
 		await orderService.removeAllPromotions(cart.id);
 
-		const updatedCart = await orderService.getActiveCart({
-			customerId: locals.customer?.id,
-			cartToken: locals.cartToken
-		});
+		const updatedCart = await getDraft(cookies);
 
 		return {
 			success: true,
@@ -189,11 +307,8 @@ export const actions: Actions = {
 		};
 	},
 
-	useSavedAddress: async ({ request, locals }) => {
-		const cart = await orderService.getActiveCart({
-			customerId: locals.customer?.id,
-			cartToken: locals.cartToken
-		});
+	useSavedAddress: async ({ request, locals, cookies }) => {
+		const cart = await getDraft(cookies);
 		if (!cart) {
 			return fail(404, { error: "Cart not found" });
 		}
@@ -228,10 +343,7 @@ export const actions: Actions = {
 		});
 
 		// Reload cart to get updated shipping rates
-		const updatedCart = await orderService.getActiveCart({
-			customerId: locals.customer?.id,
-			cartToken: locals.cartToken
-		});
+		const updatedCart = await getDraft(cookies);
 		const shippingRates = updatedCart
 			? await shippingService.getAvailableRates(updatedCart)
 			: [];
@@ -243,11 +355,8 @@ export const actions: Actions = {
 		};
 	},
 
-	setShippingAddress: async ({ request, locals }) => {
-		const cart = await orderService.getActiveCart({
-			customerId: locals.customer?.id,
-			cartToken: locals.cartToken
-		});
+	setShippingAddress: async ({ request, cookies }) => {
+		const cart = await getDraft(cookies);
 		if (!cart) {
 			return fail(404, { error: "Cart not found" });
 		}
@@ -274,10 +383,7 @@ export const actions: Actions = {
 		console.log("[checkout] shipping_address_set", { orderId: cart.id, country, postalCode });
 
 		// Reload cart to get updated shipping rates
-		const updatedCart = await orderService.getActiveCart({
-			customerId: locals.customer?.id,
-			cartToken: locals.cartToken
-		});
+		const updatedCart = await getDraft(cookies);
 		const shippingRates = updatedCart
 			? await shippingService.getAvailableRates(updatedCart)
 			: [];
@@ -289,11 +395,8 @@ export const actions: Actions = {
 		};
 	},
 
-	setContactInfo: async ({ request, locals }) => {
-		const cart = await orderService.getActiveCart({
-			customerId: locals.customer?.id,
-			cartToken: locals.cartToken
-		});
+	setContactInfo: async ({ request, cookies }) => {
+		const cart = await getDraft(cookies);
 		if (!cart) {
 			return fail(404, { error: "Cart not found" });
 		}
@@ -318,10 +421,7 @@ export const actions: Actions = {
 		// Store email on the order
 		await orderService.setCustomerEmail(cart.id, email);
 
-		const updatedCart = await orderService.getActiveCart({
-			customerId: locals.customer?.id,
-			cartToken: locals.cartToken
-		});
+		const updatedCart = await getDraft(cookies);
 
 		const paymentMethods = await paymentService.getActiveMethods();
 
@@ -333,11 +433,8 @@ export const actions: Actions = {
 		};
 	},
 
-	setShippingMethod: async ({ request, locals }) => {
-		const cart = await orderService.getActiveCart({
-			customerId: locals.customer?.id,
-			cartToken: locals.cartToken
-		});
+	setShippingMethod: async ({ request, cookies }) => {
+		const cart = await getDraft(cookies);
 		if (!cart) {
 			return fail(404, { error: "Cart not found" });
 		}
@@ -368,10 +465,7 @@ export const actions: Actions = {
 		// Recalculate totals with new shipping cost
 		await orderService.updateTotals(cart.id);
 
-		const updatedCart = await orderService.getActiveCart({
-			customerId: locals.customer?.id,
-			cartToken: locals.cartToken
-		});
+		const updatedCart = await getDraft(cookies);
 
 		// Get the shipping method we just set
 		const orderShipping = await shippingService.getOrderShipping(cart.id);
@@ -388,16 +482,13 @@ export const actions: Actions = {
 	},
 
 	createPayment: async ({ request, cookies, locals }) => {
-		const cart = await orderService.getActiveCart({
-			customerId: locals.customer?.id,
-			cartToken: locals.cartToken
-		});
+		const cart = await getDraft(cookies);
 		if (!cart) {
 			return fail(404, { error: "Cart not found" });
 		}
 
 		// Check if digital-only order
-		const isDigitalOnly = await isCartDigitalOnly(cart.id);
+		const isDigitalOnly = await isOrderDigitalOnly(cart.id);
 
 		// For physical orders: need shipping address; for digital: need contact info
 		if (isDigitalOnly) {
@@ -430,20 +521,14 @@ export const actions: Actions = {
 				const method = await paymentService.getMethodById(payment.paymentMethodId);
 				paymentInfo = {
 					providerTransactionId: payment.transactionId || "",
-					clientSecret: (payment.metadata as any)?.clientSecret,
+					clientSecret: (payment.metadata as { clientSecret?: string })?.clientSecret,
 					methodCode: method?.code ?? "",
 					metadata: payment.metadata as Record<string, unknown>
 				};
 			} else {
-				// Load full order relations for payment
-				const order = await orderService.getById(cart.id);
-				if (!order) {
-					return fail(404, { error: "Order not found" });
-				}
-
 				// Create payment via provider
 				const method = await paymentService.getMethodById(parseInt(paymentMethodId));
-				const result = await paymentService.createPayment(order, parseInt(paymentMethodId));
+				const result = await paymentService.createPayment(cart, parseInt(paymentMethodId));
 				payment = result.payment;
 				paymentInfo = {
 					...result.paymentInfo,
@@ -458,87 +543,16 @@ export const actions: Actions = {
 				});
 			}
 
-			// For mock payments, complete the order immediately
+			// Mock payments complete instantly; Stripe returns a client secret
+			// and finishes via the completeOrder action.
 			if (paymentInfo.methodCode !== "stripe") {
-				// Save address to customer's address book if requested
-				if (
-					saveToAddressBook &&
-					locals.customer?.id &&
-					!isDigitalOnly &&
-					cart.shippingStreetLine1
-				) {
-					try {
-						await customerService.addAddress(locals.customer.id, {
-							fullName: cart.shippingFullName || undefined,
-							streetLine1: cart.shippingStreetLine1,
-							city: cart.shippingCity || "",
-							postalCode: cart.shippingPostalCode || "",
-							country: cart.shippingCountry || "FI",
-							isDefault: false
-						});
-					} catch (e) {
-						console.error("Error saving address to address book:", e);
-					}
-				}
-
-				// Validate stock availability (skip for digital products)
-				if (!isDigitalOnly) {
-					const stockCheck = await orderService.validateStock(cart.id);
-					if (!stockCheck.valid) {
-						return fail(400, {
-							error: "Some items are no longer available in the requested quantity",
-							stockErrors: stockCheck.errors
-						});
-					}
-				}
-
-				// Transition order to payment_pending
-				await orderService.transitionState(cart.id, "payment_pending");
-
-				// Confirm payment
-				const paymentStatus = await paymentService.confirmPayment(payment.id);
-
-				if (isPaymentSuccessful(paymentStatus)) {
-					await orderService.transitionState(cart.id, "paid");
-
-					console.log("[order] completed", {
-						orderId: cart.id,
-						total: cart.total,
-						customerId: locals.customer?.id ?? null,
-						isDigitalOnly
-					});
-
-					const order = await orderService.getById(cart.id);
-					if (order) {
-						if (!isDigitalOnly) {
-							try {
-								await shippingService.createShipment(order);
-							} catch (e) {
-								console.error("Error creating shipment:", e);
-							}
-						}
-
-						try {
-							const deliveryResult = await digitalDeliveryService.deliverOrder(
-								cart.id
-							);
-							if (deliveryResult.errors.length > 0) {
-								console.error("Digital delivery errors:", deliveryResult.errors);
-							}
-						} catch (e) {
-							console.error("Error delivering digital products:", e);
-						}
-					}
-				}
-
-				const finalOrder = await orderService.getById(cart.id);
-				if (!finalOrder) {
-					return fail(500, { error: "Failed to retrieve order" });
-				}
-
-				cookies.delete("cart_token", { path: "/" });
-
-				throw redirect(303, `/checkout/thank-you?order=${finalOrder.code}`);
+				return await completeCheckout({
+					order: cart,
+					payment,
+					cookies,
+					customerId: locals.customer?.id ?? null,
+					saveToAddressBook
+				});
 			}
 
 			return {
@@ -559,10 +573,7 @@ export const actions: Actions = {
 	},
 
 	completeOrder: async ({ request, cookies, locals }) => {
-		const cart = await orderService.getActiveCart({
-			customerId: locals.customer?.id,
-			cartToken: locals.cartToken
-		});
+		const cart = await getDraft(cookies);
 		if (!cart) {
 			return fail(404, { error: "Cart not found" });
 		}
@@ -571,7 +582,7 @@ export const actions: Actions = {
 		const saveToAddressBook = data.get("saveToAddressBook") === "on";
 
 		// Check if digital-only order
-		const isDigitalOnly = await isCartDigitalOnly(cart.id);
+		const isDigitalOnly = await isOrderDigitalOnly(cart.id);
 
 		// Validate required information based on order type
 		if (isDigitalOnly) {
@@ -596,94 +607,14 @@ export const actions: Actions = {
 			return fail(400, { error: "Payment required" });
 		}
 
-		// Validate stock availability (skip for digital products)
-		if (!isDigitalOnly) {
-			const stockCheck = await orderService.validateStock(cart.id);
-			if (!stockCheck.valid) {
-				return fail(400, {
-					error: "Some items are no longer available in the requested quantity",
-					stockErrors: stockCheck.errors
-				});
-			}
-		}
-
 		try {
-			// Save address to customer's address book if requested
-			if (
-				saveToAddressBook &&
-				locals.customer?.id &&
-				!isDigitalOnly &&
-				cart.shippingStreetLine1
-			) {
-				try {
-					await customerService.addAddress(locals.customer.id, {
-						fullName: cart.shippingFullName || undefined,
-						streetLine1: cart.shippingStreetLine1,
-						city: cart.shippingCity || "",
-						postalCode: cart.shippingPostalCode || "",
-						country: cart.shippingCountry || "FI",
-						isDefault: false
-					});
-				} catch (e) {
-					console.error("Error saving address to address book:", e);
-					// Don't fail the order if address book save fails
-				}
-			}
-
-			// Transition order to payment_pending (marks cart as inactive)
-			await orderService.transitionState(cart.id, "payment_pending");
-
-			// Confirm payment (for mock provider, this will mark it as completed)
-			const payment = orderPayments[0];
-			const paymentStatus = await paymentService.confirmPayment(payment.id);
-
-			// If payment is successful, transition order to paid
-			if (isPaymentSuccessful(paymentStatus)) {
-				await orderService.transitionState(cart.id, "paid");
-
-				console.log("[order] completed", {
-					orderId: cart.id,
-					total: cart.total,
-					customerId: locals.customer?.id ?? null,
-					isDigitalOnly
-				});
-
-				const order = await orderService.getById(cart.id);
-				if (order) {
-					// Create shipment only for physical products
-					if (!isDigitalOnly) {
-						try {
-							await shippingService.createShipment(order);
-						} catch (e) {
-							console.error("Error creating shipment:", e);
-							// Don't fail the order if shipment creation fails
-						}
-					}
-
-					// Deliver digital products via email
-					try {
-						const deliveryResult = await digitalDeliveryService.deliverOrder(cart.id);
-						if (deliveryResult.errors.length > 0) {
-							console.error("Digital delivery errors:", deliveryResult.errors);
-						}
-					} catch (e) {
-						console.error("Error delivering digital products:", e);
-						// Don't fail the order if digital delivery fails
-					}
-				}
-			}
-
-			// Get final order with code for redirect
-			const finalOrder = await orderService.getById(cart.id);
-			if (!finalOrder) {
-				return fail(500, { error: "Failed to retrieve order" });
-			}
-
-			// Clear cart token cookie
-			cookies.delete("cart_token", { path: "/" });
-
-			// Redirect to thank you page
-			throw redirect(303, `/checkout/thank-you?order=${finalOrder.code}`);
+			return await completeCheckout({
+				order: cart,
+				payment: orderPayments[0],
+				cookies,
+				customerId: locals.customer?.id ?? null,
+				saveToAddressBook
+			});
 		} catch (error) {
 			if (error && typeof error === "object" && "status" in error && error.status === 303) {
 				throw error; // Re-throw redirect

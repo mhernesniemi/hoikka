@@ -487,11 +487,6 @@ export interface CreateOrderInput {
 	currencyCode?: string;
 }
 
-export interface AddOrderLineInput {
-	variantId: number;
-	quantity: number;
-}
-
 export interface CreateCustomerInput {
 	authUserId?: string;
 	email: string;

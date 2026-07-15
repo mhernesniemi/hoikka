@@ -46,3 +46,6 @@ docs/
 
 # Local uploads
 /static/uploads/
+
+# Local data (SQLite database, uploads)
+/data/

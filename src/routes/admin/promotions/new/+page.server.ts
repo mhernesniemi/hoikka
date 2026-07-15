@@ -42,9 +42,7 @@ export const actions: Actions = {
 		const discountType = data.get("discountType") as "percentage" | "fixed_amount";
 		const discountValueRaw = Number(data.get("discountValue"));
 		const appliesTo = data.get("appliesTo") as
-			| "all"
-			| "specific_products"
-			| "specific_collections";
+			"all" | "specific_products" | "specific_collections";
 		const minOrderAmountRaw = data.get("minOrderAmount")
 			? Number(data.get("minOrderAmount"))
 			: undefined;

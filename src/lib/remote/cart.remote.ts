@@ -1,108 +1,101 @@
 /**
- * Cart Remote Functions
+ * Cart remote functions.
  *
- * These functions use SvelteKit's `command()` pattern for RPC-style server calls.
- *
- * How it works:
- * - `command()` creates a function that runs on the SERVER but can be called from the CLIENT
- * - The client calls `await addToCart({...})` like a normal async function
- * - SvelteKit serializes the input, sends it to the server, executes, and returns the result
- * - "unchecked" means no CSRF protection (safe for read-like operations or when using cookies)
- *
- * Why use this instead of form actions?
- * - No page reload needed
- * - Can be called from any component (not just forms)
- * - Cleaner async/await syntax
- *
- * Important: Code inside command() runs on the SERVER only.
- * To trigger client-side effects (like opening a sheet), do it AFTER the await in the component.
- *
- * @see https://svelte.dev/docs/kit/$app-server#command
+ * The cart lives in a cookie (see $lib/server/cart-cookie.ts) — these
+ * functions read and mutate that cookie, so shopping never writes to the
+ * database. `getCart` is a SvelteKit `query()`; each mutating `command()`
+ * updates the cookie and then refreshes the query in the same roundtrip
+ * (single-flight mutation), so the client cart updates without extra
+ * requests.
  */
-import { command, getRequestEvent } from "$app/server";
-import { orderService } from "$lib/server/services/orders.js";
+import { query, command, getRequestEvent } from "$app/server";
+import * as v from "valibot";
+import { eq, and, isNull } from "drizzle-orm";
+import { db } from "$lib/server/db/index.js";
+import { productVariants } from "$lib/server/db/schema.js";
+import {
+	CART_COOKIE,
+	CART_COOKIE_OPTIONS,
+	parseCartCookie,
+	serializeCartCookie,
+	addLine,
+	setQuantity,
+	removeLine,
+	type CartLine
+} from "$lib/server/cart-cookie.js";
+import { getCartView, clampToAvailable } from "$lib/server/services/cart.js";
+import { reservationService } from "$lib/server/services/reservations.js";
 
-const CART_COOKIE_NAME = "cart_token";
-const CART_COOKIE_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
+function readLines(): CartLine[] {
+	return parseCartCookie(getRequestEvent().cookies.get(CART_COOKIE));
+}
 
-/**
- * Add an item to the cart. Creates a new cart if one doesn't exist.
- * Called from product pages and wishlist.
- */
-export const addToCart = command(
-	"unchecked",
-	async (input: { variantId: number; quantity: number }) => {
-		const event = getRequestEvent();
-		const customerId = event.locals.customer?.id ?? null;
-		const cartToken = event.locals.cartToken ?? null;
+function writeLines(lines: CartLine[]): void {
+	getRequestEvent().cookies.set(CART_COOKIE, serializeCartCookie(lines), CART_COOKIE_OPTIONS);
+}
 
-		const {
-			order,
-			cartToken: newCartToken,
-			isNew
-		} = await orderService.getOrCreateActiveCart({
-			customerId,
-			cartToken
-		});
-
-		// If a new guest cart was created, set the cookie
-		if (isNew && newCartToken && !customerId) {
-			event.cookies.set(CART_COOKIE_NAME, newCartToken, {
-				path: "/",
-				httpOnly: true,
-				sameSite: "lax",
-				maxAge: CART_COOKIE_MAX_AGE
-			});
-		}
-
-		await orderService.addLine(order.id, {
-			variantId: input.variantId,
-			quantity: input.quantity
-		});
-
-		return { success: true };
-	}
-);
-
-/**
- * Update quantity of a cart line item. Removes the line if quantity <= 0.
- */
-export const updateCartLineQuantity = command(
-	"unchecked",
-	async (input: { lineId: number; quantity: number }) => {
-		const event = getRequestEvent();
-		const customerId = event.locals.customer?.id ?? null;
-		const cartToken = event.locals.cartToken ?? null;
-
-		const cart = await orderService.getActiveCart({ customerId, cartToken });
-		if (!cart) {
-			throw new Error("No active cart found");
-		}
-
-		if (input.quantity <= 0) {
-			await orderService.removeLine(cart.id, input.lineId);
-		} else {
-			await orderService.updateLineQuantity(cart.id, input.lineId, input.quantity);
-		}
-
-		return { success: true };
-	}
-);
-
-/**
- * Remove a line item from the cart entirely.
- */
-export const removeCartLine = command("unchecked", async (input: { lineId: number }) => {
-	const event = getRequestEvent();
-	const customerId = event.locals.customer?.id ?? null;
-	const cartToken = event.locals.cartToken ?? null;
-
-	const cart = await orderService.getActiveCart({ customerId, cartToken });
-	if (!cart) {
-		throw new Error("No active cart found");
-	}
-
-	await orderService.removeLine(cart.id, input.lineId);
-
-	return { success: true };
+export const getCart = query(async () => {
+	const { locals } = getRequestEvent();
+	return getCartView(readLines(), locals.customer?.id ?? null);
 });
+
+const variantIdSchema = v.pipe(v.number(), v.integer(), v.minValue(1));
+const quantitySchema = v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(999));
+
+export const addToCart = command(
+	v.object({ variantId: variantIdSchema, quantity: quantitySchema }),
+	async ({ variantId, quantity }) => {
+		const [variant] = await db
+			.select({ trackInventory: productVariants.trackInventory })
+			.from(productVariants)
+			.where(and(eq(productVariants.id, variantId), isNull(productVariants.deletedAt)));
+		if (!variant) throw new Error("Product is no longer available");
+
+		const lines = readLines();
+		if (variant.trackInventory) {
+			const available = await reservationService.getAvailableStock(variantId);
+			const inCart = lines.find((l) => l.variantId === variantId)?.quantity ?? 0;
+			if (inCart + quantity > available) {
+				throw new Error(
+					`Only ${available} items available${inCart > 0 ? ` (${inCart} already in cart)` : ""}`
+				);
+			}
+		}
+
+		writeLines(addLine(lines, variantId, quantity));
+		await getCart().refresh();
+	}
+);
+
+export const setCartQuantity = command(
+	v.object({
+		variantId: variantIdSchema,
+		quantity: v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(999))
+	}),
+	async ({ variantId, quantity }) => {
+		// Clamp to available stock instead of erroring — the cart view shows
+		// what is actually purchasable either way.
+		let clamped = quantity;
+		if (quantity > 0) {
+			const [variant] = await db
+				.select({ trackInventory: productVariants.trackInventory })
+				.from(productVariants)
+				.where(eq(productVariants.id, variantId));
+			if (variant?.trackInventory) {
+				const available = await reservationService.getAvailableStock(variantId);
+				clamped = clampToAvailable(quantity, available);
+			}
+		}
+
+		writeLines(setQuantity(readLines(), variantId, clamped));
+		await getCart().refresh();
+	}
+);
+
+export const removeCartLine = command(
+	v.object({ variantId: variantIdSchema }),
+	async ({ variantId }) => {
+		writeLines(removeLine(readLines(), variantId));
+		await getCart().refresh();
+	}
+);

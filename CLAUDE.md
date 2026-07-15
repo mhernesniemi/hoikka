@@ -12,13 +12,13 @@
 ## Tools
 
 - Run `./scripts/svelte-check.sh --threshold error` for type checking. This wrapper prevents the Vite dev server from crashing by preserving `.svelte-kit/generated/` timestamps that `svelte-check` would otherwise overwrite.
-- After modifying files, run `bunx prettier --write <files>` on the changed files to format them.
-- When making changes to the DB schema, generate a migration with `bun run db:generate` and apply it locally with `bun run db:migrate`. Migrations also run automatically on deploy via the build script. Do **not** use `drizzle-kit push`.
+- After modifying files, run `pnpm exec prettier --write <files>` on the changed files to format them.
+- When making changes to the DB schema, generate a migration with `pnpm db:generate`. On the Node target, migrations apply automatically when the server starts (dev or production). On the Cloudflare target, apply them with `pnpm db:migrate:cf` (`wrangler d1 migrations apply`). Do **not** use `drizzle-kit push`.
 - **Reverting schema changes**: If a migration is reverted, you must also delete its SQL file (`drizzle/NNNN_*.sql`), its snapshot (`drizzle/meta/NNNN_snapshot.json`), and remove its entry from `drizzle/meta/_journal.json`. Leftover files will cause the next `db:generate` to fail or produce broken migrations.
 
 ## UI Guidelines
 
-- Use shadcn/svelte for UI components and install new ones as needed. The project has **two separate UI component sets**: `src/lib/components/admin/ui/` (admin panel) and `src/lib/components/storefront/ui/` (storefront). The `components.json` `ui` alias points to storefront, so `bunx shadcn-svelte@next add <component>` installs there by default. After installing, copy the component to the correct path (admin or storefront) and delete the copy you don't need.
+- Use shadcn/svelte for UI components and install new ones as needed. The project has **two separate UI component sets**: `src/lib/components/admin/ui/` (admin panel) and `src/lib/components/storefront/ui/` (storefront). The `components.json` `ui` alias points to storefront, so `pnpm dlx shadcn-svelte@next add <component>` installs there by default. After installing, copy the component to the correct path (admin or storefront) and delete the copy you don't need.
 - Prefer existing UI components (e.g. `<Button>` over `<button>`).
 - Use `cn()` for conditional Tailwind classes. Never use string interpolation in `class` attributes — always use `cn()` instead.
 - Use `<AdminCard>` for card sections on admin detail pages.

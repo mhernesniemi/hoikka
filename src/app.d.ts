@@ -14,15 +14,18 @@ declare global {
 				emailVerified?: boolean;
 			} | null;
 			customer: Customer | null;
-			cartToken: string | null;
-			newCartToken?: string;
 			wishlistToken: string | null;
 			newWishlistToken?: string;
 			adminDark: boolean;
 		}
 		// interface PageData {}
 		// interface PageState {}
-		// interface Platform {}
+		interface Platform {
+			env?: {
+				DB: import("@cloudflare/workers-types").D1Database;
+				ASSETS_BUCKET: import("@cloudflare/workers-types").R2Bucket;
+			};
+		}
 	}
 }
 

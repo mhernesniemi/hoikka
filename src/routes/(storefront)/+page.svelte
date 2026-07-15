@@ -79,28 +79,10 @@
               </a>
               <p class="pt-4 text-xs text-gray-600">
                 or
-                <a
-                  href="/deploy"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="group ml-1 inline-flex items-center overflow-hidden rounded-md border border-black"
+                <code
+                  class="ml-1 inline-flex items-center rounded-md border border-black px-1.5 py-0.5 font-mono text-xs font-medium text-black"
+                  >pnpx create-hoikka-app</code
                 >
-                  <code
-                    class="inline-flex items-center px-1.5 py-0.5 font-mono text-xs font-medium text-black"
-                    ><span class="group-hover:italic">deploy</span>&nbsp;to vercel</code
-                  >
-                  <span
-                    class="inline-flex shrink-0 items-center justify-center border-l border-black/30 px-1.5 py-0.5"
-                  >
-                    <svg
-                      viewBox="0 3.2 24 20.8"
-                      fill="currentColor"
-                      class="h-3.5 w-3.5 shrink-0 text-black"
-                    >
-                      <path d="M12 3.2 L0 24 L24 24 Z" />
-                    </svg>
-                  </span>
-                </a>
               </p>
             </div>
           </div>

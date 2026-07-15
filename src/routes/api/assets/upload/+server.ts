@@ -1,9 +1,10 @@
 /**
- * Asset upload endpoint — writes files to local storage (static/uploads/).
+ * Asset upload endpoint — writes files to the active storage backend
+ * (local fs on node, R2 on cloudflare).
  */
 import { json, error } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
-import { upload } from "$lib/server/storage.js";
+import { upload } from "$lib/server/storage/index.js";
 import { env } from "$env/dynamic/private";
 
 export const POST: RequestHandler = async ({ request, locals }) => {

@@ -1,14 +1,16 @@
 /**
  * Stock Reservation Service
- * Handles stock reservations for cart items to prevent overselling
+ * Prevents overselling during checkout.
  *
- * Reservation Pattern:
- * - Stock is reserved when items are added to cart
- * - Reservations expire after RESERVATION_TIMEOUT_MINUTES (released back to available)
- * - On payment: reservations confirmed, stock deducted
- * - On cancel: reservations released, stock restored (if paid)
+ * Reservation Pattern (checkout-only):
+ * - Nothing is reserved while shopping — the cart is a cookie
+ * - When checkout starts, each order line reserves stock for
+ *   RESERVATION_TIMEOUT_MINUTES
+ * - On payment: reservations released, stock deducted
+ * - Expired reservations are deleted opportunistically at checkout entry and
+ *   filtered out of every availability read — no background job needed
  */
-import { eq, and, gt, sql, sum } from "drizzle-orm";
+import { eq, and, gt, lte, sql, sum } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { stockReservations, productVariants } from "../db/schema.js";
 
@@ -107,26 +109,6 @@ export class ReservationService {
 	}
 
 	/**
-	 * Update reservation quantity for an existing order line
-	 */
-	async updateQuantity(orderLineId: number, quantity: number): Promise<void> {
-		// Extend expiry when quantity is updated
-		const expiresAt = new Date(Date.now() + RESERVATION_TIMEOUT_MINUTES * 60 * 1000);
-
-		await db
-			.update(stockReservations)
-			.set({ quantity, expiresAt })
-			.where(eq(stockReservations.orderLineId, orderLineId));
-	}
-
-	/**
-	 * Release reservation for a single order line
-	 */
-	async release(orderLineId: number): Promise<void> {
-		await db.delete(stockReservations).where(eq(stockReservations.orderLineId, orderLineId));
-	}
-
-	/**
 	 * Release all reservations for an order
 	 */
 	async releaseForOrder(orderId: number): Promise<void> {
@@ -134,47 +116,10 @@ export class ReservationService {
 	}
 
 	/**
-	 * Extend reservation expiry for an order (e.g., during checkout)
+	 * Delete expired reservations (called opportunistically at checkout entry)
 	 */
-	async extendForOrder(orderId: number, additionalMinutes?: number): Promise<void> {
-		const minutes = additionalMinutes ?? RESERVATION_TIMEOUT_MINUTES;
-		const newExpiry = new Date(Date.now() + minutes * 60 * 1000);
-
-		await db
-			.update(stockReservations)
-			.set({ expiresAt: newExpiry })
-			.where(eq(stockReservations.orderId, orderId));
-	}
-
-	/**
-	 * Get reservation for an order line
-	 */
-	async getByOrderLineId(orderLineId: number) {
-		const [reservation] = await db
-			.select()
-			.from(stockReservations)
-			.where(eq(stockReservations.orderLineId, orderLineId));
-
-		return reservation ?? null;
-	}
-
-	/**
-	 * Get all reservations for an order
-	 */
-	async getForOrder(orderId: number) {
-		return db.select().from(stockReservations).where(eq(stockReservations.orderId, orderId));
-	}
-
-	/**
-	 * Clean up expired reservations (can be called periodically)
-	 */
-	async cleanupExpired(): Promise<number> {
-		const result = await db
-			.delete(stockReservations)
-			.where(sql`${stockReservations.expiresAt} <= NOW()`)
-			.returning({ id: stockReservations.id });
-
-		return result.length;
+	async deleteExpired(): Promise<void> {
+		await db.delete(stockReservations).where(lte(stockReservations.expiresAt, new Date()));
 	}
 }
 

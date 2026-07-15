@@ -48,7 +48,9 @@
       try {
         const stored = localStorage.getItem(STORAGE_KEY);
         if (stored) return new Set(JSON.parse(stored));
-      } catch {}
+      } catch {
+        // Corrupt localStorage entry — fall through to the default
+      }
     }
     return new Set(collectIds(data.tree));
   }

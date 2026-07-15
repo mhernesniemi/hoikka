@@ -24,7 +24,6 @@ test.describe("Storefront smoke tests", () => {
 		await page.goto("/products");
 
 		const firstProduct = page.locator('a[href^="/products/"]').first();
-		const productName = await firstProduct.locator("h3").textContent();
 		await firstProduct.click();
 
 		// Product detail page has h1 with the product name
@@ -81,11 +80,11 @@ test.describe("Storefront smoke tests", () => {
 		// At least one line item with a price is visible
 		const lineItem = page.locator(".divide-y .flex.gap-4");
 		await expect(lineItem.first()).toBeVisible({ timeout: 5000 });
-		await expect(page.locator(".divide-y")).toContainText("€");
+		await expect(lineItem.first()).toContainText("€");
 
-		// Price breakdown is displayed
-		await expect(page.getByText("Subtotal")).toBeVisible();
-		await expect(page.getByText("Total").last()).toBeVisible();
+		// Price breakdown is displayed (scope to main — the cart sheet stays mounted)
+		await expect(page.getByRole("main").getByText("Subtotal")).toBeVisible();
+		await expect(page.getByRole("main").getByText("Total").last()).toBeVisible();
 
 		// Address form is shown (first step of checkout)
 		const addressForm = page.locator('form[action="?/setShippingAddress"]');

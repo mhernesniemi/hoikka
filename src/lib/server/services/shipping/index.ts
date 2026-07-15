@@ -2,12 +2,11 @@
  * Shipping Service
  * Manages shipping methods and order shipping information
  */
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { db } from "../../db/index.js";
 import { shippingMethods, orderShipping } from "../../db/schema.js";
 import type {
 	ShippingMethod,
-	NewShippingMethod,
 	OrderShipping,
 	NewOrderShipping,
 	OrderWithRelations
@@ -240,37 +239,6 @@ export class ShippingService {
 	 */
 	registerProvider(provider: ShippingProvider): void {
 		PROVIDERS.set(provider.code, provider);
-	}
-
-	/**
-	 * Initialize default shipping methods in database
-	 * Call this during setup/migration
-	 * Optimized to use a single query instead of multiple queries
-	 */
-	async initializeDefaultMethods(): Promise<void> {
-		const defaultMethods: NewShippingMethod[] = [
-			{
-				code: "flat_rate",
-				name: "Standard Shipping",
-				description: "Flat rate standard delivery",
-				active: true
-			}
-		];
-
-		// Fetch all existing methods in one query
-		const codes = defaultMethods.map((m) => m.code);
-		const existing = await db
-			.select()
-			.from(shippingMethods)
-			.where(inArray(shippingMethods.code, codes));
-
-		const existingCodes = new Set(existing.map((m) => m.code));
-
-		// Insert only missing methods
-		const toInsert = defaultMethods.filter((m) => !existingCodes.has(m.code));
-		if (toInsert.length > 0) {
-			await db.insert(shippingMethods).values(toInsert);
-		}
 	}
 }
 

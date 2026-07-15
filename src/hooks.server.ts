@@ -1,5 +1,5 @@
 /**
- * Server hooks for authentication, customer sync, and cart handling.
+ * Server hooks for authentication, customer sync, and wishlist handling.
  * Uses Better Auth for authentication.
  */
 import { sequence } from "@sveltejs/kit/hooks";
@@ -10,12 +10,7 @@ import { customers } from "$lib/server/db/schema.js";
 import { eq } from "drizzle-orm";
 import { stringify } from "devalue";
 import { env } from "$env/dynamic/private";
-import { orderService } from "$lib/server/services/orders.js";
-import { shippingService, paymentService, wishlistService } from "$lib/server/services/index.js";
-import { withSpan } from "$lib/server/telemetry.js";
-
-const CART_COOKIE_NAME = "cart_token";
-const CART_COOKIE_MAX_AGE = 60 * 60 * 24 * 30;
+import { wishlistService } from "$lib/server/services/index.js";
 
 const WISHLIST_COOKIE_NAME = "wishlist_token";
 const WISHLIST_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
@@ -27,9 +22,7 @@ const sessionHandler: Handle = async ({ event, resolve }) => {
 	event.locals.user = null;
 
 	try {
-		const result = await withSpan("auth.validate_session", () =>
-			auth.api.getSession({ headers: event.request.headers })
-		);
+		const result = await auth.api.getSession({ headers: event.request.headers });
 		if (result?.user) {
 			event.locals.user = {
 				id: result.user.id,
@@ -81,32 +74,6 @@ const sessionHandler: Handle = async ({ event, resolve }) => {
 	return resolve(event);
 };
 
-const cartHandler: Handle = async ({ event, resolve }) => {
-	const cartToken = event.cookies.get(CART_COOKIE_NAME) ?? null;
-	event.locals.cartToken = cartToken;
-
-	if (event.locals.customer && cartToken) {
-		try {
-			await orderService.transferCartToCustomer(cartToken, event.locals.customer.id);
-			event.cookies.delete(CART_COOKIE_NAME, { path: "/" });
-			event.locals.cartToken = null;
-		} catch {
-			// Transfer failed, likely no guest cart exists — ignore
-		}
-	}
-
-	const response = await resolve(event);
-
-	if (event.locals.newCartToken) {
-		response.headers.append(
-			"Set-Cookie",
-			`${CART_COOKIE_NAME}=${event.locals.newCartToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${CART_COOKIE_MAX_AGE}${isProduction ? "; Secure" : ""}`
-		);
-	}
-
-	return response;
-};
-
 const wishlistHandler: Handle = async ({ event, resolve }) => {
 	const wishlistToken = event.cookies.get(WISHLIST_COOKIE_NAME) ?? null;
 	event.locals.wishlistToken = wishlistToken;
@@ -133,34 +100,6 @@ const wishlistHandler: Handle = async ({ event, resolve }) => {
 	return response;
 };
 
-let shippingMethodsInitialized = false;
-
-const shippingInit: Handle = async ({ event, resolve }) => {
-	if (!shippingMethodsInitialized) {
-		try {
-			await shippingService.initializeDefaultMethods();
-			shippingMethodsInitialized = true;
-		} catch (error) {
-			console.error("[hooks] Failed to initialize shipping methods:", error);
-		}
-	}
-	return resolve(event);
-};
-
-let paymentMethodsInitialized = false;
-
-const paymentInit: Handle = async ({ event, resolve }) => {
-	if (!paymentMethodsInitialized) {
-		try {
-			await paymentService.initializeDefaultMethods();
-			paymentMethodsInitialized = true;
-		} catch (error) {
-			console.error("[hooks] Failed to initialize payment methods:", error);
-		}
-	}
-	return resolve(event);
-};
-
 const demoGuard: Handle = async ({ event, resolve }) => {
 	if (
 		env.DEMO_MODE === "true" &&
@@ -180,14 +119,7 @@ const demoGuard: Handle = async ({ event, resolve }) => {
 	return resolve(event);
 };
 
-export const handle = sequence(
-	demoGuard,
-	sessionHandler,
-	cartHandler,
-	wishlistHandler,
-	shippingInit,
-	paymentInit
-);
+export const handle = sequence(demoGuard, sessionHandler, wishlistHandler);
 
 export const handleError: HandleServerError = async ({ error, event, status, message }) => {
 	const errorId = crypto.randomUUID();

@@ -8,10 +8,18 @@ export default defineConfig({
 	workers: 1,
 	reporter: process.env.CI ? "github" : "html",
 	use: {
-		baseURL: process.env.BASE_URL || "http://localhost:5173",
+		baseURL: process.env.BASE_URL || "http://localhost:4573",
 		trace: "on-first-retry",
 		screenshot: "only-on-failure"
 	},
+	webServer: process.env.BASE_URL
+		? undefined
+		: {
+				// Dedicated port so a dev server on 5173 is never reused by accident
+				command: "pnpm dev --port 4573 --strictPort",
+				url: "http://localhost:4573",
+				reuseExistingServer: false
+			},
 	projects: [
 		{
 			name: "chromium",

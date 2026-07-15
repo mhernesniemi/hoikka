@@ -85,7 +85,14 @@
   }
 </script>
 
-<div class={cn("min-h-screen bg-background font-sans text-foreground antialiased", sidebarOpen && "max-lg:overflow-hidden max-lg:h-screen")} data-admin class:dark>
+<div
+  class={cn(
+    "min-h-screen bg-background font-sans text-foreground antialiased",
+    sidebarOpen && "max-lg:h-screen max-lg:overflow-hidden"
+  )}
+  data-admin
+  class:dark
+>
   <!-- Sidebar -->
   <aside
     class={cn(

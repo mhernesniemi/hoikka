@@ -3,7 +3,7 @@
  */
 import { json, error } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
-import { list } from "$lib/server/storage.js";
+import { list } from "$lib/server/storage/index.js";
 
 export const GET: RequestHandler = async ({ url, locals }) => {
 	if (!locals.user || !["admin", "staff"].includes(locals.user.role ?? "")) {

@@ -1,6 +1,5 @@
 import { wishlistService } from "$lib/server/services/wishlist.js";
 import { productService } from "$lib/server/services/products.js";
-import { orderService } from "$lib/server/services/orders.js";
 import { fail } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
 
@@ -41,28 +40,6 @@ export const actions: Actions = {
 		});
 
 		return { success: true };
-	},
-
-	addToCart: async ({ request, locals }) => {
-		const formData = await request.formData();
-		const variantId = parseInt(formData.get("variantId") as string);
-
-		if (isNaN(variantId)) {
-			return fail(400, { error: "Invalid variant ID" });
-		}
-
-		const { order, cartToken, isNew } = await orderService.getOrCreateActiveCart({
-			customerId: locals.customer?.id,
-			cartToken: locals.cartToken
-		});
-
-		if (isNew && cartToken && !locals.customer) {
-			locals.newCartToken = cartToken;
-		}
-
-		await orderService.addLine(order.id, { variantId, quantity: 1 });
-
-		return { success: true, addedToCart: true };
 	},
 
 	clear: async ({ locals }) => {

@@ -1,0 +1,24 @@
+{
+	"name": "create-hoikka-app",
+	"version": "0.1.0",
+	"description": "Scaffold a Hoikka ecommerce store — SvelteKit + SQLite, deployable to Node.js or Cloudflare",
+	"type": "module",
+	"bin": {
+		"create-hoikka-app": "./index.js"
+	},
+	"files": [
+		"index.js"
+	],
+	"engines": {
+		"node": ">=20"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/mhernesniemi/hoikka",
+		"directory": "packages/create-hoikka-app"
+	},
+	"license": "MIT",
+	"dependencies": {
+		"@clack/prompts": "^1.1.0"
+	}
+}

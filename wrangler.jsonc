@@ -1,0 +1,31 @@
+{
+	// Cloudflare Workers config for the "cloudflare" deployment target.
+	// Used by `pnpm dev:cf` (local bindings via miniflare), `pnpm deploy`, and
+	// `pnpm db:migrate:cf`. create-hoikka-app fills in the real database_id.
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "hoikka",
+	"compatibility_date": "2026-07-01",
+	"compatibility_flags": ["nodejs_compat"],
+	"main": ".svelte-kit/cloudflare/_worker.js",
+	"assets": {
+		"binding": "ASSETS",
+		"directory": ".svelte-kit/cloudflare"
+	},
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "hoikka-db",
+			"database_id": "00000000-0000-0000-0000-000000000000",
+			"migrations_dir": "drizzle"
+		}
+	],
+	"r2_buckets": [
+		{
+			"binding": "ASSETS_BUCKET",
+			"bucket_name": "hoikka-assets"
+		}
+	],
+	"observability": {
+		"enabled": true
+	}
+}

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { invalidateAll, goto } from "$app/navigation";
   import { page } from "$app/stores";
-  import { updateCartLineQuantity, removeCartLine } from "$lib/remote/cart.remote";
+  import { getCart, setCartQuantity, removeCartLine } from "$lib/remote/cart.remote";
   import { imageUrl } from "$lib/image";
   import { cartStore } from "$lib/stores/cart.svelte";
   import {
@@ -18,16 +18,17 @@
   import Trash2 from "@lucide/svelte/icons/trash-2";
   import LoaderCircle from "@lucide/svelte/icons/loader-circle";
 
-  const cart = $derived.by(() => cartStore.cart);
-  const itemCount = $derived.by(() => cartStore.itemCount);
-  const isLoading = $derived.by(() => cartStore.isLoading);
-  const isUpdating = $derived.by(() => cartStore.isUpdating);
+  // Fallback badge count for first paint, before the cart query resolves
+  let { initialItemCount = 0 }: { initialItemCount?: number } = $props();
+
+  const cartQuery = getCart();
+  const cart = $derived(cartQuery.current);
   const lines = $derived(cart?.lines ?? []);
-  const subtotal = $derived(cart?.subtotal ?? 0);
-  const total = $derived(cart?.total ?? 0);
-  const discount = $derived(cart?.discount ?? 0);
-  const taxTotal = $derived(cart?.taxTotal ?? 0);
-  const cartIsTaxExempt = $derived(cart?.isTaxExempt ?? false);
+  const itemCount = $derived(cart?.itemCount ?? initialItemCount);
+  const isLoading = $derived(!cart && cartQuery.loading);
+
+  let pendingMutations = $state(0);
+  const isUpdating = $derived(pendingMutations > 0);
 
   function formatPrice(cents: number): string {
     return (cents / 100).toFixed(2);
@@ -35,33 +36,28 @@
 
   const isOnCheckout = $derived($page.url.pathname === "/checkout");
 
-  async function updateQuantity(lineId: number, newQuantity: number) {
-    cartStore.updateLineQuantity(lineId, newQuantity);
+  async function mutate(action: () => Promise<unknown>) {
+    pendingMutations++;
     try {
-      await updateCartLineQuantity({ lineId, quantity: newQuantity });
+      await action();
     } catch {
-      // error handled by invalidateAll below
+      // The refreshed cart query is authoritative either way
+    } finally {
+      pendingMutations--;
     }
-    await invalidateAll();
-    if (isOnCheckout && cartStore.itemCount === 0) {
-      cartStore.close();
-      goto("/products");
+    if (isOnCheckout) {
+      // The checkout draft order is rebuilt from the cookie on load
+      await invalidateAll();
+      if ((cartQuery.current?.itemCount ?? 0) === 0) {
+        cartStore.close();
+        goto("/products");
+      }
     }
   }
 
-  async function removeLine(lineId: number) {
-    cartStore.removeLine(lineId);
-    try {
-      await removeCartLine({ lineId });
-    } catch {
-      // error handled by invalidateAll below
-    }
-    await invalidateAll();
-    if (isOnCheckout && cartStore.itemCount === 0) {
-      cartStore.close();
-      goto("/products");
-    }
-  }
+  const updateQuantity = (variantId: number, quantity: number) =>
+    mutate(() => setCartQuantity({ variantId, quantity }));
+  const removeLine = (variantId: number) => mutate(() => removeCartLine({ variantId }));
 </script>
 
 <Sheet
@@ -92,7 +88,7 @@
     <div class="flex-1 overflow-y-auto py-4">
       {#if isLoading}
         <div class="divide-y divide-gray-200">
-          {#each [1, 2] as _}
+          {#each [1, 2] as _ (_)}
             <div class="flex gap-3 p-3">
               <div class="h-20 w-20 shrink-0 animate-pulse rounded-md bg-gray-200"></div>
               <div class="flex min-w-0 flex-1 flex-col">
@@ -121,8 +117,8 @@
         </div>
       {:else}
         <div class="divide-y divide-gray-200">
-          {#each lines as line (line.id)}
-            <div class="flex gap-3 p-3">
+          {#each lines as line (line.variantId)}
+            <div class="flex gap-3 p-3" class:opacity-60={line.outOfStock}>
               <div class="h-20 w-20 shrink-0 overflow-hidden rounded-md bg-gray-100">
                 {#if line.imageUrl}
                   <img
@@ -141,23 +137,22 @@
                 <div class="flex items-start justify-between gap-2">
                   <div class="min-w-0">
                     <h4 class="truncate text-sm font-medium text-gray-900">
-                      {#if line.productId}
-                        <a
-                          href="/products/{line.productId}"
-                          onclick={() => cartStore.close()}
-                          class="hover:underline">{line.productName || "Untitled product"}</a
-                        >
-                      {:else}
-                        {line.productName || "Untitled product"}
-                      {/if}
+                      <a
+                        href="/products/{line.productId}"
+                        onclick={() => cartStore.close()}
+                        class="hover:underline">{line.productName || "Untitled product"}</a
+                      >
                     </h4>
                     {#if line.variantName}
                       <p class="text-xs text-gray-500">{line.variantName}</p>
                     {/if}
+                    {#if line.outOfStock}
+                      <p class="text-xs text-red-600">Out of stock</p>
+                    {/if}
                   </div>
                   <button
                     type="button"
-                    onclick={() => removeLine(line.id)}
+                    onclick={() => removeLine(line.variantId)}
                     class="rounded p-1 text-gray-400 transition-colors hover:bg-gray-200 hover:text-gray-600"
                     aria-label="Remove item"
                   >
@@ -169,7 +164,7 @@
                   <div class="inline-flex items-center rounded border border-gray-200 bg-white">
                     <button
                       type="button"
-                      onclick={() => updateQuantity(line.id, line.quantity - 1)}
+                      onclick={() => updateQuantity(line.variantId, line.quantity - 1)}
                       class="flex h-7 w-7 items-center justify-center text-gray-500 transition-colors hover:text-gray-700"
                       aria-label="Decrease quantity"
                     >
@@ -178,7 +173,7 @@
                     <span class="w-6 text-center text-xs font-medium">{line.quantity}</span>
                     <button
                       type="button"
-                      onclick={() => updateQuantity(line.id, line.quantity + 1)}
+                      onclick={() => updateQuantity(line.variantId, line.quantity + 1)}
                       class="flex h-7 w-7 items-center justify-center text-gray-500 transition-colors hover:text-gray-700"
                       aria-label="Increase quantity"
                     >
@@ -204,36 +199,36 @@
               <LoaderCircle class="h-4 w-4 animate-spin text-gray-400" />
               <span class="ml-2 text-sm text-gray-500">Updating...</span>
             </div>
-          {:else}
+          {:else if cart}
             <div class="space-y-2">
               <div class="flex justify-between text-sm">
                 <span class="text-gray-500">Subtotal</span>
-                <span class="text-gray-700">{formatPrice(subtotal)} EUR</span>
+                <span class="text-gray-700">{formatPrice(cart.subtotal)} EUR</span>
               </div>
 
-              {#if discount > 0}
+              {#if cart.discount > 0}
                 <div class="flex justify-between text-sm text-green-600">
                   <span>Discount</span>
-                  <span>-{formatPrice(discount)} EUR</span>
+                  <span>-{formatPrice(cart.discount)} EUR</span>
                 </div>
               {/if}
 
-              {#if cartIsTaxExempt}
+              {#if cart.isTaxExempt}
                 <div class="flex justify-between text-sm text-gray-500">
                   <span>Tax exempt (B2B)</span>
                   <span>0.00 EUR</span>
                 </div>
-              {:else if taxTotal > 0}
+              {:else if cart.taxTotal > 0}
                 <div class="flex justify-between text-sm text-gray-500">
                   <span>Incl. VAT</span>
-                  <span>{formatPrice(taxTotal)} EUR</span>
+                  <span>{formatPrice(cart.taxTotal)} EUR</span>
                 </div>
               {/if}
             </div>
 
             <div class="flex justify-between border-t border-gray-200 pt-2">
               <span class="font-semibold text-gray-900">Total</span>
-              <span class="font-semibold text-gray-900">{formatPrice(total)} EUR</span>
+              <span class="font-semibold text-gray-900">{formatPrice(cart.total)} EUR</span>
             </div>
           {/if}
 

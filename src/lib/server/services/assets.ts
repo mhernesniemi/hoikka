@@ -11,7 +11,7 @@ import {
 	collections
 } from "$lib/server/db/schema.js";
 import { eq, asc, desc, isNotNull, isNull, notInArray } from "drizzle-orm";
-import { remove as removeFile } from "$lib/server/storage.js";
+import { remove as removeFile } from "$lib/server/storage/index.js";
 
 const MIME_TYPES: Record<string, string> = {
 	".jpg": "image/jpeg",

@@ -4,7 +4,6 @@
   import { cn } from "$lib/utils";
   import SearchBar from "$lib/components/storefront/SearchBar.svelte";
   import CartSheet from "$lib/components/storefront/CartSheet.svelte";
-  import { cartStore } from "$lib/stores/cart.svelte";
   import { wishlistStore } from "$lib/stores/wishlist.svelte";
   import { productStore } from "$lib/stores/products.svelte";
   import type { LayoutData } from "./$types";
@@ -43,10 +42,6 @@
   });
 
   // Sync server data to stores for optimistic updates
-  $effect(() => {
-    cartStore.sync(data.cart);
-  });
-
   $effect(() => {
     wishlistStore.sync(data.wishlistCount);
   });
@@ -108,7 +103,7 @@
               <a href="/sign-in"><UserIcon class="h-6 w-6" /></a>
             {/if}
 
-            <CartSheet />
+            <CartSheet initialItemCount={data.cartItemCount} />
           </nav>
         </div>
 

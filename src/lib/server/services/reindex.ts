@@ -1,10 +1,8 @@
 /**
  * Reindex logic for the SQLite FTS5 product search table.
- * Accepts a db instance so the same code runs from services and the standalone
- * reindex script.
  */
 import { eq, and, sql, isNull } from "drizzle-orm";
-import type { BunSQLiteDatabase } from "drizzle-orm/bun-sqlite";
+import type { Db } from "../db/index.js";
 import {
 	products,
 	productVariants,
@@ -23,9 +21,6 @@ interface FeaturedAssetJson {
 
 type FacetsJson = Record<string, { code: string; name: string; facetValueId: number }[]>;
 type VariantFacetImagesJson = Record<string, Record<string, string>>;
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type Db = BunSQLiteDatabase<any>;
 
 export async function reindexProduct(db: Db, productId: number): Promise<void> {
 	const [product] = await db

@@ -2,13 +2,13 @@
   import type { PageData } from "./$types.js";
   import Check from "@lucide/svelte/icons/check";
   import { formatPrice } from "$lib/utils.js";
-  import { cartStore } from "$lib/stores/cart.svelte";
+  import { getCart } from "$lib/remote/cart.remote";
   import { invalidateAll } from "$app/navigation";
 
   let { data }: { data: PageData } = $props();
 
-  // Clear cart after checkout and refresh all server data
-  cartStore.sync(null);
+  // The cart cookie was cleared on completion — refresh the cart query and layout data
+  getCart().refresh();
   invalidateAll();
 </script>
 

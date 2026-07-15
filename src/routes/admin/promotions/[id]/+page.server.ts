@@ -50,10 +50,7 @@ export const actions: Actions = {
 			? Number(data.get("discountValue"))
 			: undefined;
 		const appliesTo = data.get("appliesTo") as
-			| "all"
-			| "specific_products"
-			| "specific_collections"
-			| null;
+			"all" | "specific_products" | "specific_collections" | null;
 		const minOrderAmountRaw = data.get("minOrderAmount")
 			? Number(data.get("minOrderAmount"))
 			: null;

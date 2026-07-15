@@ -5,6 +5,7 @@
   import { cn } from "$lib/utils";
   import { imageUrl } from "$lib/image";
   import { cartStore } from "$lib/stores/cart.svelte";
+  import { addToCart } from "$lib/remote/cart.remote";
   import type { PageData, ActionData } from "./$types";
   import Heart from "@lucide/svelte/icons/heart";
   import ImageIcon from "@lucide/svelte/icons/image";
@@ -15,6 +16,18 @@
 
   let removingId = $state<number | null>(null);
   let addingId = $state<number | null>(null);
+
+  async function handleAddToCart(variantId: number) {
+    addingId = variantId;
+    cartStore.open();
+    try {
+      await addToCart({ variantId, quantity: 1 });
+    } catch {
+      // The cart sheet shows the authoritative state either way
+    } finally {
+      addingId = null;
+    }
+  }
   let message = $state<{ type: "success" | "error"; text: string } | null>(null);
 
   function getName(item: (typeof items)[0]): string {
@@ -143,26 +156,13 @@
                 </form>
 
                 {#if variantId && available}
-                  <form
-                    method="POST"
-                    action="?/addToCart"
-                    use:enhance={() => {
-                      addingId = variantId;
-                      // Open cart immediately with loading state
-                      cartStore.setLoading(true);
-                      cartStore.open();
-                      return async ({ update }) => {
-                        await update();
-                        addingId = null;
-                        cartStore.setLoading(false);
-                      };
-                    }}
+                  <Button
+                    size="sm"
+                    disabled={addingId === variantId}
+                    onclick={() => handleAddToCart(variantId)}
                   >
-                    <input type="hidden" name="variantId" value={variantId} />
-                    <Button type="submit" size="sm" disabled={addingId === variantId}>
-                      {addingId === variantId ? "Adding..." : "Add to Cart"}
-                    </Button>
-                  </form>
+                    {addingId === variantId ? "Adding..." : "Add to Cart"}
+                  </Button>
                 {/if}
               </div>
             </div>

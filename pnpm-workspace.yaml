@@ -1,0 +1,8 @@
+packages:
+    - "packages/*"
+
+# pnpm 10: native deps that may run build scripts
+onlyBuiltDependencies:
+    - better-sqlite3
+    - esbuild
+    - workerd

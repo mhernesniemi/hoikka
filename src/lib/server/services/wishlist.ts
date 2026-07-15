@@ -31,7 +31,7 @@ export class WishlistService {
 		const { customerId, guestToken } = opts;
 
 		// Find existing
-		let wishlist = await this.get({ customerId, guestToken });
+		const wishlist = await this.get({ customerId, guestToken });
 
 		if (wishlist) {
 			return { wishlist, guestToken: wishlist.guestToken, isNew: false };

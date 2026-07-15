@@ -1,12 +1,12 @@
 # Hoikka
 
-[![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![Svelte](https://img.shields.io/badge/Svelte-5-ff3e00.svg)](https://svelte.dev) [![Drizzle](https://img.shields.io/badge/Drizzle-ORM-c5f74f.svg)](https://orm.drizzle.team) [![Neon](https://img.shields.io/badge/Neon-Postgres-00e599.svg)](https://neon.tech) [![Vercel](https://img.shields.io/badge/Vercel-deploy-black.svg)](https://vercel.com)
+[![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![Svelte](https://img.shields.io/badge/Svelte-5-ff3e00.svg)](https://svelte.dev) [![Drizzle](https://img.shields.io/badge/Drizzle-ORM-c5f74f.svg)](https://orm.drizzle.team) [![SQLite](https://img.shields.io/badge/SQLite-database-003b57.svg)](https://sqlite.org) [![Cloudflare](https://img.shields.io/badge/Cloudflare-ready-f38020.svg)](https://workers.cloudflare.com)
 
 ![Hoikka](static/hoikka-screenshot.jpg)
 
 [Hoikka](https://hoikka.dev) is an opinionated, full-stack e-commerce platform built with SvelteKit.
 
-It includes the storefront, admin panel, and business logic in a single lightweight codebase and is ready to deploy serverless.
+It includes the storefront, admin panel, and business logic in a single lightweight codebase running on SQLite. One switch deploys it to a plain Node.js server or to Cloudflare Workers (D1 + R2).
 
 ## Philosophy: Code Over Configuration
 
@@ -34,31 +34,35 @@ This also makes Hoikka well-suited for AI-assisted development: the codebase is 
 - [Content Pages](https://hoikka-docs.vercel.app/features/content-pages): static pages for policies, FAQs, and more
 - [Multi-Language](https://hoikka-docs.vercel.app/core/localization): translation tables for products, categories, collections, facets, and pages
 - [Asset Management](https://hoikka-docs.vercel.app/features/assets): media library with focal point cropping
-- [Integrations](https://hoikka-docs.vercel.app/integrations/overview): scheduled tasks, sync runner for ERP/PIM, webhooks with signature verification
+
+The shopping cart lives in a cookie — browsing and cart actions never write to the database, which keeps the storefront fast. An order is created only when checkout starts.
 
 ## Quick Start
 
-[![Deploy with Vercel](https://vercel.com/button)](https://www.hoikka.dev/deploy)
+```bash
+pnpx create-hoikka-app my-store
+```
 
-This provisions a Neon Postgres database and Vercel Blob storage automatically.
+The CLI clones the latest release and asks where you want to run the store:
 
-### Local Development
+- **Local / Node.js** — SQLite file + local uploads. Seeds demo products and starts `pnpm dev`.
+- **Cloudflare** — Workers + D1 + R2. The CLI creates the resources, applies migrations, and deploys.
 
-After deploying to Vercel:
+Switching targets later is one line: flip `HOIKKA_TARGET` in `.env`.
+
+### Manual setup
 
 ```bash
-# Clone your new repository and install dependencies
-git clone <your-repo>
-cd <your-repo>
-bun install
+git clone https://github.com/mhernesniemi/hoikka.git my-store
+cd my-store
+pnpm install
 
-# Link to your Vercel project and pull environment variables
-bunx vercel link
-
-# Run migrations and start dev server
-bun run db:migrate
-bun run dev
+cp .env.example .env   # set BETTER_AUTH_SECRET (openssl rand -base64 32)
+pnpm seed              # optional demo products
+pnpm dev
 ```
+
+Migrations run automatically when the server starts. Create your admin account at `/admin` on first visit.
 
 Or follow the full [installation instructions](https://hoikka-docs.vercel.app/getting-started/installation).
 
