@@ -65,6 +65,10 @@ The SQLite database is created at `./data/hoikka.db` automatically. For producti
 
 Migrations run automatically when the server starts. Create your admin account at `/admin` on first visit.
 
+### AI assistant (MCP)
+
+Hoikka ships a local [MCP](https://modelcontextprotocol.io) server (`pnpm mcp`) that lets an AI assistant inspect the schema, browse the catalog, create products (with search indexing handled for you), adjust stock, and read orders. It's registered in `.mcp.json`, so MCP-aware tools (e.g. Claude Code) discover it automatically — no setup beyond `pnpm install`.
+
 Or follow the full [installation instructions](https://hoikka-docs.vercel.app/getting-started/installation).
 
 ## Docs
