@@ -24,6 +24,16 @@ const adapter =
 const config = {
 	preprocess: vitePreprocess(),
 
+	// `state_referenced_locally` fires whenever `$state` is seeded from a prop's
+	// initial value (e.g. `let visibility = $state(data.product.visibility)`) —
+	// the intended pattern for editable draft state throughout this codebase,
+	// not a bug. Silenced globally rather than per-site to avoid ~40 ignore
+	// comments across admin edit pages.
+	onwarn: (warning, defaultHandler) => {
+		if (warning.code === "state_referenced_locally") return;
+		defaultHandler(warning);
+	},
+
 	kit: {
 		adapter,
 		experimental: {
