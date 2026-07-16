@@ -14,8 +14,6 @@ declare global {
 				emailVerified?: boolean;
 			} | null;
 			customer: Customer | null;
-			wishlistToken: string | null;
-			newWishlistToken?: string;
 			adminDark: boolean;
 		}
 		// interface PageData {}
@@ -24,6 +22,15 @@ declare global {
 			env?: {
 				DB: import("@cloudflare/workers-types").D1Database;
 				ASSETS_BUCKET: import("@cloudflare/workers-types").R2Bucket;
+				/** Optional — image resizing falls back to originals without it */
+				IMAGES?: import("@cloudflare/workers-types").ImagesBinding;
+			};
+			ctx?: { waitUntil(promise: Promise<unknown>): void };
+			caches?: {
+				default: {
+					match(url: string): Promise<Response | undefined>;
+					put(url: string, response: Response): Promise<void>;
+				};
 			};
 		}
 	}

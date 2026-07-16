@@ -1,6 +1,6 @@
 <script lang="ts">
   import { enhance } from "$app/forms";
-  import { page } from "$app/stores";
+  import { page } from "$app/state";
   import { toast } from "svelte-sonner";
   import { Button } from "$lib/components/admin/ui/button";
   import { Checkbox } from "$lib/components/admin/ui/checkbox";
@@ -29,9 +29,9 @@
   let showCancelDelete = $state(false);
 
   onMount(() => {
-    if ($page.url.searchParams.has("created")) {
+    if (page.url.searchParams.has("created")) {
       showCancelDelete = true;
-      history.replaceState({}, "", $page.url.pathname);
+      history.replaceState({}, "", page.url.pathname);
     }
   });
 

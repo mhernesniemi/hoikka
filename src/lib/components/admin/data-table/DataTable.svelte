@@ -26,7 +26,7 @@
   import DataTableColumnHeader from "./DataTableColumnHeader.svelte";
   import { cn } from "$lib/utils";
   import { goto } from "$app/navigation";
-  import { page } from "$app/stores";
+  import { page } from "$app/state";
   import Search from "@lucide/svelte/icons/search";
   import type { Snippet, Component } from "svelte";
 
@@ -57,22 +57,22 @@
   } = $props();
 
   // Initialize sorting from URL when server-paginated
-  const urlSort = serverPagination ? $page.url.searchParams.get("sort") : null;
-  const urlOrder = serverPagination ? $page.url.searchParams.get("order") : null;
+  const urlSort = serverPagination ? page.url.searchParams.get("sort") : null;
+  const urlOrder = serverPagination ? page.url.searchParams.get("order") : null;
   let sorting = $state<SortingState>(urlSort ? [{ id: urlSort, desc: urlOrder !== "asc" }] : []);
   let globalFilter = $state("");
   let rowSelection = $state<RowSelectionState>({});
   let pagination = $state<PaginationState>({ pageIndex: 0, pageSize });
 
   // Server-side search: read initial value from URL and debounce navigation
-  let serverSearchValue = $state($page.url.searchParams.get("search") ?? "");
+  let serverSearchValue = $state(page.url.searchParams.get("search") ?? "");
   let searchDebounceTimer: ReturnType<typeof setTimeout> | undefined;
 
   function handleServerSearch(value: string) {
     serverSearchValue = value;
     clearTimeout(searchDebounceTimer);
     searchDebounceTimer = setTimeout(() => {
-      const url = new URL($page.url);
+      const url = new URL(page.url);
       if (value) {
         url.searchParams.set("search", value);
       } else {
@@ -108,7 +108,7 @@
       const newSorting = typeof updater === "function" ? updater(sorting) : updater;
       sorting = newSorting;
       if (serverPagination) {
-        const url = new URL($page.url);
+        const url = new URL(page.url);
         if (newSorting.length > 0) {
           url.searchParams.set("sort", newSorting[0].id);
           url.searchParams.set("order", newSorting[0].desc ? "desc" : "asc");
@@ -170,7 +170,7 @@
   );
 
   function goToServerPage(newPage: number) {
-    const url = new URL($page.url);
+    const url = new URL(page.url);
     if (newPage <= 1) {
       url.searchParams.delete("page");
     } else {

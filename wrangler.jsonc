@@ -25,6 +25,9 @@
 			"bucket_name": "hoikka-assets"
 		}
 	],
+	"images": {
+		"binding": "IMAGES"
+	},
 	"observability": {
 		"enabled": true
 	}

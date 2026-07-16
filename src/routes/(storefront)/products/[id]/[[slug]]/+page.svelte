@@ -1,11 +1,11 @@
 <script lang="ts">
   import { enhance } from "$app/forms";
   import { cn } from "$lib/utils";
-  import { imageUrl, focalPosition } from "$lib/image";
+  import { imageUrl } from "$lib/image";
+  import Img from "$lib/components/storefront/Img.svelte";
   import { addToCart } from "$lib/remote/cart.remote";
   import { toggleWishlist } from "$lib/remote/wishlist.remote";
   import { cartStore } from "$lib/stores/cart.svelte";
-  import { wishlistStore } from "$lib/stores/wishlist.svelte";
   import { formatPrice, stripHtml } from "$lib/utils";
   import { findBestDiscount, getDiscountedPrice } from "$lib/promotion-utils";
   import ProductCard from "$lib/components/storefront/ProductCard.svelte";
@@ -192,28 +192,15 @@
   async function handleToggleWishlist() {
     isTogglingWishlist = true;
 
-    // Optimistic update
+    // Optimistic heart state — the badge count refreshes single-flight
     const willBeAdded = !isWishlisted;
     wishlistOverride = willBeAdded;
-    if (willBeAdded) {
-      wishlistStore.increment();
-    } else {
-      wishlistStore.decrement();
-    }
 
     try {
-      await toggleWishlist({
-        productId: product.id,
-        variantId: selectedVariantId ?? undefined
-      });
+      const { added } = await toggleWishlist({ productId: product.id });
+      wishlistOverride = added;
     } catch {
-      // Revert optimistic update on error
       wishlistOverride = !willBeAdded;
-      if (willBeAdded) {
-        wishlistStore.decrement();
-      } else {
-        wishlistStore.increment();
-      }
       message = { type: "error", text: "Failed to update wishlist" };
       setTimeout(() => (message = null), 3000);
     } finally {
@@ -279,11 +266,15 @@
       <div class="aspect-square overflow-hidden rounded-lg bg-gray-100">
         {#if images.length > 0}
           {@const currentImage = images[selectedImageIndex]}
-          <img
-            src={imageUrl(currentImage.source, 600)}
+          <Img
+            src={currentImage.source}
             alt={product.name}
+            width={600}
+            sizes="(max-width: 1024px) 100vw, 600px"
+            loading="eager"
+            focalX={currentImage.focalX}
+            focalY={currentImage.focalY}
             class="h-full w-full object-cover"
-            style="object-position: {focalPosition(currentImage.focalX, currentImage.focalY)}"
           />
         {:else}
           <div class="flex h-full w-full items-center justify-center text-gray-400">
@@ -310,11 +301,13 @@
                   : "border-transparent hover:border-gray-300"
               )}
             >
-              <img
-                src={imageUrl(image.source, 100)}
+              <Img
+                src={image.source}
                 alt=""
+                width={100}
+                focalX={image.focalX}
+                focalY={image.focalY}
                 class="h-full w-full object-cover"
-                style="object-position: {focalPosition(image.focalX, image.focalY)}"
               />
             </button>
           {/each}

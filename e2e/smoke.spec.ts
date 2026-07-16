@@ -36,6 +36,25 @@ test.describe("Storefront smoke tests", () => {
 		await expect(page.locator('nav[aria-label="Breadcrumb"]')).toBeVisible();
 	});
 
+	test("search-as-you-type returns FTS results", async ({ page }) => {
+		await page.goto("/products");
+
+		const searchInput = page.getByPlaceholder("Search products...");
+		await searchInput.click();
+		await searchInput.fill("mug");
+
+		// Results come from the quickSearch remote query over FTS5
+		await expect(page.getByText("Aurora Ceramic Mug").first()).toBeVisible({ timeout: 5000 });
+	});
+
+	test("facet filtering works server-side", async ({ page }) => {
+		await page.goto("/products?q=mug");
+
+		const productCards = page.locator('a[href^="/products/"]');
+		await expect(productCards.first()).toBeVisible({ timeout: 10000 });
+		await expect(page.getByRole("main")).toContainText("Aurora Ceramic Mug");
+	});
+
 	test("add to cart and view cart", async ({ page }) => {
 		await page.goto("/products");
 
@@ -87,11 +106,8 @@ test.describe("Storefront smoke tests", () => {
 		await expect(page.getByRole("main").getByText("Total").last()).toBeVisible();
 
 		// Address form is shown (first step of checkout)
-		const addressForm = page.locator('form[action="?/setShippingAddress"]');
-		const contactForm = page.locator('form[action="?/setContactInfo"]');
-		const hasForm =
-			(await addressForm.isVisible().catch(() => false)) ||
-			(await contactForm.isVisible().catch(() => false));
-		expect(hasForm).toBeTruthy();
+		const addressForm = page.getByTestId("address-form");
+		const contactForm = page.getByTestId("contact-form");
+		await expect(addressForm.or(contactForm)).toBeVisible();
 	});
 });

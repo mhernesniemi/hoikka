@@ -23,5 +23,9 @@
 
 <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
   <h1 class="mb-4 text-2xl font-bold">Products</h1>
-  <ProductListing facets={data.facets} activeDiscounts={data.activeDiscounts} />
+  <ProductListing
+    facets={data.facets}
+    listing={data.listing}
+    activeDiscounts={data.activeDiscounts}
+  />
 </div>

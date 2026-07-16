@@ -1,39 +1,11 @@
 /**
- * Search Remote Functions
+ * Header search-as-you-type. A remote query over the server FTS5 index —
+ * results are ranked and the catalog never ships to the client.
  */
-import { command } from "$app/server";
-import { productService } from "$lib/server/services/index.js";
+import { query } from "$app/server";
+import * as v from "valibot";
+import { quickSearchProducts } from "$lib/server/services/product-search.js";
 
-export interface SearchResult {
-	id: number;
-	name: string;
-	slug: string;
-	price: number;
-	image: string | null;
-}
-
-/**
- * Search products by query string
- */
-export const searchProducts = command(
-	"unchecked",
-	async (query: string): Promise<SearchResult[]> => {
-		if (!query || query.trim().length < 2) {
-			return [];
-		}
-
-		const result = await productService.list({
-			search: query.trim(),
-			limit: 8,
-			visibility: "public"
-		});
-
-		return result.items.map((product) => ({
-			id: product.id,
-			name: product.name,
-			slug: product.slug,
-			price: product.variants[0]?.price || 0,
-			image: product.featuredAsset?.source || null
-		}));
-	}
+export const quickSearch = query(v.pipe(v.string(), v.maxLength(100)), async (term) =>
+	quickSearchProducts(term)
 );

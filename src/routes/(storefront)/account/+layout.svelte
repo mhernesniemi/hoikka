@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { page } from "$app/stores";
+  import { page } from "$app/state";
   import { goto } from "$app/navigation";
   import { cn } from "$lib/utils";
   import { authClient } from "$lib/auth-client";
@@ -14,7 +14,7 @@
   ];
 
   function isActive(href: string): boolean {
-    const path = $page.url.pathname;
+    const path = page.url.pathname;
     if (href === "/account") {
       return path === "/account";
     }

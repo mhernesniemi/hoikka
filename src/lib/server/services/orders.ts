@@ -15,7 +15,6 @@ import {
 	orderLines,
 	orderPromotions,
 	productVariants,
-	productVariantTranslations,
 	promotions,
 	orderShipping,
 	products,
@@ -38,7 +37,7 @@ import { taxService, taxRateFromDb, taxRateToDb } from "./tax.js";
 import { STATE_TRANSITIONS, isValidTransition } from "./order-utils.js";
 import { promotionService } from "./promotions.js";
 import { calculateDiscount, calculateProductDiscount } from "./promotion-utils.js";
-import { categoryService } from "./categories.js";
+import { getCartView } from "./cart.js";
 
 export class OrderService {
 	/**
@@ -158,87 +157,56 @@ export class OrderService {
 				await reservationService.reserve(line.variantId, draft.id, line.id, line.quantity);
 			}
 		} else {
-			// Wipe and rebuild the draft from the cookie
+			// Wipe and rebuild the draft from the cookie. Prices, names, and tax
+			// come from getCartView — the same batched computation the cart sheet
+			// shows, so what the customer saw is exactly what gets snapshotted.
 			await reservationService.releaseForOrder(draft.id);
 			await db.delete(orderLines).where(eq(orderLines.orderId, draft.id));
 
-			const customerId = opts.customerId ?? null;
-			const isTaxExempt = await taxService.isCustomerTaxExempt(customerId);
+			const view = await getCartView(cartLines, opts.customerId ?? null, {
+				skipPromotions: true
+			});
+			const viewByVariant = new Map(view.lines.map((l) => [l.variantId, l]));
 
 			for (const cartLine of cartLines) {
-				const [variant] = await db
-					.select()
-					.from(productVariants)
-					.where(
-						and(
-							eq(productVariants.id, cartLine.variantId),
-							isNull(productVariants.deletedAt)
-						)
-					);
-				if (!variant) {
+				const line = viewByVariant.get(cartLine.variantId);
+				if (!line) {
 					stockErrors.push("An item in your cart is no longer available");
 					continue;
 				}
-
-				const [product] = await db
-					.select()
-					.from(products)
-					.where(eq(products.id, variant.productId));
-				const productName = product?.name || "Unknown Product";
-
-				let quantity = cartLine.quantity;
-				if (variant.trackInventory) {
-					const available = await reservationService.getAvailableStock(variant.id);
-					if (available <= 0) {
-						stockErrors.push(`${productName}: out of stock`);
-						continue;
-					}
-					if (quantity > available) {
-						stockErrors.push(`${productName}: only ${available} available`);
-						quantity = available;
-					}
+				if (line.outOfStock) {
+					stockErrors.push(`${line.productName}: out of stock`);
+					continue;
+				}
+				if (line.quantity < cartLine.quantity) {
+					stockErrors.push(`${line.productName}: only ${line.quantity} available`);
 				}
 
-				const taxCode = await categoryService.getProductTaxCode(variant.productId);
-				const taxRate = await taxService.getTaxRate(taxCode);
-				const effectivePrice = await this.resolveEffectivePrice(
-					variant.price,
-					variant.id,
-					customerId
-				);
-				const lineTax = taxService.calculateLineTax(
-					effectivePrice,
-					quantity,
-					taxRate,
-					isTaxExempt
-				);
-
-				const [variantTrans] = await db
-					.select()
-					.from(productVariantTranslations)
-					.where(eq(productVariantTranslations.variantId, variant.id))
-					.limit(1);
-
-				const [line] = await db
+				const [inserted] = await db
 					.insert(orderLines)
 					.values({
 						orderId: draft.id,
-						variantId: variant.id,
-						quantity,
-						unitPrice: effectivePrice,
-						lineTotal: lineTax.lineTotalGross,
-						taxCode,
-						taxRate: taxRateToDb(taxRate),
-						taxAmount: lineTax.taxAmount,
-						unitPriceNet: lineTax.unitPriceNet,
-						lineTotalNet: lineTax.lineTotalNet,
-						productName,
-						variantName: variantTrans?.name || variant.name || null,
-						sku: variant.sku
+						variantId: line.variantId,
+						quantity: line.quantity,
+						unitPrice: line.unitPrice,
+						lineTotal: line.lineTotal,
+						taxCode: line.taxCode,
+						taxRate: taxRateToDb(line.taxRate),
+						taxAmount: line.taxAmount,
+						unitPriceNet: line.unitPriceNet,
+						lineTotalNet: line.lineTotalNet,
+						productName: line.productName,
+						variantName: line.variantName,
+						sku: line.sku
 					})
 					.returning();
 
-				await reservationService.reserve(variant.id, draft.id, line.id, quantity);
+				await reservationService.reserve(
+					line.variantId,
+					draft.id,
+					inserted.id,
+					line.quantity
+				);
 			}
 
 			await this.recalculateTotals(draft.id);
@@ -423,56 +391,11 @@ export class OrderService {
 
 		const promotion = validation.promotion;
 
-		// Calculate discount based on promotion type
-		let discountAmount = 0;
-		let orderPromotionType: "order" | "product" | "shipping" = "order";
+		const { amount: discountAmount, type: orderPromotionType } =
+			await this.computePromotionDiscount(promotion, orderId, order.subtotal);
 
-		if (promotion.promotionType === "free_shipping") {
-			// Free shipping: discount = current shipping cost
-			const [shippingRecord] = await db
-				.select()
-				.from(orderShipping)
-				.where(eq(orderShipping.orderId, orderId))
-				.limit(1);
-			discountAmount = shippingRecord?.price ?? 0;
-			orderPromotionType = "shipping";
-		} else if (promotion.promotionType === "product") {
-			// Product-level discount: only qualifying lines
-			const qualifyingProductIds = await promotionService.getQualifyingProductIds(
-				promotion.id
-			);
-
-			// Get order lines with their product IDs
-			const linesWithProducts = await db
-				.select({
-					lineTotal: orderLines.lineTotal,
-					productId: products.id
-				})
-				.from(orderLines)
-				.innerJoin(productVariants, eq(orderLines.variantId, productVariants.id))
-				.innerJoin(products, eq(productVariants.productId, products.id))
-				.where(eq(orderLines.orderId, orderId));
-
-			const qualifyingLineTotal = linesWithProducts
-				.filter(
-					(l) =>
-						qualifyingProductIds === null || qualifyingProductIds.includes(l.productId)
-				)
-				.reduce((sum, l) => sum + l.lineTotal, 0);
-
-			if (qualifyingLineTotal === 0) {
-				return {
-					success: false,
-					message: "No qualifying products in your cart"
-				};
-			}
-
-			discountAmount = calculateProductDiscount(promotion, qualifyingLineTotal);
-			orderPromotionType = "product";
-		} else {
-			// Order-level discount
-			discountAmount = calculateDiscount(promotion, order.subtotal);
-			orderPromotionType = "order";
+		if (orderPromotionType === "product" && discountAmount === 0) {
+			return { success: false, message: "No qualifying products in your cart" };
 		}
 
 		// Apply promotion
@@ -503,15 +426,7 @@ export class OrderService {
 	 * Remove a specific promotion from an order
 	 */
 	async removePromotion(orderId: number, promotionId: number): Promise<void> {
-		await db
-			.delete(orderPromotions)
-			.where(
-				and(
-					eq(orderPromotions.orderId, orderId),
-					eq(orderPromotions.promotionId, promotionId)
-				)
-			);
-
+		await this.deleteOrderPromotion(orderId, promotionId);
 		await this.recalculateTotals(orderId);
 	}
 
@@ -732,7 +647,8 @@ export class OrderService {
 	}
 
 	/**
-	 * Apply qualifying automatic promotions and remove ones that no longer qualify
+	 * Apply qualifying automatic promotions and remove or update ones that no
+	 * longer qualify. Amount math lives in computePromotionDiscount.
 	 */
 	async applyAutomaticPromotions(orderId: number): Promise<void> {
 		const [order] = await db.select().from(orders).where(eq(orders.id, orderId));
@@ -742,113 +658,64 @@ export class OrderService {
 		const subtotal = lines.reduce((sum, line) => sum + line.lineTotal, 0);
 		if (subtotal === 0) return;
 
-		// Get currently applied promotions
 		const applied = await db
 			.select()
 			.from(orderPromotions)
 			.where(eq(orderPromotions.orderId, orderId));
-
 		const appliedPromoIds = applied.map((op) => op.promotionId);
 
-		// Get active automatic promotions
 		const autoPromos = await promotionService.listActiveAutomatic();
 
-		// Remove automatic promotions that no longer qualify
+		// Remove automatic promotions that are no longer active or valid;
+		// update amounts for ones that still qualify
 		for (const ap of applied) {
 			const promo = autoPromos.find((p) => p.id === ap.promotionId);
+
 			if (!promo) {
-				// Check if this was an automatic promo that's no longer active
+				// Not in the active set — remove it if it was an automatic promo
 				const [fullPromo] = await db
 					.select()
 					.from(promotions)
 					.where(eq(promotions.id, ap.promotionId));
 				if (fullPromo?.method === "automatic") {
-					await db
-						.delete(orderPromotions)
-						.where(
-							and(
-								eq(orderPromotions.orderId, orderId),
-								eq(orderPromotions.promotionId, ap.promotionId)
-							)
-						);
-					continue;
+					await this.deleteOrderPromotion(orderId, ap.promotionId);
 				}
+				continue;
 			}
-			if (promo) {
-				// Re-validate: check min order amount
-				const validation = await promotionService.validateAutomatic(promo, subtotal, {
-					customerId: order.customerId ?? undefined,
-					existingPromotionIds: appliedPromoIds.filter((id) => id !== promo.id)
-				});
-				if (!validation.valid) {
-					await db
-						.delete(orderPromotions)
-						.where(
-							and(
-								eq(orderPromotions.orderId, orderId),
-								eq(orderPromotions.promotionId, promo.id)
-							)
-						);
-				} else {
-					// Recalculate discount amount for the current subtotal
-					let newAmount = 0;
-					if (promo.promotionType === "product") {
-						const qualifyingProductIds = await promotionService.getQualifyingProductIds(
-							promo.id
-						);
-						const linesWithProducts = await db
-							.select({
-								lineTotal: orderLines.lineTotal,
-								productId: products.id
-							})
-							.from(orderLines)
-							.innerJoin(
-								productVariants,
-								eq(orderLines.variantId, productVariants.id)
-							)
-							.innerJoin(products, eq(productVariants.productId, products.id))
-							.where(eq(orderLines.orderId, orderId));
 
-						const qualifyingLineTotal = linesWithProducts
-							.filter(
-								(l) =>
-									qualifyingProductIds === null ||
-									qualifyingProductIds.includes(l.productId)
-							)
-							.reduce((sum, l) => sum + l.lineTotal, 0);
+			const validation = await promotionService.validateAutomatic(promo, subtotal, {
+				customerId: order.customerId ?? undefined,
+				existingPromotionIds: appliedPromoIds.filter((id) => id !== promo.id)
+			});
+			if (!validation.valid) {
+				await this.deleteOrderPromotion(orderId, promo.id);
+				continue;
+			}
 
-						newAmount = calculateProductDiscount(promo, qualifyingLineTotal);
-					} else if (promo.promotionType !== "free_shipping") {
-						newAmount = calculateDiscount(promo, subtotal);
-					}
+			// Shipping amounts are reconciled in recalculateTotals
+			if (promo.promotionType === "free_shipping") continue;
 
-					// Update if the amount changed (skip shipping — handled in recalculateTotals)
-					if (
-						promo.promotionType !== "free_shipping" &&
-						newAmount !== ap.discountAmount
-					) {
-						await db
-							.update(orderPromotions)
-							.set({ discountAmount: newAmount })
-							.where(
-								and(
-									eq(orderPromotions.orderId, orderId),
-									eq(orderPromotions.promotionId, promo.id)
-								)
-							);
-					}
-				}
+			const { amount } = await this.computePromotionDiscount(promo, orderId, subtotal);
+			if (amount !== ap.discountAmount) {
+				await db
+					.update(orderPromotions)
+					.set({ discountAmount: amount })
+					.where(
+						and(
+							eq(orderPromotions.orderId, orderId),
+							eq(orderPromotions.promotionId, promo.id)
+						)
+					);
 			}
 		}
 
-		// Re-fetch applied after removals
+		// Apply newly qualifying automatic promotions
 		const currentApplied = await db
 			.select()
 			.from(orderPromotions)
 			.where(eq(orderPromotions.orderId, orderId));
 		const currentAppliedIds = currentApplied.map((op) => op.promotionId);
 
-		// Try to apply new automatic promotions
 		for (const promo of autoPromos) {
 			if (currentAppliedIds.includes(promo.id)) continue;
 
@@ -856,62 +723,14 @@ export class OrderService {
 				customerId: order.customerId ?? undefined,
 				existingPromotionIds: currentAppliedIds
 			});
-
 			if (!validation.valid) continue;
 
-			// Calculate discount
-			let discountAmount = 0;
-			let orderPromotionType: "order" | "product" | "shipping" = "order";
-
-			if (promo.promotionType === "free_shipping") {
-				const [shippingRecord] = await db
-					.select()
-					.from(orderShipping)
-					.where(eq(orderShipping.orderId, orderId))
-					.limit(1);
-				discountAmount = shippingRecord?.price ?? 0;
-				orderPromotionType = "shipping";
-			} else if (promo.promotionType === "product") {
-				const qualifyingProductIds = await promotionService.getQualifyingProductIds(
-					promo.id
-				);
-				const linesWithProducts = await db
-					.select({
-						lineTotal: orderLines.lineTotal,
-						productId: products.id
-					})
-					.from(orderLines)
-					.innerJoin(productVariants, eq(orderLines.variantId, productVariants.id))
-					.innerJoin(products, eq(productVariants.productId, products.id))
-					.where(eq(orderLines.orderId, orderId));
-
-				const qualifyingLineTotal = linesWithProducts
-					.filter(
-						(l) =>
-							qualifyingProductIds === null ||
-							qualifyingProductIds.includes(l.productId)
-					)
-					.reduce((sum, l) => sum + l.lineTotal, 0);
-
-				if (qualifyingLineTotal === 0) continue;
-
-				discountAmount = calculateProductDiscount(promo, qualifyingLineTotal);
-				orderPromotionType = "product";
-			} else {
-				discountAmount = calculateDiscount(promo, subtotal);
-				orderPromotionType = "order";
-			}
-
-			if (discountAmount <= 0) continue;
+			const { amount, type } = await this.computePromotionDiscount(promo, orderId, subtotal);
+			if (amount <= 0) continue;
 
 			await db
 				.insert(orderPromotions)
-				.values({
-					orderId,
-					promotionId: promo.id,
-					discountAmount,
-					type: orderPromotionType
-				})
+				.values({ orderId, promotionId: promo.id, discountAmount: amount, type })
 				.onConflictDoNothing();
 
 			currentAppliedIds.push(promo.id);
@@ -921,6 +740,71 @@ export class OrderService {
 	// ============================================================================
 	// PRIVATE HELPERS
 	// ============================================================================
+
+	/**
+	 * Compute the current discount amount (and order-promotion type) for a
+	 * promotion against an order. The single source of truth for promo math —
+	 * used when applying codes, applying automatic promotions, and
+	 * recalculating totals.
+	 */
+	private async computePromotionDiscount(
+		promo: {
+			id: number;
+			promotionType: string | null;
+			discountType: "percentage" | "fixed_amount";
+			discountValue: number;
+		},
+		orderId: number,
+		subtotal: number
+	): Promise<{ amount: number; type: "order" | "product" | "shipping" }> {
+		if (promo.promotionType === "free_shipping") {
+			const [shippingRecord] = await db
+				.select()
+				.from(orderShipping)
+				.where(eq(orderShipping.orderId, orderId))
+				.limit(1);
+			return { amount: shippingRecord?.price ?? 0, type: "shipping" };
+		}
+
+		if (promo.promotionType === "product") {
+			const qualifyingTotal = await this.qualifyingLineTotal(orderId, promo.id);
+			return { amount: calculateProductDiscount(promo, qualifyingTotal), type: "product" };
+		}
+
+		return { amount: calculateDiscount(promo, subtotal), type: "order" };
+	}
+
+	/** Sum of line totals for the products a product-scoped promotion applies to. */
+	private async qualifyingLineTotal(orderId: number, promotionId: number): Promise<number> {
+		const qualifyingProductIds = await promotionService.getQualifyingProductIds(promotionId);
+
+		const linesWithProducts = await db
+			.select({
+				lineTotal: orderLines.lineTotal,
+				productId: products.id
+			})
+			.from(orderLines)
+			.innerJoin(productVariants, eq(orderLines.variantId, productVariants.id))
+			.innerJoin(products, eq(productVariants.productId, products.id))
+			.where(eq(orderLines.orderId, orderId));
+
+		return linesWithProducts
+			.filter(
+				(l) => qualifyingProductIds === null || qualifyingProductIds.includes(l.productId)
+			)
+			.reduce((sum, l) => sum + l.lineTotal, 0);
+	}
+
+	private async deleteOrderPromotion(orderId: number, promotionId: number): Promise<void> {
+		await db
+			.delete(orderPromotions)
+			.where(
+				and(
+					eq(orderPromotions.orderId, orderId),
+					eq(orderPromotions.promotionId, promotionId)
+				)
+			);
+	}
 
 	private async resolveEffectivePrice(
 		variantPrice: number,
@@ -1025,33 +909,11 @@ export class OrderService {
 				.where(eq(promotions.id, ap.promotionId));
 			if (!promo || promo.method !== "code") continue;
 
-			let newAmount = 0;
-			if (promo.promotionType === "product") {
-				const qualifyingProductIds = await promotionService.getQualifyingProductIds(
-					promo.id
-				);
-				const linesWithProducts = await db
-					.select({
-						lineTotal: orderLines.lineTotal,
-						productId: products.id
-					})
-					.from(orderLines)
-					.innerJoin(productVariants, eq(orderLines.variantId, productVariants.id))
-					.innerJoin(products, eq(productVariants.productId, products.id))
-					.where(eq(orderLines.orderId, orderId));
-
-				const qualifyingLineTotal = linesWithProducts
-					.filter(
-						(l) =>
-							qualifyingProductIds === null ||
-							qualifyingProductIds.includes(l.productId)
-					)
-					.reduce((sum, l) => sum + l.lineTotal, 0);
-
-				newAmount = calculateProductDiscount(promo, qualifyingLineTotal);
-			} else {
-				newAmount = calculateDiscount(promo, subtotal);
-			}
+			const { amount: newAmount } = await this.computePromotionDiscount(
+				promo,
+				orderId,
+				subtotal
+			);
 
 			if (newAmount !== ap.discountAmount) {
 				await db

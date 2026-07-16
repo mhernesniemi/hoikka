@@ -2,39 +2,22 @@
   import { goto } from "$app/navigation";
   import { formatPrice } from "$lib/utils";
   import { imageUrl } from "$lib/image";
-  import { productStore } from "$lib/stores/products.svelte";
+  import { quickSearch } from "$lib/remote/search.remote";
   import * as Command from "$lib/components/storefront/ui/command/index.js";
 
   let searchQuery = $state("");
+  let debouncedQuery = $state("");
   let showResults = $state(false);
   let containerEl = $state<HTMLDivElement | null>(null);
 
-  const MAX_RESULTS = 20;
-
-  const searchResults = $derived.by(() => {
-    const query = searchQuery.toLowerCase().trim();
-    if (!query) return [];
-    const results: {
-      id: number;
-      name: string;
-      slug: string;
-      price: number;
-      image: string | null;
-    }[] = [];
-    for (const p of productStore.products) {
-      if (p.name.toLowerCase().includes(query)) {
-        results.push({
-          id: p.id,
-          name: p.name,
-          slug: p.slug,
-          price: p.minPrice ?? 0,
-          image: p.featuredAsset?.source ?? null
-        });
-        if (results.length >= MAX_RESULTS) break;
-      }
-    }
-    return results;
+  // Debounce keystrokes before hitting the server FTS query
+  $effect(() => {
+    const q = searchQuery.trim();
+    const timer = setTimeout(() => (debouncedQuery = q), 150);
+    return () => clearTimeout(timer);
   });
+
+  const searchResults = $derived(debouncedQuery ? (quickSearch(debouncedQuery).current ?? []) : []);
 
   function handleSelect() {
     searchQuery = "";
@@ -77,7 +60,7 @@
           {#each searchResults as product (product.id)}
             <Command.LinkItem
               value={product.name}
-              href="/products/{product.id}/{product.slug}"
+              href="/products/{product.id}"
               onSelect={handleSelect}
               class="flex items-center gap-3 px-4 py-3"
             >
@@ -92,7 +75,7 @@
               {/if}
               <div class="min-w-0 flex-1">
                 <p class="truncate text-sm font-medium text-gray-900">{product.name}</p>
-                <p class="text-sm text-gray-500">{formatPrice(product.price)}</p>
+                <p class="text-sm text-gray-500">{formatPrice(product.price ?? 0)}</p>
               </div>
             </Command.LinkItem>
           {/each}

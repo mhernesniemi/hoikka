@@ -31,8 +31,6 @@ import type {
 	collections,
 	collectionTranslations,
 	collectionFilters,
-	wishlists,
-	wishlistItems,
 	reviews,
 	stockReservations,
 	taxRates,
@@ -113,7 +111,6 @@ export interface CachedProduct {
 	featuredAsset: { source: string; focalX: number; focalY: number } | null;
 	facets: Record<string, { code: string; name: string; facetValueId: number }[]>;
 	variantFacetImages: Record<string, Record<string, string>> | null;
-	createdAt: string;
 }
 
 /** Product with all related data */
@@ -348,12 +345,6 @@ export interface CollectionWithRelations extends Collection {
 // ============================================================================
 // WISHLIST TYPES
 // ============================================================================
-
-export type Wishlist = InferSelectModel<typeof wishlists>;
-export type NewWishlist = InferInsertModel<typeof wishlists>;
-
-export type WishlistItem = InferSelectModel<typeof wishlistItems>;
-export type NewWishlistItem = InferInsertModel<typeof wishlistItems>;
 
 // ============================================================================
 // REVIEW TYPES

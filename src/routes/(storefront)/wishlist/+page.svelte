@@ -6,6 +6,7 @@
   import { imageUrl } from "$lib/image";
   import { cartStore } from "$lib/stores/cart.svelte";
   import { addToCart } from "$lib/remote/cart.remote";
+  import { getWishlistCount } from "$lib/remote/wishlist.remote";
   import type { PageData, ActionData } from "./$types";
   import Heart from "@lucide/svelte/icons/heart";
   import ImageIcon from "@lucide/svelte/icons/image";
@@ -49,7 +50,7 @@
   }
 
   function getVariantId(item: (typeof items)[0]): number | null {
-    return item.item.variantId ?? item.product.variants[0]?.id ?? null;
+    return item.product.variants[0]?.id ?? null;
   }
 
   function getImage(item: (typeof items)[0]): string | null {
@@ -70,7 +71,15 @@
   <div class="mb-8 flex items-center justify-between">
     <h1 class="text-3xl font-bold">Wishlist</h1>
     {#if items.length > 0}
-      <form method="POST" action="?/clear" use:enhance>
+      <form
+        method="POST"
+        action="?/clear"
+        use:enhance={() =>
+          async ({ update }) => {
+            await update();
+            getWishlistCount().refresh();
+          }}
+      >
         <button type="submit" class="text-sm text-red-600 hover:text-red-700"> Clear all </button>
       </form>
     {/if}
@@ -141,6 +150,7 @@
                     removingId = item.item.productId;
                     return async ({ update }) => {
                       await update();
+                      getWishlistCount().refresh();
                       removingId = null;
                     };
                   }}

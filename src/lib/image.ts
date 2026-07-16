@@ -1,10 +1,21 @@
 /**
- * Return an image URL suitable for rendering. No optimization pipeline is
- * wired up locally — the `width`/`quality` args are accepted for call-site
- * stability and will be re-used when R2 + a CDN/optimizer are added.
+ * Image URL helpers. Local uploads are served by /uploads/[...path], which
+ * resizes on demand (sharp on the node target, the Cloudflare Images binding
+ * on the cloudflare target) — `width`/`quality` become `?w=&q=` params on
+ * that route. External URLs pass through untouched.
+ *
+ * Prefer the <Img> component (storefront) over calling these directly — it
+ * emits srcset/sizes and focal-point positioning for you.
  */
-export function imageUrl(source: string, _width: number, _quality = 75): string {
-	return source;
+export function imageUrl(source: string, width?: number, quality = 80): string {
+	if (!width || !source.startsWith("/uploads/")) return source;
+	return `${source}?w=${width}&q=${quality}`;
+}
+
+/** 1x/2x srcset for local uploads; undefined for external URLs. */
+export function imageSrcset(source: string, width: number, quality = 80): string | undefined {
+	if (!source.startsWith("/uploads/")) return undefined;
+	return `${imageUrl(source, width, quality)} 1x, ${imageUrl(source, width * 2, quality)} 2x`;
 }
 
 /**

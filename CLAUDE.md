@@ -7,7 +7,7 @@
 - Add tests where appropriate when adding a new feature or modifying existing code.
 - Keep the codebase lightweight and easy to understand.
 - When modifying code, remove any functions, variables, imports, or declarations that become unused as a result of the change. Do not leave dead code behind.
-- When adding fields to the `products` schema, also update the manually constructed `ProductWithRelations` objects in `src/lib/server/services/product-search.ts` and `src/lib/components/storefront/ProductListing.svelte`.
+- When adding fields to the `products` schema, also update the manually constructed `ProductWithRelations` object in `src/lib/components/storefront/ProductListing.svelte` (`toProductCard`).
 
 ## Tools
 
@@ -18,7 +18,7 @@
 
 ## UI Guidelines
 
-- Use shadcn/svelte for UI components and install new ones as needed. The project has **two separate UI component sets**: `src/lib/components/admin/ui/` (admin panel) and `src/lib/components/storefront/ui/` (storefront). The `components.json` `ui` alias points to storefront, so `pnpm dlx shadcn-svelte@next add <component>` installs there by default. After installing, copy the component to the correct path (admin or storefront) and delete the copy you don't need.
+- Use shadcn/svelte for UI components and install new ones as needed. The project has **two separate UI component sets**: `src/lib/components/admin/ui/` (admin panel) is styled with **semantic tokens** (`bg-surface`, `text-foreground`, `bg-primary`, …) defined under `[data-admin]` in `src/routes/admin/admin.css` and is meant to stay stable/stock; `src/lib/components/storefront/ui/` (storefront) uses **literal Tailwind classes** (no token indirection) and is meant to be freely customized. The `components.json` `ui` alias points to storefront, so `pnpm dlx shadcn-svelte@next add <component>` installs there by default. After installing, copy the component to the correct path (admin or storefront) and delete the copy you don't need.
 - Prefer existing UI components (e.g. `<Button>` over `<button>`).
 - Use `cn()` for conditional Tailwind classes. Never use string interpolation in `class` attributes — always use `cn()` instead.
 - Use `<AdminCard>` for card sections on admin detail pages.

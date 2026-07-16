@@ -1,13 +1,13 @@
 <script lang="ts">
-  import { page } from "$app/stores";
+  import { page } from "$app/state";
 </script>
 
 <div class="flex min-h-[60vh] flex-col items-center justify-center text-center">
-  <p class="text-6xl font-bold text-gray-900">{$page.status}</p>
+  <p class="text-6xl font-bold text-gray-900">{page.status}</p>
   <p class="mt-3 text-lg text-gray-500">
-    {$page.status === 404
+    {page.status === 404
       ? "The page you're looking for doesn't exist."
-      : $page.error?.message || "Something went wrong."}
+      : page.error?.message || "Something went wrong."}
   </p>
   <a
     href="/"

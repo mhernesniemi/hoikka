@@ -2,8 +2,9 @@ import { error } from "@sveltejs/kit";
 import type { PageServerLoad } from "./$types";
 import { categoryService } from "$lib/server/services/categories.js";
 import { facetService } from "$lib/server/services/facets.js";
+import { listProducts, parseListingParams } from "$lib/server/services/product-search.js";
 
-export const load: PageServerLoad = async ({ params }) => {
+export const load: PageServerLoad = async ({ params, url, locals }) => {
 	const pathSegments = params.path.split("/").filter(Boolean);
 	const currentSlug = pathSegments[pathSegments.length - 1];
 
@@ -30,11 +31,17 @@ export const load: PageServerLoad = async ({ params }) => {
 		facetService.list()
 	]);
 
+	const listing = await listProducts({
+		...parseListingParams(url),
+		productIds,
+		customerId: locals.customer?.id ?? null
+	});
+
 	return {
 		category,
 		breadcrumbs,
 		children,
-		productIds,
+		listing,
 		facets: allFacets.filter((f) => !f.isHidden)
 	};
 };

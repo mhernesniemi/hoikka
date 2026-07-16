@@ -1,6 +1,6 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
-  import { page } from "$app/stores";
+  import { page } from "$app/state";
   import { authClient } from "$lib/auth-client";
   import { Button } from "$lib/components/storefront/ui/button";
   import { Input } from "$lib/components/storefront/ui/input";
@@ -14,10 +14,10 @@
   let isGoogleLoading = $state(false);
 
   const successMessage = $derived.by(() => {
-    if ($page.url.searchParams.get("verified") === "true") {
+    if (page.url.searchParams.get("verified") === "true") {
       return "Email verified! Sign in to continue.";
     }
-    if ($page.url.searchParams.get("message") === "password-reset") {
+    if (page.url.searchParams.get("message") === "password-reset") {
       return "Password reset successfully. Sign in with your new password.";
     }
     return null;
@@ -36,7 +36,7 @@
         if (result.data?.user?.emailVerified === false) {
           goto(`/verify-email?email=${encodeURIComponent(email)}`);
         } else {
-          const redirect = $page.url.searchParams.get("redirect") ?? "/";
+          const redirect = page.url.searchParams.get("redirect") ?? "/";
           goto(redirect);
         }
       }
@@ -54,7 +54,7 @@
     try {
       await authClient.signIn.social({
         provider: "google",
-        callbackURL: $page.url.searchParams.get("redirect") ?? "/"
+        callbackURL: page.url.searchParams.get("redirect") ?? "/"
       });
     } catch {
       error = "Google sign-in failed. Please try again.";

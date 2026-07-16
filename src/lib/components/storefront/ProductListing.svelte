@@ -1,10 +1,10 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
-  import { page } from "$app/stores";
+  import { page } from "$app/state";
   import { cn, getCurrencySymbol } from "$lib/utils";
   import { SelectNative } from "$lib/components/storefront/ui/select-native";
   import ProductCard from "$lib/components/storefront/ProductCard.svelte";
-  import { productStore } from "$lib/stores/products.svelte";
+  import type { ListingResult } from "$lib/server/services/product-search";
   import {
     PRODUCT_SORT_OPTIONS,
     type CachedProduct,
@@ -19,28 +19,28 @@
 
   let mobileFiltersOpen = $state(false);
 
+  // The listing is computed server-side (FTS5) by the page load from the URL
+  // params; this component renders it and builds filter/sort/page URLs.
   let {
     facets,
+    listing,
     activeDiscounts = [],
-    productIds,
     basePath = "/products"
   }: {
     facets: FacetWithValues[];
+    listing: ListingResult;
     activeDiscounts?: ActiveDiscount[];
-    productIds?: number[];
     basePath?: string;
   } = $props();
 
-  const limit = 40;
-
-  // Parse URL params reactively
-  const search = $derived($page.url.searchParams.get("q") ?? undefined);
-  const currentPage = $derived(Number($page.url.searchParams.get("page")) || 1);
-  const sortKey = $derived(($page.url.searchParams.get("sort") as ProductSortKey) || "newest");
+  // Parse URL params reactively (display state only — filtering happens server-side)
+  const search = $derived(page.url.searchParams.get("q") ?? undefined);
+  const currentPage = $derived(Number(page.url.searchParams.get("page")) || 1);
+  const sortKey = $derived((page.url.searchParams.get("sort") as ProductSortKey) || "newest");
 
   const activeFilters = $derived.by(() => {
     const filters: Record<string, string[]> = {};
-    for (const [key, value] of $page.url.searchParams.entries()) {
+    for (const [key, value] of page.url.searchParams.entries()) {
       if (key.startsWith("facet_")) {
         const facetCode = key.replace("facet_", "");
         if (!filters[facetCode]) {
@@ -52,61 +52,17 @@
     return filters;
   });
 
-  // Price range from URL (stored in cents)
-  const priceMinParam = $derived.by(() => {
-    const v = $page.url.searchParams.get("price_min");
-    return v ? Math.round(Number(v) * 100) : undefined;
-  });
-  const priceMaxParam = $derived.by(() => {
-    const v = $page.url.searchParams.get("price_max");
-    return v ? Math.round(Number(v) * 100) : undefined;
-  });
-
   const hasActiveFilters = $derived(
-    Object.keys(activeFilters).length > 0 || priceMinParam != null || priceMaxParam != null
+    Object.keys(activeFilters).length > 0 ||
+      page.url.searchParams.has("price_min") ||
+      page.url.searchParams.has("price_max")
   );
 
-  // Available price range for this page's scope
-  const priceRange = $derived(
-    productStore.loaded ? productStore.getPriceRange({ productIds, search }) : null
-  );
+  const priceRange = $derived(listing.priceRange);
+  const baseFacetCounts = $derived(listing.baseFacetCounts);
+  const facetCounts = $derived(listing.facetCounts);
 
-  // Derive filtered products from store
-  const searchResult = $derived(
-    productStore.loaded
-      ? productStore.search({
-          productIds,
-          search,
-          facets: Object.keys(activeFilters).length > 0 ? activeFilters : undefined,
-          priceMin: priceMinParam,
-          priceMax: priceMaxParam,
-          sort: sortKey,
-          page: currentPage,
-          limit
-        })
-      : { items: [], total: 0 }
-  );
-
-  // Base counts: no facet/price filters, just productIds + search scope.
-  // Determines which values are relevant to this page.
-  const baseFacetCounts = $derived(
-    productStore.loaded ? productStore.getFacetCounts({ productIds, search }) : {}
-  );
-
-  // Disjunctive counts: reflects cross-group filtering + price for current state.
-  const facetCounts = $derived(
-    productStore.loaded && hasActiveFilters
-      ? productStore.getFacetCounts({
-          productIds,
-          search,
-          facets: Object.keys(activeFilters).length > 0 ? activeFilters : undefined,
-          priceMin: priceMinParam,
-          priceMax: priceMaxParam
-        })
-      : baseFacetCounts
-  );
-
-  const totalPages = $derived(Math.ceil(searchResult.total / limit));
+  const totalPages = $derived(Math.ceil(listing.pagination.total / listing.pagination.limit));
 
   // Convert CachedProduct → ProductWithRelations for ProductCard
   function toProductCard(cached: CachedProduct): ProductWithRelations {
@@ -188,7 +144,7 @@
   }
 
   function getFilterUrl(facetCode: string, valueCode: string, add: boolean): string {
-    const params = new URLSearchParams($page.url.searchParams);
+    const params = new URLSearchParams(page.url.searchParams);
 
     if (add) {
       params.append(`facet_${facetCode}`, valueCode);
@@ -217,7 +173,7 @@
     const data = new FormData(form);
     const min = (data.get("price_min") as string)?.trim();
     const max = (data.get("price_max") as string)?.trim();
-    const params = new URLSearchParams($page.url.searchParams);
+    const params = new URLSearchParams(page.url.searchParams);
 
     if (min && Number(min) > 0) {
       params.set("price_min", min);
@@ -236,7 +192,7 @@
   }
 
   function getSortUrl(sort: string): string {
-    const params = new URLSearchParams($page.url.searchParams);
+    const params = new URLSearchParams(page.url.searchParams);
     if (sort === "newest") {
       params.delete("sort");
     } else {
@@ -248,7 +204,7 @@
   }
 
   function getPageUrl(pageNum: number): string {
-    const params = new URLSearchParams($page.url.searchParams);
+    const params = new URLSearchParams(page.url.searchParams);
     if (pageNum <= 1) {
       params.delete("page");
     } else {
@@ -348,7 +304,7 @@
             type="number"
             name="price_min"
             placeholder={String(Math.floor(priceRange.min / 100))}
-            value={$page.url.searchParams.get("price_min") ?? ""}
+            value={page.url.searchParams.get("price_min") ?? ""}
             oninput={(e) => applyPriceFilter(e.currentTarget.form!)}
             min="0"
             step="any"
@@ -359,7 +315,7 @@
             type="number"
             name="price_max"
             placeholder={String(Math.ceil(priceRange.max / 100))}
-            value={$page.url.searchParams.get("price_max") ?? ""}
+            value={page.url.searchParams.get("price_max") ?? ""}
             oninput={(e) => applyPriceFilter(e.currentTarget.form!)}
             min="0"
             step="any"
@@ -370,83 +326,70 @@
     {/if}
 
     <!-- Facet Filters -->
-    {#if productStore.loaded}
-      {#each facets as facet}
-        {@const baseMap = new Map(
-          (baseFacetCounts[facet.code] ?? []).map((v) => [v.code, v.count])
-        )}
-        {@const countsMap = new Map((facetCounts[facet.code] ?? []).map((v) => [v.code, v.count]))}
-        {@const relevantValues = facet.values.filter(
-          (v) => (baseMap.get(v.code) ?? 0) > 0 || isFilterActive(facet.code, v.code)
-        )}
-        {#if relevantValues.length > 0}
-          <div class="mb-6">
-            <h3 class="mb-3 font-semibold">{facet.name}</h3>
-            <div class="space-y-2">
-              {#each relevantValues as value}
-                {@const count = countsMap.get(value.code) ?? 0}
-                {@const active = isFilterActive(facet.code, value.code)}
-                {@const disabled = count === 0 && !active}
-                {#if disabled}
-                  <span
-                    class="flex cursor-default items-center justify-between text-sm text-gray-300"
-                  >
-                    <span class="flex items-center gap-2">
-                      <span
-                        class="flex h-4 w-4 items-center justify-center rounded border border-gray-200"
-                      ></span>
-                      {value.name}
-                    </span>
-                    <span>(0)</span>
+    {#each facets as facet (facet.id)}
+      {@const baseMap = new Map(
+        (baseFacetCounts[facet.code] ?? []).map((v) => [v.valueCode, v.count])
+      )}
+      {@const countsMap = new Map(
+        (facetCounts[facet.code] ?? []).map((v) => [v.valueCode, v.count])
+      )}
+      {@const relevantValues = facet.values.filter(
+        (v) => (baseMap.get(v.code) ?? 0) > 0 || isFilterActive(facet.code, v.code)
+      )}
+      {#if relevantValues.length > 0}
+        <div class="mb-6">
+          <h3 class="mb-3 font-semibold">{facet.name}</h3>
+          <div class="space-y-2">
+            {#each relevantValues as value}
+              {@const count = countsMap.get(value.code) ?? 0}
+              {@const active = isFilterActive(facet.code, value.code)}
+              {@const disabled = count === 0 && !active}
+              {#if disabled}
+                <span
+                  class="flex cursor-default items-center justify-between text-sm text-gray-300"
+                >
+                  <span class="flex items-center gap-2">
+                    <span
+                      class="flex h-4 w-4 items-center justify-center rounded border border-gray-200"
+                    ></span>
+                    {value.name}
                   </span>
-                {:else}
-                  <a
-                    href={getFilterUrl(facet.code, value.code, !active)}
-                    class={cn(
-                      "flex items-center justify-between text-sm",
-                      active ? "font-medium text-blue-600" : "text-gray-600 hover:text-gray-900"
-                    )}
-                  >
-                    <span class="flex items-center gap-2">
-                      <span
-                        class={cn(
-                          "flex h-4 w-4 items-center justify-center rounded border",
-                          active ? "border-blue-600 bg-blue-600" : "border-gray-300"
-                        )}
-                      >
-                        {#if active}
-                          <Check class="h-3 w-3 text-white" />
-                        {/if}
-                      </span>
-                      {value.name}
+                  <span>(0)</span>
+                </span>
+              {:else}
+                <a
+                  href={getFilterUrl(facet.code, value.code, !active)}
+                  class={cn(
+                    "flex items-center justify-between text-sm",
+                    active ? "font-medium text-blue-600" : "text-gray-600 hover:text-gray-900"
+                  )}
+                >
+                  <span class="flex items-center gap-2">
+                    <span
+                      class={cn(
+                        "flex h-4 w-4 items-center justify-center rounded border",
+                        active ? "border-blue-600 bg-blue-600" : "border-gray-300"
+                      )}
+                    >
+                      {#if active}
+                        <Check class="h-3 w-3 text-white" />
+                      {/if}
                     </span>
-                    <span class="text-gray-400">({count})</span>
-                  </a>
-                {/if}
-              {/each}
-            </div>
+                    {value.name}
+                  </span>
+                  <span class="text-gray-400">({count})</span>
+                </a>
+              {/if}
+            {/each}
           </div>
-        {/if}
-      {/each}
-    {/if}
+        </div>
+      {/if}
+    {/each}
   </aside>
 
   <!-- Products Grid -->
   <div class="flex-1">
-    {#if !productStore.loaded}
-      <!-- Skeleton grid while cache streams in -->
-      <div class="grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-3">
-        {#each Array(6) as _}
-          <div class="animate-pulse overflow-hidden rounded-lg border border-gray-200">
-            <div class="aspect-square bg-gray-200"></div>
-            <div class="p-4">
-              <div class="h-4 w-3/4 rounded bg-gray-200"></div>
-              <div class="mt-2 h-4 w-1/4 rounded bg-gray-200"></div>
-            </div>
-          </div>
-        {/each}
-      </div>
-    {:else if searchResult.items.length === 0}
+    {#if listing.items.length === 0}
       <div class="py-12 text-center text-gray-500">
         {#if search}
           <p>No products found for "<span class="font-medium text-gray-900">{search}</span>"</p>
@@ -464,7 +407,7 @@
       </div>
     {:else}
       <div class="grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-3">
-        {#each searchResult.items as product (product.id)}
+        {#each listing.items as product (product.id)}
           <ProductCard
             product={toProductCard(product)}
             {activeDiscounts}

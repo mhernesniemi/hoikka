@@ -1,5 +1,5 @@
 /**
- * Server hooks for authentication, customer sync, and wishlist handling.
+ * Server hooks for authentication and customer sync.
  * Uses Better Auth for authentication.
  */
 import { sequence } from "@sveltejs/kit/hooks";
@@ -10,16 +10,21 @@ import { customers } from "$lib/server/db/schema.js";
 import { eq } from "drizzle-orm";
 import { stringify } from "devalue";
 import { env } from "$env/dynamic/private";
-import { wishlistService } from "$lib/server/services/index.js";
-
-const WISHLIST_COOKIE_NAME = "wishlist_token";
-const WISHLIST_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
-
-const isProduction = env.NODE_ENV === "production";
 
 // Session handler — validates session via Better Auth and syncs customer record.
 const sessionHandler: Handle = async ({ event, resolve }) => {
 	event.locals.user = null;
+
+	// Most storefront traffic is anonymous — skip the session DB lookup
+	// entirely when no Better Auth session cookie is present.
+	const hasSessionCookie = event.request.headers
+		.get("cookie")
+		?.includes("better-auth.session_token");
+	if (!hasSessionCookie) {
+		event.locals.customer = null;
+		event.locals.adminDark = event.cookies.get("admin-dark") === "1";
+		return resolve(event);
+	}
 
 	try {
 		const result = await auth.api.getSession({ headers: event.request.headers });
@@ -74,32 +79,6 @@ const sessionHandler: Handle = async ({ event, resolve }) => {
 	return resolve(event);
 };
 
-const wishlistHandler: Handle = async ({ event, resolve }) => {
-	const wishlistToken = event.cookies.get(WISHLIST_COOKIE_NAME) ?? null;
-	event.locals.wishlistToken = wishlistToken;
-
-	if (event.locals.customer && wishlistToken) {
-		try {
-			await wishlistService.transferToCustomer(wishlistToken, event.locals.customer.id);
-			event.cookies.delete(WISHLIST_COOKIE_NAME, { path: "/" });
-			event.locals.wishlistToken = null;
-		} catch {
-			// Transfer failed - ignore
-		}
-	}
-
-	const response = await resolve(event);
-
-	if (event.locals.newWishlistToken) {
-		response.headers.append(
-			"Set-Cookie",
-			`${WISHLIST_COOKIE_NAME}=${event.locals.newWishlistToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${WISHLIST_COOKIE_MAX_AGE}${isProduction ? "; Secure" : ""}`
-		);
-	}
-
-	return response;
-};
-
 const demoGuard: Handle = async ({ event, resolve }) => {
 	if (
 		env.DEMO_MODE === "true" &&
@@ -119,7 +98,7 @@ const demoGuard: Handle = async ({ event, resolve }) => {
 	return resolve(event);
 };
 
-export const handle = sequence(demoGuard, sessionHandler, wishlistHandler);
+export const handle = sequence(demoGuard, sessionHandler);
 
 export const handleError: HandleServerError = async ({ error, event, status, message }) => {
 	const errorId = crypto.randomUUID();

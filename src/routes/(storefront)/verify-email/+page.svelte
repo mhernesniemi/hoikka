@@ -1,6 +1,6 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
-  import { page } from "$app/stores";
+  import { page } from "$app/state";
   import { authClient } from "$lib/auth-client";
   import { Button } from "$lib/components/storefront/ui/button";
   import { Input } from "$lib/components/storefront/ui/input";
@@ -14,8 +14,8 @@
   let cooldown = $state(0);
   let sent = $state(false);
 
-  const email = $derived($page.url.searchParams.get("email") ?? "");
-  const redirect = $derived($page.url.searchParams.get("redirect") ?? "/");
+  const email = $derived(page.url.searchParams.get("email") ?? "");
+  const redirect = $derived(page.url.searchParams.get("redirect") ?? "/");
 
   let cooldownInterval: ReturnType<typeof setInterval> | undefined;
 

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { enhance } from "$app/forms";
   import { cn } from "$lib/utils";
-  import { page } from "$app/stores";
+  import { page } from "$app/state";
   import { onMount } from "svelte";
   import { toast } from "svelte-sonner";
   import { Button } from "$lib/components/admin/ui/button";
@@ -27,9 +27,9 @@
   let selectedCustomerIds = $state<Set<number>>(new Set());
 
   onMount(() => {
-    if ($page.url.searchParams.has("created")) {
+    if (page.url.searchParams.has("created")) {
       toast.success("Customer group created successfully");
-      history.replaceState({}, "", $page.url.pathname);
+      history.replaceState({}, "", page.url.pathname);
     }
   });
 

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { enhance } from "$app/forms";
-  import { page } from "$app/stores";
+  import { page } from "$app/state";
   import { cn } from "$lib/utils";
   import { onMount } from "svelte";
   import { Button } from "$lib/components/admin/ui/button";
@@ -102,9 +102,9 @@
   });
 
   onMount(() => {
-    if ($page.url.searchParams.has("created")) {
+    if (page.url.searchParams.has("created")) {
       toast.success("Promotion created successfully");
-      history.replaceState({}, "", $page.url.pathname);
+      history.replaceState({}, "", page.url.pathname);
     }
   });
 

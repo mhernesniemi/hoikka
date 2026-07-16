@@ -33,7 +33,8 @@ export default defineConfig({
 			target === "cloudflare"
 				? {
 						"$lib/server/db/node.js": stub("./src/lib/server/db/node-stub.ts"),
-						"$lib/server/storage/fs.js": stub("./src/lib/server/storage/fs-stub.ts")
+						"$lib/server/storage/fs.js": stub("./src/lib/server/storage/fs-stub.ts"),
+						"$lib/server/images/node.js": stub("./src/lib/server/images/node-stub.ts")
 					}
 				: {}
 	},

@@ -1,9 +1,10 @@
 import type { PageServerLoad } from "./$types";
 import { collectionService } from "$lib/server/services/collections.js";
 import { facetService } from "$lib/server/services/facets.js";
+import { listProducts, parseListingParams } from "$lib/server/services/product-search.js";
 import { error, redirect } from "@sveltejs/kit";
 
-export const load: PageServerLoad = async ({ params, locals }) => {
+export const load: PageServerLoad = async ({ params, url, locals }) => {
 	const id = Number(params.id);
 
 	if (isNaN(id)) {
@@ -27,9 +28,15 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		facetService.list()
 	]);
 
+	const listing = await listProducts({
+		...parseListingParams(url),
+		productIds,
+		customerId: locals.customer?.id ?? null
+	});
+
 	return {
 		collection,
-		productIds,
+		listing,
 		facets: allFacets.filter((f) => !f.isHidden)
 	};
 };

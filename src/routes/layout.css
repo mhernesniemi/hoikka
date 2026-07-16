@@ -12,7 +12,7 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* Admin theme tokens — registered here so Tailwind generates the utilities.
-   Actual values are set via CSS variables in admin.css (:root / .dark). */
+   Actual values are set via CSS variables in admin.css ([data-admin] / .dark). */
 @theme inline {
 	--color-background: var(--color-background);
 	--color-surface: var(--color-surface);
@@ -27,11 +27,19 @@
 
 	--color-border: var(--color-border);
 	--color-input-border: var(--color-input-border);
+	--color-input-border-hover: var(--color-input-border-hover);
 
 	--color-hover: var(--color-hover);
 
 	--color-destructive-subtle: var(--color-destructive-subtle);
 	--color-accent-subtle: var(--color-accent-subtle);
+
+	--color-primary: var(--color-primary);
+	--color-primary-hover: var(--color-primary-hover);
+	--color-primary-foreground: var(--color-primary-foreground);
+	--color-primary-border: var(--color-primary-border);
+
+	--color-button-foreground: var(--color-button-foreground);
 }
 
 /* Cursor pointer for clickable elements */

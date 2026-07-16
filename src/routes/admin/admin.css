@@ -20,6 +20,21 @@
 
 	--color-destructive-subtle: oklch(0.971 0.013 17.38);
 	--color-accent-subtle: oklch(0.932 0.032 255);
+
+	--color-input-border-hover: color-mix(in oklab, var(--color-foreground) 20%, transparent);
+
+	/* Button "default" variant: solid blue, no border */
+	--color-primary: oklch(54.6% 0.245 262.881); /* blue-600 */
+	--color-primary-hover: oklch(48.8% 0.243 264.376); /* blue-700 */
+	--color-primary-foreground: #fff;
+	--color-primary-border: transparent;
+	--btn-primary-border-width: 0px;
+
+	/* Text on outline/ghost buttons */
+	--color-button-foreground: var(--color-foreground-secondary);
+
+	/* Labels have a small bottom margin in the admin */
+	--label-margin: 0.25rem;
 }
 
 [data-admin].dark {
@@ -41,6 +56,9 @@
 
 	--color-destructive-subtle: oklch(0.24 0.05 25);
 	--color-accent-subtle: oklch(0.24 0.03 265);
+
+	--color-primary: oklch(42.4% 0.199 265.638); /* blue-800 */
+	--color-primary-hover: oklch(42.4% 0.199 265.638 / 0.9); /* blue-800/90 */
 }
 
 /* ── Dark mode: native input controls (date pickers, etc.) ───────── */
@@ -104,4 +122,10 @@
 	outline: none;
 	--tw-ring-shadow: none;
 	--tw-ring-offset-shadow: none;
+}
+
+/* Keep the forms-plugin placeholder color (gray-500) that the admin command
+   palette has always had, overriding the component's `placeholder:text-placeholder`. */
+[data-admin] [data-slot="command-input"]::placeholder {
+	color: oklch(55.1% 0.027 264.364);
 }

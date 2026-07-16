@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { ProductWithRelations } from "$lib/types";
   import { formatPrice, cn } from "$lib/utils";
-  import { imageUrl, focalPosition } from "$lib/image";
+  import Img from "$lib/components/storefront/Img.svelte";
   import { findBestDiscount, getDiscountedPrice, type ActiveDiscount } from "$lib/promotion-utils";
   import ImageIcon from "@lucide/svelte/icons/image";
 
@@ -59,17 +59,17 @@
   {/if}
   <div class="aspect-square overflow-hidden bg-gray-100">
     {#if product.featuredAsset}
-      <img
-        src={imageUrl(product.featuredAsset.source, 400)}
+      <Img
+        src={product.featuredAsset.source}
         alt={name}
+        width={400}
+        sizes="(max-width: 640px) 50vw, 33vw"
+        focalX={product.featuredAsset.focalX}
+        focalY={product.featuredAsset.focalY}
         class={cn(
           "h-full w-full object-cover transition-transform group-hover:scale-105",
           grayscale && "opacity-70 grayscale group-hover:opacity-90 group-hover:grayscale-0"
         )}
-        style="object-position: {focalPosition(
-          product.featuredAsset.focalX,
-          product.featuredAsset.focalY
-        )}"
       />
     {:else}
       <div class="flex h-full w-full items-center justify-center text-gray-400">

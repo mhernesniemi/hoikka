@@ -1,6 +1,6 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
-  import { page } from "$app/stores";
+  import { page } from "$app/state";
   import { authClient } from "$lib/auth-client";
   import { Button } from "$lib/components/storefront/ui/button";
   import { Input } from "$lib/components/storefront/ui/input";
@@ -41,7 +41,7 @@
     try {
       await authClient.signIn.social({
         provider: "google",
-        callbackURL: $page.url.searchParams.get("redirect") ?? "/"
+        callbackURL: page.url.searchParams.get("redirect") ?? "/"
       });
     } catch {
       error = "Google sign-in failed. Please try again.";

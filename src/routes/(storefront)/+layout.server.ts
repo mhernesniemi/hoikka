@@ -1,25 +1,15 @@
-import { wishlistService } from "$lib/server/services/wishlist.js";
-import { getAllProductCards } from "$lib/server/services/product-search.js";
 import { promotionService } from "$lib/server/services/promotions.js";
 import { parseCartCookie, countItems, CART_COOKIE } from "$lib/server/cart-cookie.js";
+import { parseWishlistCookie, WISHLIST_COOKIE } from "$lib/server/wishlist-cookie.js";
 import type { LayoutServerLoad } from "./$types";
 
-export const load: LayoutServerLoad = async ({ locals, cookies }) => {
-	const [wishlistCount, activeDiscounts] = await Promise.all([
-		wishlistService.getCount({
-			customerId: locals.customer?.id,
-			guestToken: locals.wishlistToken
-		}),
-		promotionService.getActiveProductDiscounts()
-	]);
+export const load: LayoutServerLoad = async ({ cookies }) => {
+	const activeDiscounts = await promotionService.getActiveProductDiscounts();
 
-	// The cart is a cookie — counting items costs zero DB reads
-	const cartItemCount = countItems(parseCartCookie(cookies.get(CART_COOKIE)));
-
+	// Cart and wishlist are cookies — counting them costs zero DB reads
 	return {
-		wishlistCount,
-		cartItemCount,
-		cachedProducts: getAllProductCards(locals.customer?.id ?? null),
+		cartItemCount: countItems(parseCartCookie(cookies.get(CART_COOKIE))),
+		wishlistCount: parseWishlistCookie(cookies.get(WISHLIST_COOKIE)).length,
 		activeDiscounts
 	};
 };

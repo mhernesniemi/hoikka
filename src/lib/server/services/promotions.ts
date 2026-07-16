@@ -23,7 +23,7 @@ import type {
 	PromotionWithRelations,
 	PaginatedResult
 } from "$lib/types.js";
-import { calculateDiscount } from "./promotion-utils.js";
+import { calculateDiscount, canCombinePromotions } from "./promotion-utils.js";
 
 export class PromotionService {
 	/**
@@ -73,6 +73,7 @@ export class PromotionService {
 			);
 		}
 
+		this.clearDiscountsCache();
 		return promotion;
 	}
 
@@ -287,6 +288,7 @@ export class PromotionService {
 			}
 		}
 
+		this.clearDiscountsCache();
 		return updated;
 	}
 
@@ -302,43 +304,25 @@ export class PromotionService {
 	 */
 	async delete(id: number): Promise<boolean> {
 		await db.delete(promotions).where(eq(promotions.id, id));
+		this.clearDiscountsCache();
 		return true;
 	}
 
 	/**
-	 * Validate a promotion code
-	 * Returns the promotion if valid, or an error message if not
+	 * Shared validation of a promotion's order conditions (enabled, minimum
+	 * amount, per-customer limit, combination rules, customer-group
+	 * restriction). Used by both the code path and the automatic path.
 	 */
-	async validate(
-		code: string,
+	private async validateConditions(
+		promotion: Promotion,
 		orderAmount: number,
 		options?: {
 			customerId?: number;
 			existingPromotionIds?: number[];
 		}
-	): Promise<{ valid: boolean; promotion?: Promotion; error?: string }> {
-		const promotion = await this.getByCode(code);
-
-		if (!promotion) {
-			return { valid: false, error: "Invalid promotion code" };
-		}
-
+	): Promise<{ valid: boolean; error?: string }> {
 		if (!promotion.enabled) {
 			return { valid: false, error: "Promotion is not active" };
-		}
-
-		const now = new Date();
-
-		if (promotion.startsAt && promotion.startsAt > now) {
-			return { valid: false, error: "Promotion has not started yet" };
-		}
-
-		if (promotion.endsAt && promotion.endsAt < now) {
-			return { valid: false, error: "Promotion has expired" };
-		}
-
-		if (promotion.usageLimit && promotion.usageCount >= promotion.usageLimit) {
-			return { valid: false, error: "Promotion usage limit reached" };
 		}
 
 		if (promotion.minOrderAmount && orderAmount < promotion.minOrderAmount) {
@@ -363,7 +347,6 @@ export class PromotionService {
 				.from(promotions)
 				.where(inArray(promotions.id, options.existingPromotionIds));
 
-			const { canCombinePromotions } = await import("./promotion-utils.js");
 			if (!canCombinePromotions(existingPromos, promotion)) {
 				return {
 					valid: false,
@@ -374,12 +357,12 @@ export class PromotionService {
 
 		// Customer group restriction check
 		if (promotion.customerGroupId) {
-			if (!options?.customerId) {
-				return {
-					valid: false,
-					error: "This promotion is restricted to specific customers"
-				};
-			}
+			const restricted = {
+				valid: false,
+				error: "This promotion is restricted to specific customers"
+			};
+			if (!options?.customerId) return restricted;
+
 			const [membership] = await db
 				.select()
 				.from(customerGroupMembers)
@@ -389,13 +372,46 @@ export class PromotionService {
 						eq(customerGroupMembers.groupId, promotion.customerGroupId)
 					)
 				);
-			if (!membership) {
-				return {
-					valid: false,
-					error: "This promotion is restricted to specific customers"
-				};
-			}
+			if (!membership) return restricted;
 		}
+
+		return { valid: true };
+	}
+
+	/**
+	 * Validate a promotion code
+	 * Returns the promotion if valid, or an error message if not
+	 */
+	async validate(
+		code: string,
+		orderAmount: number,
+		options?: {
+			customerId?: number;
+			existingPromotionIds?: number[];
+		}
+	): Promise<{ valid: boolean; promotion?: Promotion; error?: string }> {
+		const promotion = await this.getByCode(code);
+
+		if (!promotion) {
+			return { valid: false, error: "Invalid promotion code" };
+		}
+
+		const now = new Date();
+
+		if (promotion.startsAt && promotion.startsAt > now) {
+			return { valid: false, error: "Promotion has not started yet" };
+		}
+
+		if (promotion.endsAt && promotion.endsAt < now) {
+			return { valid: false, error: "Promotion has expired" };
+		}
+
+		if (promotion.usageLimit && promotion.usageCount >= promotion.usageLimit) {
+			return { valid: false, error: "Promotion usage limit reached" };
+		}
+
+		const conditions = await this.validateConditions(promotion, orderAmount, options);
+		if (!conditions.valid) return conditions;
 
 		return { valid: true, promotion };
 	}
@@ -514,53 +530,7 @@ export class PromotionService {
 			existingPromotionIds?: number[];
 		}
 	): Promise<{ valid: boolean; error?: string }> {
-		if (!promotion.enabled) {
-			return { valid: false, error: "Promotion is not active" };
-		}
-
-		if (promotion.minOrderAmount && orderAmount < promotion.minOrderAmount) {
-			return { valid: false, error: "Minimum order amount not met" };
-		}
-
-		if (promotion.usageLimitPerCustomer && options?.customerId) {
-			const usageCount = await this.getCustomerUsageCount(promotion.id, options.customerId);
-			if (usageCount >= promotion.usageLimitPerCustomer) {
-				return { valid: false, error: "Per-customer usage limit reached" };
-			}
-		}
-
-		if (options?.existingPromotionIds?.length) {
-			const existingPromos = await db
-				.select()
-				.from(promotions)
-				.where(inArray(promotions.id, options.existingPromotionIds));
-
-			const { canCombinePromotions } = await import("./promotion-utils.js");
-			if (!canCombinePromotions(existingPromos, promotion)) {
-				return { valid: false, error: "Cannot combine with existing promotions" };
-			}
-		}
-
-		// Customer group restriction check
-		if (promotion.customerGroupId) {
-			if (!options?.customerId) {
-				return { valid: false, error: "Restricted to specific customers" };
-			}
-			const [membership] = await db
-				.select()
-				.from(customerGroupMembers)
-				.where(
-					and(
-						eq(customerGroupMembers.customerId, options.customerId),
-						eq(customerGroupMembers.groupId, promotion.customerGroupId)
-					)
-				);
-			if (!membership) {
-				return { valid: false, error: "Restricted to specific customers" };
-			}
-		}
-
-		return { valid: true };
+		return this.validateConditions(promotion, orderAmount, options);
 	}
 
 	/**
@@ -572,18 +542,16 @@ export class PromotionService {
 
 	/**
 	 * Get active automatic discounts that apply to products (for storefront display)
-	 * Returns lightweight objects with resolved product scopes
+	 * Returns lightweight objects with resolved product scopes.
+	 *
+	 * Runs on every storefront page load, so results are cached briefly
+	 * (per server process / Workers isolate). Admin mutations clear the cache.
 	 */
-	async getActiveProductDiscounts(): Promise<
-		{
-			id: number;
-			title: string | null;
-			discountType: string;
-			discountValue: number;
-			promotionType: string;
-			productIds: number[] | null;
-		}[]
-	> {
+	async getActiveProductDiscounts(): Promise<ActiveProductDiscount[]> {
+		if (discountsCache && Date.now() < discountsCache.expires) {
+			return discountsCache.value;
+		}
+
 		const activeAutomatic = await this.listActiveAutomatic();
 
 		// Filter out free_shipping — it doesn't affect product prices
@@ -600,9 +568,27 @@ export class PromotionService {
 			}))
 		);
 
+		discountsCache = { value: results, expires: Date.now() + DISCOUNTS_CACHE_TTL_MS };
 		return results;
 	}
+
+	/** Call after any promotion mutation so storefront discounts update immediately. */
+	clearDiscountsCache(): void {
+		discountsCache = null;
+	}
 }
+
+interface ActiveProductDiscount {
+	id: number;
+	title: string | null;
+	discountType: string;
+	discountValue: number;
+	promotionType: string;
+	productIds: number[] | null;
+}
+
+const DISCOUNTS_CACHE_TTL_MS = 60_000;
+let discountsCache: { value: ActiveProductDiscount[]; expires: number } | null = null;
 
 // Export singleton instance
 export const promotionService = new PromotionService();

@@ -1,5 +1,5 @@
 import { productService, stampGroupPrices } from "$lib/server/services/products.js";
-import { wishlistService } from "$lib/server/services/wishlist.js";
+import { parseWishlistCookie, WISHLIST_COOKIE } from "$lib/server/wishlist-cookie.js";
 import { reviewService } from "$lib/server/services/reviews.js";
 import { categoryService } from "$lib/server/services/categories.js";
 import { taxService } from "$lib/server/services/tax.js";
@@ -7,7 +7,7 @@ import { relatedProductService } from "$lib/server/services/related-products.js"
 import { error, fail, redirect } from "@sveltejs/kit";
 import type { PageServerLoad, Actions } from "./$types";
 
-export const load: PageServerLoad = async ({ params, locals, url }) => {
+export const load: PageServerLoad = async ({ params, locals, url, cookies }) => {
 	const id = Number(params.id);
 
 	if (isNaN(id)) {
@@ -37,20 +37,16 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 		throw redirect(301, `/products/${id}/${product.slug}`);
 	}
 
-	const [isWishlisted, rating, reviewsResult, customerReview, productCategories] =
-		await Promise.all([
-			wishlistService.hasItem({
-				productId: product.id,
-				customerId: locals.customer?.id,
-				guestToken: locals.wishlistToken
-			}),
-			reviewService.getProductRating(product.id),
-			reviewService.getProductReviews(product.id, { limit: 10 }),
-			locals.customer
-				? reviewService.getCustomerReviewForProduct(locals.customer.id, product.id)
-				: null,
-			categoryService.getProductCategories(product.id)
-		]);
+	const isWishlisted = parseWishlistCookie(cookies.get(WISHLIST_COOKIE)).includes(product.id);
+
+	const [rating, reviewsResult, customerReview, productCategories] = await Promise.all([
+		reviewService.getProductRating(product.id),
+		reviewService.getProductReviews(product.id, { limit: 10 }),
+		locals.customer
+			? reviewService.getCustomerReviewForProduct(locals.customer.id, product.id)
+			: null,
+		categoryService.getProductCategories(product.id)
+	]);
 
 	// Get breadcrumbs for the first category (primary category path)
 	const breadcrumbs =

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { enhance } from "$app/forms";
-  import { page } from "$app/stores";
+  import { page } from "$app/state";
   import { onMount } from "svelte";
   import { toast } from "svelte-sonner";
   import { Button } from "$lib/components/admin/ui/button";
@@ -104,10 +104,10 @@
   });
 
   onMount(() => {
-    if ($page.url.searchParams.has("created")) {
+    if (page.url.searchParams.has("created")) {
       cameFromCreate = true;
       showCancelDelete = true;
-      history.replaceState({}, "", $page.url.pathname);
+      history.replaceState({}, "", page.url.pathname);
       requestAnimationFrame(() => bulkInputEl?.focus());
     }
   });

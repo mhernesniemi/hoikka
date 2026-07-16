@@ -1,7 +1,7 @@
 <script lang="ts">
   import { deserialize, enhance } from "$app/forms";
   import { invalidateAll } from "$app/navigation";
-  import { page } from "$app/stores";
+  import { page } from "$app/state";
   import { onMount } from "svelte";
   import { toast } from "svelte-sonner";
   import type { ColumnDef } from "@tanstack/table-core";
@@ -48,10 +48,10 @@
   let createDialogOpen = $state(false);
 
   onMount(() => {
-    if ($page.url.searchParams.has("created")) {
+    if (page.url.searchParams.has("created")) {
       cameFromCreate = true;
       showCancelDelete = true;
-      history.replaceState({}, "", $page.url.pathname);
+      history.replaceState({}, "", page.url.pathname);
     }
   });
 

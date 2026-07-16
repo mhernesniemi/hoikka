@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { page } from "$app/stores";
+  import { page } from "$app/state";
   import { cn } from "$lib/utils";
   import { toast } from "svelte-sonner";
   import type { ColumnDef } from "@tanstack/table-core";
@@ -15,7 +15,7 @@
 
   let { data, form }: { data: PageData; form: ActionData } = $props();
 
-  const activeTab = $derived($page.url.searchParams.get("tab") ?? "customers");
+  const activeTab = $derived(page.url.searchParams.get("tab") ?? "customers");
 
   // Customer bulk delete
   let showBulkDelete = $state(false);

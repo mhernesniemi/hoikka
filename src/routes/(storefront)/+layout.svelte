@@ -1,11 +1,10 @@
 <script lang="ts">
   import { invalidateAll, onNavigate } from "$app/navigation";
-  import { page } from "$app/stores";
+  import { page } from "$app/state";
   import { cn } from "$lib/utils";
   import SearchBar from "$lib/components/storefront/SearchBar.svelte";
   import CartSheet from "$lib/components/storefront/CartSheet.svelte";
-  import { wishlistStore } from "$lib/stores/wishlist.svelte";
-  import { productStore } from "$lib/stores/products.svelte";
+  import { getWishlistCount } from "$lib/remote/wishlist.remote";
   import type { LayoutData } from "./$types";
   import Heart from "@lucide/svelte/icons/heart";
   import Dot from "@lucide/svelte/icons/dot";
@@ -41,21 +40,15 @@
     previousUserId = currentUserId;
   });
 
-  // Sync server data to stores for optimistic updates
-  $effect(() => {
-    wishlistStore.sync(data.wishlistCount);
-  });
-
-  $effect(() => {
-    data.cachedProducts.then((products) => productStore.sync(products));
-  });
-
-  const wishlistCount = $derived.by(() => wishlistStore.count);
+  // The count query refreshes single-flight with wishlist mutations;
+  // layout data seeds the first paint
+  const wishlistCountQuery = getWishlistCount();
+  const wishlistCount = $derived(wishlistCountQuery.current ?? data.wishlistCount);
 </script>
 
 <div class="flex min-h-screen flex-col bg-white">
   <!-- Header (hidden on front page) -->
-  {#if $page.url.pathname !== "/"}
+  {#if page.url.pathname !== "/"}
     <header class="sticky top-0 z-50 bg-white/95 backdrop-blur-sm">
       <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div class="flex h-16 items-center justify-between gap-2">

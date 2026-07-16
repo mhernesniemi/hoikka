@@ -945,47 +945,6 @@ export const reviews = sqliteTable(
 );
 
 // ============================================================================
-// WISHLISTS
-// ============================================================================
-
-export const wishlists = sqliteTable(
-	"wishlists",
-	{
-		id: pk(),
-		customerId: integer("customer_id").references(() => customers.id, { onDelete: "cascade" }),
-		guestToken: text("guest_token").unique(),
-		createdAt: now(),
-		updatedAt: updatedNow()
-	},
-	(table) => [
-		index("wishlists_customer_idx").on(table.customerId),
-		index("wishlists_guest_token_idx").on(table.guestToken)
-	]
-);
-
-export const wishlistItems = sqliteTable(
-	"wishlist_items",
-	{
-		id: pk(),
-		wishlistId: integer("wishlist_id")
-			.references(() => wishlists.id, { onDelete: "cascade" })
-			.notNull(),
-		productId: integer("product_id")
-			.references(() => products.id, { onDelete: "cascade" })
-			.notNull(),
-		variantId: integer("variant_id").references(() => productVariants.id, {
-			onDelete: "cascade"
-		}),
-		addedAt: now()
-	},
-	(table) => [
-		index("wishlist_items_wishlist_idx").on(table.wishlistId),
-		index("wishlist_items_product_idx").on(table.productId),
-		uniqueIndex("wishlist_items_wishlist_product_idx").on(table.wishlistId, table.productId)
-	]
-);
-
-// ============================================================================
 // CONTENT PAGES
 // ============================================================================
 
@@ -1378,29 +1337,6 @@ export const reviewsRelations = relations(reviews, ({ one }) => ({
 	customer: one(customers, {
 		fields: [reviews.customerId],
 		references: [customers.id]
-	})
-}));
-
-export const wishlistsRelations = relations(wishlists, ({ one, many }) => ({
-	customer: one(customers, {
-		fields: [wishlists.customerId],
-		references: [customers.id]
-	}),
-	items: many(wishlistItems)
-}));
-
-export const wishlistItemsRelations = relations(wishlistItems, ({ one }) => ({
-	wishlist: one(wishlists, {
-		fields: [wishlistItems.wishlistId],
-		references: [wishlists.id]
-	}),
-	product: one(products, {
-		fields: [wishlistItems.productId],
-		references: [products.id]
-	}),
-	variant: one(productVariants, {
-		fields: [wishlistItems.variantId],
-		references: [productVariants.id]
 	})
 }));
 

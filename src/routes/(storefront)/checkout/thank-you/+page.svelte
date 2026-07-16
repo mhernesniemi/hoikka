@@ -3,13 +3,14 @@
   import Check from "@lucide/svelte/icons/check";
   import { formatPrice } from "$lib/utils.js";
   import { getCart } from "$lib/remote/cart.remote";
-  import { invalidateAll } from "$app/navigation";
+  import { browser } from "$app/environment";
 
   let { data }: { data: PageData } = $props();
 
-  // The cart cookie was cleared on completion — refresh the cart query and layout data
-  getCart().refresh();
-  invalidateAll();
+  // The cart cookie was cleared on completion — refresh the client's cart query
+  if (browser) {
+    getCart().refresh();
+  }
 </script>
 
 <svelte:head>

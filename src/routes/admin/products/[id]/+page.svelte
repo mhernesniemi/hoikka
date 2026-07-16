@@ -1,7 +1,7 @@
 <script lang="ts">
   import { enhance } from "$app/forms";
   import { goto, invalidateAll } from "$app/navigation";
-  import { page } from "$app/stores";
+  import { page } from "$app/state";
   import { onMount } from "svelte";
   import { toast } from "svelte-sonner";
   import { Button } from "$lib/components/admin/ui/button";
@@ -69,7 +69,7 @@
 
   // Show toast from URL params (variant redirects)
   onMount(() => {
-    const url = $page.url;
+    const url = page.url;
     if (url.searchParams.has("created")) {
       cameFromCreate = true;
       showCancelDelete = true;

@@ -80,8 +80,8 @@
 
   <ProductListing
     facets={data.facets}
+    listing={data.listing}
     activeDiscounts={data.activeDiscounts}
-    productIds={data.productIds}
     {basePath}
   />
 </div>

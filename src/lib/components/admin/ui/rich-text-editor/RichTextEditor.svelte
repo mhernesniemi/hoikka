@@ -115,7 +115,7 @@
 
 <div
   class={cn(
-    "hover:border-input-border-hover overflow-hidden rounded-lg border border-input-border bg-surface focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500",
+    "overflow-hidden rounded-lg border border-input-border bg-surface focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 hover:border-input-border-hover",
     className
   )}
 >

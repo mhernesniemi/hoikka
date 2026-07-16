@@ -1,7 +1,7 @@
 <script lang="ts">
   import "./admin.css";
   import { onMount } from "svelte";
-  import { page } from "$app/stores";
+  import { page } from "$app/state";
   import { beforeNavigate } from "$app/navigation";
   import { goto } from "$app/navigation";
   import { authClient } from "$lib/auth-client";
@@ -81,7 +81,7 @@
   ];
 
   function isActive(href: string): boolean {
-    return $page.url.pathname.startsWith(href);
+    return page.url.pathname.startsWith(href);
   }
 </script>
 

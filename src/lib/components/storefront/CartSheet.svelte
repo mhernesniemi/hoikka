@@ -1,8 +1,9 @@
 <script lang="ts">
   import { invalidateAll, goto } from "$app/navigation";
-  import { page } from "$app/stores";
+  import { page } from "$app/state";
   import { getCart, setCartQuantity, removeCartLine } from "$lib/remote/cart.remote";
-  import { imageUrl } from "$lib/image";
+  import { getCheckout } from "$lib/remote/checkout.remote";
+  import Img from "$lib/components/storefront/Img.svelte";
   import { cartStore } from "$lib/stores/cart.svelte";
   import {
     Sheet,
@@ -34,7 +35,7 @@
     return (cents / 100).toFixed(2);
   }
 
-  const isOnCheckout = $derived($page.url.pathname === "/checkout");
+  const isOnCheckout = $derived(page.url.pathname === "/checkout");
 
   async function mutate(action: () => Promise<unknown>) {
     pendingMutations++;
@@ -46,8 +47,10 @@
       pendingMutations--;
     }
     if (isOnCheckout) {
-      // The checkout draft order is rebuilt from the cookie on load
+      // The checkout draft order is rebuilt from the cookie on load, then the
+      // checkout query must be refetched to pick up the reconciled draft
       await invalidateAll();
+      await getCheckout().refresh();
       if ((cartQuery.current?.itemCount ?? 0) === 0) {
         cartStore.close();
         goto("/products");
@@ -121,9 +124,10 @@
             <div class="flex gap-3 p-3" class:opacity-60={line.outOfStock}>
               <div class="h-20 w-20 shrink-0 overflow-hidden rounded-md bg-gray-100">
                 {#if line.imageUrl}
-                  <img
-                    src={imageUrl(line.imageUrl, 100)}
+                  <Img
+                    src={line.imageUrl}
                     alt={line.productName}
+                    width={100}
                     class="h-full w-full object-cover"
                   />
                 {:else}

@@ -19,11 +19,12 @@ test.describe("Full checkout flow", () => {
 		await expect(page.locator("h1")).toContainText("Checkout");
 
 		// Fill the shipping address
-		await page.fill('input[name="fullName"]', "Testi Ostaja");
-		await page.fill('input[name="streetLine1"]', "Mannerheimintie 1");
-		await page.fill('input[name="postalCode"]', "00100");
-		await page.fill('input[name="city"]', "Helsinki");
-		await page.locator('form[action="?/setShippingAddress"] button[type="submit"]').click();
+		const addressForm = page.getByTestId("address-form");
+		await addressForm.locator('input[name="fullName"]').fill("Testi Ostaja");
+		await addressForm.locator('input[name="streetLine1"]').fill("Mannerheimintie 1");
+		await addressForm.locator('input[name="postalCode"]').fill("00100");
+		await addressForm.locator('input[name="city"]').fill("Helsinki");
+		await addressForm.getByRole("button", { name: "Continue" }).click();
 
 		// Wait until the address is saved (summary card with Edit button appears)
 		await expect(page.getByRole("main").getByRole("button", { name: "Edit" })).toBeVisible({

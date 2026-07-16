@@ -33,6 +33,12 @@ export interface CartViewLine {
 	quantity: number;
 	lineTotal: number;
 	taxAmount: number;
+	// Full tax breakdown so startCheckout can snapshot lines from this view —
+	// cart display and checkout share one pricing computation
+	taxCode: string;
+	taxRate: number;
+	unitPriceNet: number;
+	lineTotalNet: number;
 	/** Available stock, or null when inventory is not tracked */
 	available: number | null;
 	outOfStock: boolean;
@@ -73,7 +79,8 @@ export function clampToAvailable(quantity: number, available: number | null): nu
 
 export async function getCartView(
 	cartLines: CartLine[],
-	customerId: number | null
+	customerId: number | null,
+	opts: { skipPromotions?: boolean } = {}
 ): Promise<CartView> {
 	if (cartLines.length === 0) return EMPTY_CART;
 
@@ -203,6 +210,10 @@ export async function getCartView(
 			quantity,
 			lineTotal: lineTax.lineTotalGross,
 			taxAmount: lineTax.taxAmount,
+			taxCode,
+			taxRate,
+			unitPriceNet: lineTax.unitPriceNet,
+			lineTotalNet: lineTax.lineTotalNet,
 			available,
 			outOfStock: quantity === 0
 		});
@@ -214,7 +225,7 @@ export async function getCartView(
 
 	// Automatic promotions, computed for display only — persisted at checkout
 	const appliedPromotions: CartViewPromotion[] = [];
-	if (subtotal > 0) {
+	if (subtotal > 0 && !opts.skipPromotions) {
 		const autoPromos = await promotionService.listActiveAutomatic();
 		for (const promo of autoPromos) {
 			if (promo.promotionType === "free_shipping") continue; // needs a shipping cost

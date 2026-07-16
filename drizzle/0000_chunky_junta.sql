@@ -603,30 +603,3 @@ CREATE TABLE `verification` (
 	`created_at` integer,
 	`updated_at` integer
 );
---> statement-breakpoint
-CREATE TABLE `wishlist_items` (
-	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
-	`wishlist_id` integer NOT NULL,
-	`product_id` integer NOT NULL,
-	`variant_id` integer,
-	`addedAt` integer NOT NULL,
-	FOREIGN KEY (`wishlist_id`) REFERENCES `wishlists`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`product_id`) REFERENCES `products`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`variant_id`) REFERENCES `product_variants`(`id`) ON UPDATE no action ON DELETE cascade
-);
---> statement-breakpoint
-CREATE INDEX `wishlist_items_wishlist_idx` ON `wishlist_items` (`wishlist_id`);--> statement-breakpoint
-CREATE INDEX `wishlist_items_product_idx` ON `wishlist_items` (`product_id`);--> statement-breakpoint
-CREATE UNIQUE INDEX `wishlist_items_wishlist_product_idx` ON `wishlist_items` (`wishlist_id`,`product_id`);--> statement-breakpoint
-CREATE TABLE `wishlists` (
-	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
-	`customer_id` integer,
-	`guest_token` text,
-	`createdAt` integer NOT NULL,
-	`updatedAt` integer NOT NULL,
-	FOREIGN KEY (`customer_id`) REFERENCES `customers`(`id`) ON UPDATE no action ON DELETE cascade
-);
---> statement-breakpoint
-CREATE UNIQUE INDEX `wishlists_guest_token_unique` ON `wishlists` (`guest_token`);--> statement-breakpoint
-CREATE INDEX `wishlists_customer_idx` ON `wishlists` (`customer_id`);--> statement-breakpoint
-CREATE INDEX `wishlists_guest_token_idx` ON `wishlists` (`guest_token`);
