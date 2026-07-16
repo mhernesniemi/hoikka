@@ -67,12 +67,6 @@
   const wishlistedQuery = $derived(isProductWishlisted(product.id));
   const isWishlisted = $derived(wishlistOverride ?? wishlistedQuery.current ?? false);
 
-  // A toggle override belongs to one product only
-  $effect(() => {
-    void product.id;
-    wishlistOverride = null;
-  });
-
   // Build a stable image list: product assets + unique variant images
   const allImages = $derived.by(() => {
     const productImages =
@@ -113,11 +107,21 @@
     return [...productImages, ...variantImages.images];
   });
 
-  // Initialize selected variant when product loads
+  // Reset per-product state when navigating to a different product: the
+  // component instance is reused across client-side navigations (e.g. via
+  // related products), so $state survives and would otherwise keep pointing
+  // at the previous product's variants/images. Guarded by id so data
+  // invalidations of the same product preserve the user's selection.
+  let shownProductId: number | null = null;
   $effect(() => {
-    if (product.variants[0] && selectedVariantId === null) {
-      selectedVariantId = product.variants[0].id;
-    }
+    if (product.id === shownProductId) return;
+    shownProductId = product.id;
+    selectedVariantId = product.variants[0]?.id ?? null;
+    selectedImageIndex = 0;
+    quantity = 1;
+    wishlistOverride = null;
+    message = null;
+    showReviewForm = false;
   });
 
   const selectedVariant = $derived(product.variants.find((v) => v.id === selectedVariantId));

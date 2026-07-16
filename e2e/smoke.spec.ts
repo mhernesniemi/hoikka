@@ -36,6 +36,27 @@ test.describe("Storefront smoke tests", () => {
 		await expect(page.locator('nav[aria-label="Breadcrumb"]')).toBeVisible();
 	});
 
+	test("navigating to a related product keeps the buy box intact", async ({ page }) => {
+		// The detail page component is reused across product→product client
+		// navigations — per-product state (selected variant) must reset, or
+		// price/add-to-cart silently disappear (regression test)
+		await page.goto("/products");
+		await page.locator('a[href^="/products/"]').first().click();
+		await expect(page.locator('button:has-text("Add to Cart")')).toBeVisible();
+
+		const related = page.locator(
+			'section:has(h2:text("You May Also Like")) a[href^="/products/"]'
+		);
+		if ((await related.count()) === 0) return; // seed data has no related products
+
+		const firstProductName = await page.locator("h1").textContent();
+		await related.first().click();
+		await expect(page.locator("h1")).not.toHaveText(firstProductName ?? "", {
+			timeout: 10000
+		});
+		await expect(page.locator('button:has-text("Add to Cart")')).toBeVisible();
+	});
+
 	test("search-as-you-type returns FTS results", async ({ page }) => {
 		await page.goto("/products");
 
