@@ -91,8 +91,8 @@ export class ProductService {
 			.limit(limit)
 			.offset(offset);
 
-		// Load relations for each product
-		const items = await Promise.all(productList.map((p) => this.loadProductRelations(p)));
+		// Load relations for all products in batched queries
+		const items = await this.loadProductsRelations(productList);
 
 		return {
 			items,
@@ -207,6 +207,24 @@ export class ProductService {
 		if (!product[0]) return null;
 
 		return this.loadProductRelations(product[0]);
+	}
+
+	/**
+	 * Get several products by id in the given order, with relations loaded
+	 * in batched queries (missing/deleted ids are skipped)
+	 */
+	async getByIds(ids: number[]): Promise<ProductWithRelations[]> {
+		if (ids.length === 0) return [];
+
+		const rows = await db
+			.select()
+			.from(products)
+			.where(and(inArray(products.id, ids), isNull(products.deletedAt)));
+
+		const byId = new Map(rows.map((p) => [p.id, p]));
+		const ordered = ids.map((id) => byId.get(id)).filter((p): p is Product => p !== undefined);
+
+		return this.loadProductsRelations(ordered);
 	}
 
 	/**
@@ -550,110 +568,149 @@ export class ProductService {
 	}
 
 	private async loadProductRelations(product: Product): Promise<ProductWithRelations> {
-		// Load variants, sorting isFeatured first then by id
-		const variantList = await db
-			.select()
-			.from(productVariants)
-			.where(
-				and(eq(productVariants.productId, product.id), isNull(productVariants.deletedAt))
-			)
-			.orderBy(desc(productVariants.isFeatured), asc(productVariants.id));
+		const [loaded] = await this.loadProductsRelations([product]);
+		return loaded;
+	}
 
-		const variants = await Promise.all(variantList.map((v) => this.loadVariantRelations(v)));
+	/**
+	 * Load relations for many products in a fixed number of batched queries.
+	 * Per-row lookups are cheap on local SQLite but each query is a network
+	 * round trip on D1, so this stays at 5 queries however many products
+	 * (and variants/facets/assets) are involved.
+	 */
+	private async loadProductsRelations(productList: Product[]): Promise<ProductWithRelations[]> {
+		if (productList.length === 0) return [];
+		const productIds = productList.map((p) => p.id);
+		const featuredAssetIds = productList
+			.map((p) => p.featuredAssetId)
+			.filter((id): id is number => id !== null);
 
-		// Load facet values
-		const facetValueIds = await db
-			.select({ facetValueId: productFacetValues.facetValueId })
-			.from(productFacetValues)
-			.where(eq(productFacetValues.productId, product.id));
-
-		const facetValuesData = [];
-		for (const fv of facetValueIds) {
-			const value = await db
+		const [variantRows, productFacetRows, assetRows, featuredAssetRows] = await Promise.all([
+			db
 				.select()
-				.from(facetValues)
-				.where(eq(facetValues.id, fv.facetValueId))
-				.limit(1);
+				.from(productVariants)
+				.where(
+					and(
+						inArray(productVariants.productId, productIds),
+						isNull(productVariants.deletedAt)
+					)
+				)
+				.orderBy(desc(productVariants.isFeatured), asc(productVariants.id)),
+			db
+				.select({ productId: productFacetValues.productId, value: facetValues })
+				.from(productFacetValues)
+				.innerJoin(facetValues, eq(facetValues.id, productFacetValues.facetValueId))
+				.where(inArray(productFacetValues.productId, productIds))
+				.orderBy(asc(facetValues.id)),
+			db
+				.select({ productId: productAssets.productId, asset: assets })
+				.from(productAssets)
+				.innerJoin(assets, eq(assets.id, productAssets.assetId))
+				.where(inArray(productAssets.productId, productIds))
+				.orderBy(asc(productAssets.position)),
+			featuredAssetIds.length > 0
+				? db.select().from(assets).where(inArray(assets.id, featuredAssetIds))
+				: []
+		]);
 
-			if (value[0]) {
-				facetValuesData.push(value[0]);
+		// Variant facet values need the variant ids from the first round
+		const variantIds = variantRows.map((v) => v.id);
+		const variantFacetRows =
+			variantIds.length > 0
+				? await db
+						.select({ variantId: variantFacetValues.variantId, value: facetValues })
+						.from(variantFacetValues)
+						.innerJoin(facetValues, eq(facetValues.id, variantFacetValues.facetValueId))
+						.where(inArray(variantFacetValues.variantId, variantIds))
+						.orderBy(asc(facetValues.id))
+				: [];
+
+		const facetsByVariant = new Map<number, FacetValue[]>();
+		for (const row of variantFacetRows) {
+			const list = facetsByVariant.get(row.variantId) ?? [];
+			list.push(row.value);
+			facetsByVariant.set(row.variantId, list);
+		}
+
+		const variantsByProduct = new Map<number, ProductVariantWithRelations[]>();
+		for (const v of variantRows) {
+			const list = variantsByProduct.get(v.productId) ?? [];
+			list.push({
+				...v,
+				facetValues: facetsByVariant.get(v.id) ?? [],
+				assets: [],
+				featuredAsset: null
+			});
+			variantsByProduct.set(v.productId, list);
+		}
+
+		const facetsByProduct = new Map<number, FacetValue[]>();
+		for (const row of productFacetRows) {
+			const list = facetsByProduct.get(row.productId) ?? [];
+			list.push(row.value);
+			facetsByProduct.set(row.productId, list);
+		}
+
+		const assetsByProduct = new Map<number, (typeof assetRows)[number]["asset"][]>();
+		for (const row of assetRows) {
+			const list = assetsByProduct.get(row.productId) ?? [];
+			list.push(row.asset);
+			assetsByProduct.set(row.productId, list);
+		}
+
+		const featuredById = new Map(featuredAssetRows.map((a) => [a.id, a]));
+
+		return productList.map((product) => {
+			const variants = variantsByProduct.get(product.id) ?? [];
+
+			// Featured asset, falling back to variant image
+			let featuredAsset =
+				(product.featuredAssetId ? featuredById.get(product.featuredAssetId) : null) ??
+				null;
+
+			if (!featuredAsset) {
+				const fallbackUrl = this.resolveVariantFallbackImage(variants);
+				if (fallbackUrl) {
+					featuredAsset = {
+						id: 0,
+						name: "",
+						type: "image" as const,
+						mimeType: "image/jpeg",
+						width: 0,
+						height: 0,
+						fileSize: 0,
+						source: fallbackUrl,
+						alt: null,
+						focalX: 0.5,
+						focalY: 0.5,
+						createdAt: product.createdAt
+					};
+				}
 			}
-		}
 
-		// Load assets
-		const productAssetList = await db
-			.select({ asset: assets, position: productAssets.position })
-			.from(productAssets)
-			.innerJoin(assets, eq(assets.id, productAssets.assetId))
-			.where(eq(productAssets.productId, product.id))
-			.orderBy(asc(productAssets.position));
-
-		const assetList = productAssetList.map((pa) => pa.asset);
-
-		// Load featured asset, falling back to variant image
-		let featuredAsset = null;
-		if (product.featuredAssetId) {
-			const [fa] = await db
-				.select()
-				.from(assets)
-				.where(eq(assets.id, product.featuredAssetId));
-			featuredAsset = fa ?? null;
-		}
-
-		if (!featuredAsset) {
-			const fallbackUrl = this.resolveVariantFallbackImage(variants);
-			if (fallbackUrl) {
-				featuredAsset = {
-					id: 0,
-					name: "",
-					type: "image" as const,
-					mimeType: "image/jpeg",
-					width: 0,
-					height: 0,
-					fileSize: 0,
-					source: fallbackUrl,
-					alt: null,
-					focalX: 0.5,
-					focalY: 0.5,
-					createdAt: product.createdAt
-				};
-			}
-		}
-
-		return {
-			...product,
-			variants,
-			facetValues: facetValuesData,
-			assets: assetList,
-			featuredAsset
-		};
+			return {
+				...product,
+				variants,
+				facetValues: facetsByProduct.get(product.id) ?? [],
+				assets: assetsByProduct.get(product.id) ?? [],
+				featuredAsset
+			};
+		});
 	}
 
 	private async loadVariantRelations(
 		variant: ProductVariant
 	): Promise<ProductVariantWithRelations> {
-		// Load facet values
-		const facetValueIds = await db
-			.select({ facetValueId: variantFacetValues.facetValueId })
+		const facetRows = await db
+			.select({ value: facetValues })
 			.from(variantFacetValues)
-			.where(eq(variantFacetValues.variantId, variant.id));
-
-		const facetValuesData: FacetValue[] = [];
-		for (const fv of facetValueIds) {
-			const value = await db
-				.select()
-				.from(facetValues)
-				.where(eq(facetValues.id, fv.facetValueId))
-				.limit(1);
-
-			if (value[0]) {
-				facetValuesData.push(value[0]);
-			}
-		}
+			.innerJoin(facetValues, eq(facetValues.id, variantFacetValues.facetValueId))
+			.where(eq(variantFacetValues.variantId, variant.id))
+			.orderBy(asc(facetValues.id));
 
 		return {
 			...variant,
-			facetValues: facetValuesData,
+			facetValues: facetRows.map((r) => r.value),
 			assets: [],
 			featuredAsset: null
 		};

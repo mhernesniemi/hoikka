@@ -18,7 +18,25 @@ export const load: PageServerLoad = async ({ params, locals, url, cookies }) => 
 		url.searchParams.has("preview") &&
 		!!locals.user &&
 		["admin", "staff"].includes(locals.user.role ?? "");
-	const product = await productService.getById(id);
+
+	// Everything here depends only on the id, so fetch it all in parallel —
+	// on D1 each awaited stage adds a network round trip
+	const [product, rating, reviewsResult, customerReview, breadcrumbs, relatedProducts] =
+		await Promise.all([
+			productService.getById(id),
+			reviewService.getProductRating(id),
+			reviewService.getProductReviews(id, { limit: 10 }),
+			locals.customer
+				? reviewService.getCustomerReviewForProduct(locals.customer.id, id)
+				: null,
+			// Breadcrumbs for the first category (primary category path)
+			categoryService
+				.getProductCategories(id)
+				.then((cats) =>
+					cats.length > 0 ? categoryService.getBreadcrumbs(cats[0].id) : []
+				),
+			relatedProductService.getRelatedProducts(id, 8)
+		]);
 
 	if (!product || (!isPreview && product.visibility === "draft")) {
 		throw error(404, "Product not found");
@@ -38,23 +56,6 @@ export const load: PageServerLoad = async ({ params, locals, url, cookies }) => 
 	}
 
 	const isWishlisted = parseWishlistCookie(cookies.get(WISHLIST_COOKIE)).includes(product.id);
-
-	const [rating, reviewsResult, customerReview, productCategories] = await Promise.all([
-		reviewService.getProductRating(product.id),
-		reviewService.getProductReviews(product.id, { limit: 10 }),
-		locals.customer
-			? reviewService.getCustomerReviewForProduct(locals.customer.id, product.id)
-			: null,
-		categoryService.getProductCategories(product.id)
-	]);
-
-	// Get breadcrumbs for the first category (primary category path)
-	const breadcrumbs =
-		productCategories.length > 0
-			? await categoryService.getBreadcrumbs(productCategories[0].id)
-			: [];
-
-	const relatedProducts = await relatedProductService.getRelatedProducts(product.id, 8);
 
 	await stampGroupPrices([product, ...relatedProducts], locals.customer?.id ?? null);
 

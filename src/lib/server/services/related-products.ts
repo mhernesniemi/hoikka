@@ -17,8 +17,7 @@ export class RelatedProductService {
 		if (manual.length === 0) return [];
 
 		const ids = manual.slice(0, limit).map((r) => r.relatedProductId);
-		const loaded = await Promise.all(ids.map((id) => productService.getById(id)));
-		return loaded.filter((p): p is ProductWithRelations => p !== null);
+		return productService.getByIds(ids);
 	}
 
 	/**

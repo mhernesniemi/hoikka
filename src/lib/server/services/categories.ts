@@ -109,26 +109,20 @@ export class CategoryService {
 	 * Get breadcrumb path from root to category
 	 */
 	async getBreadcrumbs(categoryId: number): Promise<CategoryBreadcrumb[]> {
-		const breadcrumbs: CategoryBreadcrumb[] = [];
-		let currentId: number | null = categoryId;
+		// One recursive query instead of a round trip per ancestor —
+		// each query is a network hop on D1
+		const rows = (await db.all(sql`
+			WITH RECURSIVE crumb AS (
+				SELECT id, slug, name, parent_id, 0 AS depth
+				FROM categories WHERE id = ${categoryId}
+				UNION ALL
+				SELECT c.id, c.slug, c.name, c.parent_id, crumb.depth + 1
+				FROM categories c JOIN crumb ON c.id = crumb.parent_id
+			)
+			SELECT id, slug, name FROM crumb ORDER BY depth DESC
+		`)) as { id: number; slug: string; name: string }[];
 
-		while (currentId !== null) {
-			const category: Category | undefined = await db.query.categories.findFirst({
-				where: eq(categories.id, currentId)
-			});
-
-			if (!category) break;
-
-			breadcrumbs.unshift({
-				id: category.id,
-				slug: category.slug,
-				name: category.name
-			});
-
-			currentId = category.parentId;
-		}
-
-		return breadcrumbs;
+		return rows.map((r) => ({ id: r.id, slug: r.slug, name: r.name }));
 	}
 
 	/**
