@@ -211,14 +211,13 @@ export class CategoryService {
 	 * Get all categories for a product
 	 */
 	async getProductCategories(productId: number): Promise<Category[]> {
-		const result = await db.query.productCategories.findMany({
-			where: eq(productCategories.productId, productId),
-			with: {
-				category: true
-			}
-		});
+		const rows = await db
+			.select({ category: categories })
+			.from(productCategories)
+			.innerJoin(categories, eq(productCategories.categoryId, categories.id))
+			.where(eq(productCategories.productId, productId));
 
-		return result.map((pc) => pc.category);
+		return rows.map((r) => r.category);
 	}
 
 	/**
@@ -291,16 +290,14 @@ export class CategoryService {
 	 * Returns "standard" if the product has no categories.
 	 */
 	async getProductTaxCode(productId: number): Promise<string> {
-		const result = await db.query.productCategories.findFirst({
-			where: eq(productCategories.productId, productId),
-			with: {
-				category: {
-					columns: { taxCode: true }
-				}
-			}
-		});
+		const [row] = await db
+			.select({ taxCode: categories.taxCode })
+			.from(productCategories)
+			.innerJoin(categories, eq(productCategories.categoryId, categories.id))
+			.where(eq(productCategories.productId, productId))
+			.limit(1);
 
-		return result?.category?.taxCode ?? "standard";
+		return row?.taxCode ?? "standard";
 	}
 }
 
