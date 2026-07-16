@@ -9,6 +9,30 @@
   let { data }: { data: PageData } = $props();
   let demoError = $state<string | null>(null);
   let demoLoading = $state(false);
+  // Prefilled with the public demo credentials; editable so a real admin can sign in too
+  let loginEmail = $state("admin@example.com");
+  let loginPassword = $state("admin538");
+
+  async function handleAdminLogin(event: SubmitEvent) {
+    event.preventDefault();
+    demoError = null;
+    demoLoading = true;
+    try {
+      const result = await authClient.signIn.email({
+        email: loginEmail,
+        password: loginPassword
+      });
+      if (result.error) {
+        demoError = result.error.message ?? "Login failed";
+        demoLoading = false;
+      } else {
+        goto("/admin");
+      }
+    } catch (e) {
+      demoError = e instanceof Error ? e.message : "Login failed";
+      demoLoading = false;
+    }
+  }
 </script>
 
 <svelte:head>
@@ -151,7 +175,7 @@
                 </div>
               {/if}
 
-              <div class="space-y-4">
+              <form class="space-y-4" onsubmit={handleAdminLogin}>
                 <div>
                   <label for="email" class="mb-1 block text-sm font-medium text-gray-700">
                     Email
@@ -159,8 +183,9 @@
                   <input
                     type="email"
                     id="email"
-                    value="admin@example.com"
-                    class="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-gray-600"
+                    autocomplete="username"
+                    bind:value={loginEmail}
+                    class="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-gray-900"
                   />
                 </div>
 
@@ -171,37 +196,16 @@
                   <input
                     type="password"
                     id="password"
-                    value="admin538"
-                    class="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-gray-600"
+                    autocomplete="current-password"
+                    bind:value={loginPassword}
+                    class="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-gray-900"
                   />
                 </div>
 
-                <Button
-                  class="mt-4 w-full"
-                  disabled={demoLoading}
-                  onclick={async () => {
-                    demoError = null;
-                    demoLoading = true;
-                    try {
-                      const result = await authClient.signIn.email({
-                        email: "admin@example.com",
-                        password: "admin538"
-                      });
-                      if (result.error) {
-                        demoError = result.error.message ?? "Login failed";
-                        demoLoading = false;
-                      } else {
-                        goto("/admin");
-                      }
-                    } catch (e) {
-                      demoError = e instanceof Error ? e.message : "Login failed";
-                      demoLoading = false;
-                    }
-                  }}
-                >
+                <Button type="submit" class="mt-4 w-full" disabled={demoLoading}>
                   {demoLoading ? "Logging in..." : "Log in"}
                 </Button>
-              </div>
+              </form>
             {:else}
               <p class="mb-6 text-sm text-gray-600">
                 No admin account has been created yet. Set up your first admin user to get started.
