@@ -60,7 +60,7 @@
           {#each searchResults as product (product.id)}
             <Command.LinkItem
               value={product.name}
-              href="/products/{product.id}"
+              href="/products/{product.id}/{product.slug}"
               onSelect={handleSelect}
               class="flex items-center gap-3 px-4 py-3"
             >

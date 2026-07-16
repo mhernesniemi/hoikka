@@ -40,10 +40,10 @@
     previousUserId = currentUserId;
   });
 
-  // The count query refreshes single-flight with wishlist mutations;
-  // layout data seeds the first paint
+  // Pure client state: layout data is edge-cached for guests, so the badge
+  // hydrates from the remote query (refreshed single-flight with mutations)
   const wishlistCountQuery = getWishlistCount();
-  const wishlistCount = $derived(wishlistCountQuery.current ?? data.wishlistCount);
+  const wishlistCount = $derived(wishlistCountQuery.current ?? 0);
 </script>
 
 <div class="flex min-h-screen flex-col bg-white">
@@ -96,7 +96,7 @@
               <a href="/sign-in"><UserIcon class="h-6 w-6" /></a>
             {/if}
 
-            <CartSheet initialItemCount={data.cartItemCount} />
+            <CartSheet />
           </nav>
         </div>
 

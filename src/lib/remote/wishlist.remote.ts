@@ -18,6 +18,18 @@ export const getWishlistCount = query(async () => {
 	return parseWishlistCookie(cookies.get(WISHLIST_COOKIE)).length;
 });
 
+/**
+ * Whether a product is wishlisted. Queried client-side so cached storefront
+ * pages stay identical for every visitor (the cookie never touches SSR).
+ */
+export const isProductWishlisted = query(
+	v.pipe(v.number(), v.integer(), v.minValue(1)),
+	async (productId) => {
+		const { cookies } = getRequestEvent();
+		return parseWishlistCookie(cookies.get(WISHLIST_COOKIE)).includes(productId);
+	}
+);
+
 export const toggleWishlist = command(
 	v.object({ productId: v.pipe(v.number(), v.integer(), v.minValue(1)) }),
 	async ({ productId }) => {

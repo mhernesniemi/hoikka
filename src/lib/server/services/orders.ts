@@ -38,6 +38,7 @@ import { STATE_TRANSITIONS, isValidTransition } from "./order-utils.js";
 import { promotionService } from "./promotions.js";
 import { calculateDiscount, calculateProductDiscount } from "./promotion-utils.js";
 import { getCartView } from "./cart.js";
+import { bumpCatalogVersion } from "$lib/server/edge-cache.js";
 
 export class OrderService {
 	/**
@@ -559,6 +560,11 @@ export class OrderService {
 			}
 			// Release any remaining reservations
 			await reservationService.releaseForOrder(orderId);
+		}
+
+		// Stock changed — cached storefront pages must re-render
+		if (newState === "paid" || newState === "cancelled") {
+			await bumpCatalogVersion();
 		}
 
 		return updated;

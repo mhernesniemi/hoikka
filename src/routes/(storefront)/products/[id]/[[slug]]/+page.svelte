@@ -1,10 +1,10 @@
 <script lang="ts">
   import { enhance } from "$app/forms";
   import { cn } from "$lib/utils";
-  import { imageUrl } from "$lib/image";
+  import { imageUrl, imageSrcset } from "$lib/image";
   import Img from "$lib/components/storefront/Img.svelte";
   import { addToCart } from "$lib/remote/cart.remote";
-  import { toggleWishlist } from "$lib/remote/wishlist.remote";
+  import { toggleWishlist, isProductWishlisted } from "$lib/remote/wishlist.remote";
   import { cartStore } from "$lib/stores/cart.svelte";
   import { formatPrice, stripHtml } from "$lib/utils";
   import { findBestDiscount, getDiscountedPrice } from "$lib/promotion-utils";
@@ -62,8 +62,16 @@
   let message = $state<{ type: "success" | "error"; text: string } | null>(null);
   let selectedImageIndex = $state(0);
 
-  // Use override if set (after toggle), otherwise use server data
-  const isWishlisted = $derived(wishlistOverride ?? data.isWishlisted);
+  // Use override if set (after toggle), otherwise the remote query — the
+  // page itself is edge-cached for guests, so wishlist state is client-only
+  const wishlistedQuery = $derived(isProductWishlisted(product.id));
+  const isWishlisted = $derived(wishlistOverride ?? wishlistedQuery.current ?? false);
+
+  // A toggle override belongs to one product only
+  $effect(() => {
+    void product.id;
+    wishlistOverride = null;
+  });
 
   // Build a stable image list: product assets + unique variant images
   const allImages = $derived.by(() => {
@@ -223,6 +231,18 @@
     <meta property="og:image" content={product.featuredAsset.source} />
   {/if}
 
+  <!-- Fetch the hero image at document parse time, before hydration -->
+  {#if allImages.length > 0}
+    <link
+      rel="preload"
+      as="image"
+      href={imageUrl(allImages[0].source, 600)}
+      imagesrcset={imageSrcset(allImages[0].source, 600)}
+      imagesizes="(max-width: 1024px) 100vw, 600px"
+      fetchpriority="high"
+    />
+  {/if}
+
   <!-- JSON-LD Structured Data -->
   {@html jsonLd}
 </svelte:head>
@@ -272,6 +292,7 @@
             width={600}
             sizes="(max-width: 1024px) 100vw, 600px"
             loading="eager"
+            fetchpriority="high"
             focalX={currentImage.focalX}
             focalY={currentImage.focalY}
             class="h-full w-full object-cover"

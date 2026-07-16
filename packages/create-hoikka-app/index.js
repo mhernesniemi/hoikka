@@ -463,6 +463,53 @@ async function main() {
 					s.stop("R2 bucket already exists");
 				}
 
+				// Create the KV namespace for the storefront edge cache and write
+				// its real id into wrangler.jsonc (missing binding = caching off)
+				let kvId = null;
+				s.start("Creating KV namespace for the edge cache");
+				try {
+					const kvOutput = execSync(
+						`${pm.exec} wrangler kv namespace create ${projectName}-cache`,
+						{ cwd: projectDir, stdio: "pipe" }
+					).toString();
+					const kvMatch = kvOutput.match(/"id":\s*"([0-9a-f]{32})"/);
+					if (kvMatch) {
+						kvId = kvMatch[1];
+						s.stop("KV namespace created");
+					} else {
+						s.stop(
+							"KV namespace created, but its id could not be read — copy it into wrangler.jsonc manually"
+						);
+					}
+				} catch {
+					// Already exists — look it up
+					try {
+						const kvList = execSync(`${pm.exec} wrangler kv namespace list`, {
+							cwd: projectDir,
+							stdio: "pipe"
+						}).toString();
+						const entry = JSON.parse(kvList).find((n) =>
+							n.title.includes(`${projectName}-cache`)
+						);
+						if (entry) {
+							kvId = entry.id;
+							s.stop("KV namespace already exists — using existing");
+						} else {
+							s.stop("KV namespace setup failed — edge caching stays disabled");
+						}
+					} catch {
+						s.stop("KV namespace setup failed — edge caching stays disabled");
+					}
+				}
+				if (kvId) {
+					const wranglerPath = path.join(projectDir, "wrangler.jsonc");
+					const content = readFileSync(wranglerPath, "utf-8").replace(
+						/"id":\s*"0{32}"/,
+						`"id": "${kvId}"`
+					);
+					writeFileSync(wranglerPath, content);
+				}
+
 				// Apply migrations to the remote D1 (migrations ship with the template)
 				if (databaseId) {
 					s.start("Applying migrations to remote D1");

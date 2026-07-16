@@ -15,7 +15,11 @@ export function imageUrl(source: string, width?: number, quality = 80): string {
 /** 1x/2x srcset for local uploads; undefined for external URLs. */
 export function imageSrcset(source: string, width: number, quality = 80): string | undefined {
 	if (!source.startsWith("/uploads/")) return undefined;
-	return `${imageUrl(source, width, quality)} 1x, ${imageUrl(source, width * 2, quality)} 2x`;
+	// Retina pixel density hides compression artifacts, so the 2x candidate
+	// takes noticeably heavier compression at no visible cost — the 2x file
+	// is the biggest download on the page, this roughly halves it
+	const retinaQuality = Math.max(40, Math.round(quality * 0.75));
+	return `${imageUrl(source, width, quality)} 1x, ${imageUrl(source, width * 2, retinaQuality)} 2x`;
 }
 
 /**

@@ -58,6 +58,8 @@ export interface ListingResult {
 interface FtsRow {
 	productId: number;
 	name: string;
+	/** Joined from products — the FTS table itself doesn't store it */
+	slug: string | null;
 	description: string | null;
 	visibility: "public" | "private" | "draft";
 	featured_asset: string | null;
@@ -156,7 +158,7 @@ function mapRow(row: FtsRow): CachedProduct {
 	return {
 		id: row.productId,
 		name: row.name,
-		slug: "",
+		slug: row.slug ?? "",
 		description: row.description,
 		minPrice: row.min_price,
 		maxPrice: row.max_price,
@@ -276,7 +278,8 @@ export async function listProducts(options: ListingOptions = {}): Promise<Listin
 			rowid AS productId,
 			name, description, visibility,
 			featured_asset, facets, variant_facet_images,
-			min_price, max_price, in_stock
+			min_price, max_price, in_stock,
+			(SELECT slug FROM products WHERE id = product_search_fts.rowid) AS slug
 		FROM product_search_fts
 		WHERE ${where}
 		ORDER BY ${orderBy}
@@ -330,21 +333,25 @@ export async function listProducts(options: ListingOptions = {}): Promise<Listin
 export async function quickSearchProducts(
 	term: string,
 	limit = 8
-): Promise<{ id: number; name: string; price: number | null; image: string | null }[]> {
+): Promise<
+	{ id: number; name: string; slug: string; price: number | null; image: string | null }[]
+> {
 	const matchExpr = buildMatchExpression(term);
 	if (!matchExpr) return [];
 
 	const rows = (await db.all(sql`
-		SELECT rowid AS productId, name, min_price, featured_asset
+		SELECT rowid AS productId, name, min_price, featured_asset,
+			(SELECT slug FROM products WHERE id = product_search_fts.rowid) AS slug
 		FROM product_search_fts
 		WHERE visibility = 'public' AND product_search_fts MATCH ${matchExpr}
 		ORDER BY ${RELEVANCE_SQL}
 		LIMIT ${limit}
-	`)) as Pick<FtsRow, "productId" | "name" | "min_price" | "featured_asset">[];
+	`)) as Pick<FtsRow, "productId" | "name" | "slug" | "min_price" | "featured_asset">[];
 
 	return rows.map((row) => ({
 		id: row.productId,
 		name: row.name,
+		slug: row.slug ?? "",
 		price: row.min_price,
 		image: row.featured_asset
 			? (JSON.parse(row.featured_asset) as { source: string }).source

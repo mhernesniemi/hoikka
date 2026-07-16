@@ -1,12 +1,11 @@
 import { productService } from "$lib/server/services/products.js";
-import { parseWishlistCookie, WISHLIST_COOKIE } from "$lib/server/wishlist-cookie.js";
 import { loadProductPageData } from "$lib/server/services/product-page.js";
 import { reviewService } from "$lib/server/services/reviews.js";
 import { taxService } from "$lib/server/services/tax.js";
 import { error, fail, redirect } from "@sveltejs/kit";
 import type { PageServerLoad, Actions } from "./$types";
 
-export const load: PageServerLoad = async ({ params, locals, url, cookies }) => {
+export const load: PageServerLoad = async ({ params, locals, url }) => {
 	const id = Number(params.id);
 
 	if (isNaN(id)) {
@@ -38,11 +37,10 @@ export const load: PageServerLoad = async ({ params, locals, url, cookies }) => 
 		throw redirect(301, `/products/${id}/${product.slug}`);
 	}
 
-	const isWishlisted = parseWishlistCookie(cookies.get(WISHLIST_COOKIE)).includes(product.id);
-
+	// isWishlisted intentionally isn't loaded here: guest pages are
+	// edge-cached, so cookie state hydrates via a remote query instead
 	return {
 		product,
-		isWishlisted,
 		rating,
 		reviews: reviewsResult.items,
 		reviewsPagination: reviewsResult.pagination,

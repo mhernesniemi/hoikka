@@ -28,6 +28,14 @@
 	"images": {
 		"binding": "IMAGES"
 	},
+	"kv_namespaces": [
+		{
+			// Guest storefront edge cache version key. create-hoikka-app fills in
+			// the real id; without the binding, edge caching is simply disabled.
+			"binding": "CACHE_KV",
+			"id": "00000000000000000000000000000000"
+		}
+	],
 	"observability": {
 		"enabled": true
 	}

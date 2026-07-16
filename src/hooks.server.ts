@@ -11,17 +11,19 @@ import { eq } from "drizzle-orm";
 import { stringify } from "devalue";
 import { env } from "$env/dynamic/private";
 import { ensureNodeScheduler } from "$lib/server/integrations/scheduler.js";
+import { edgeCache } from "$lib/server/edge-cache.js";
 
 // Session handler — validates session via Better Auth and syncs customer record.
 const sessionHandler: Handle = async ({ event, resolve }) => {
 	event.locals.user = null;
 
 	// Most storefront traffic is anonymous — skip the session DB lookup
-	// entirely when no Better Auth session cookie is present.
+	// entirely when no Better Auth session cookie is present. Asset requests
+	// never need locals, so they skip it even for logged-in visitors.
 	const hasSessionCookie = event.request.headers
 		.get("cookie")
 		?.includes("better-auth.session_token");
-	if (!hasSessionCookie) {
+	if (!hasSessionCookie || event.url.pathname.startsWith("/uploads/")) {
 		event.locals.customer = null;
 		event.locals.adminDark = event.cookies.get("admin-dark") === "1";
 		return resolve(event);
@@ -105,7 +107,9 @@ const demoGuard: Handle = async ({ event, resolve }) => {
 	return resolve(event);
 };
 
-export const handle = sequence(tasksInit, demoGuard, sessionHandler);
+// edgeCache sits before sessionHandler so cached guest responses return
+// without touching auth or the database at all
+export const handle = sequence(tasksInit, demoGuard, edgeCache, sessionHandler);
 
 export const handleError: HandleServerError = async ({ error, event, status, message }) => {
 	const errorId = crypto.randomUUID();

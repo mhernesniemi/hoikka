@@ -24,6 +24,8 @@ declare global {
 				ASSETS_BUCKET: import("@cloudflare/workers-types").R2Bucket;
 				/** Optional — image resizing falls back to originals without it */
 				IMAGES?: import("@cloudflare/workers-types").ImagesBinding;
+				/** Optional — guest storefront edge caching is disabled without it */
+				CACHE_KV?: import("@cloudflare/workers-types").KVNamespace;
 			};
 			ctx?: { waitUntil(promise: Promise<unknown>): void };
 			caches?: {

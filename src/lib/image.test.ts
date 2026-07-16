@@ -1,5 +1,33 @@
 import { describe, it, expect } from "vitest";
-import { focalPosition } from "./image";
+import { focalPosition, imageUrl, imageSrcset } from "./image";
+
+describe("imageUrl", () => {
+	it("appends resize params for local uploads", () => {
+		expect(imageUrl("/uploads/products/a.png", 400)).toBe("/uploads/products/a.png?w=400&q=80");
+	});
+
+	it("passes external URLs through untouched", () => {
+		expect(imageUrl("https://cdn.example.com/a.png", 400)).toBe(
+			"https://cdn.example.com/a.png"
+		);
+	});
+});
+
+describe("imageSrcset", () => {
+	it("serves the 2x candidate at reduced quality", () => {
+		expect(imageSrcset("/uploads/products/a.png", 400)).toBe(
+			"/uploads/products/a.png?w=400&q=80 1x, /uploads/products/a.png?w=800&q=60 2x"
+		);
+	});
+
+	it("never drops below the quality floor", () => {
+		expect(imageSrcset("/uploads/products/a.png", 400, 45)).toContain("w=800&q=40 2x");
+	});
+
+	it("returns undefined for external URLs", () => {
+		expect(imageSrcset("https://cdn.example.com/a.png", 400)).toBeUndefined();
+	});
+});
 
 describe("focalPosition", () => {
 	it("returns 50% 50% for null values", () => {
