@@ -1,9 +1,8 @@
-import { productService, stampGroupPrices } from "$lib/server/services/products.js";
+import { productService } from "$lib/server/services/products.js";
 import { parseWishlistCookie, WISHLIST_COOKIE } from "$lib/server/wishlist-cookie.js";
+import { loadProductPageData } from "$lib/server/services/product-page.js";
 import { reviewService } from "$lib/server/services/reviews.js";
-import { categoryService } from "$lib/server/services/categories.js";
 import { taxService } from "$lib/server/services/tax.js";
-import { relatedProductService } from "$lib/server/services/related-products.js";
 import { error, fail, redirect } from "@sveltejs/kit";
 import type { PageServerLoad, Actions } from "./$types";
 
@@ -19,24 +18,8 @@ export const load: PageServerLoad = async ({ params, locals, url, cookies }) => 
 		!!locals.user &&
 		["admin", "staff"].includes(locals.user.role ?? "");
 
-	// Everything here depends only on the id, so fetch it all in parallel —
-	// on D1 each awaited stage adds a network round trip
-	const [product, rating, reviewsResult, customerReview, breadcrumbs, relatedProducts] =
-		await Promise.all([
-			productService.getById(id),
-			reviewService.getProductRating(id),
-			reviewService.getProductReviews(id, { limit: 10 }),
-			locals.customer
-				? reviewService.getCustomerReviewForProduct(locals.customer.id, id)
-				: null,
-			// Breadcrumbs for the first category (primary category path)
-			categoryService
-				.getProductCategories(id)
-				.then((cats) =>
-					cats.length > 0 ? categoryService.getBreadcrumbs(cats[0].id) : []
-				),
-			relatedProductService.getRelatedProducts(id, 8)
-		]);
+	const { product, rating, reviewsResult, customerReview, breadcrumbs, relatedProducts } =
+		await loadProductPageData(id, locals.customer?.id ?? null);
 
 	if (!product || (!isPreview && product.visibility === "draft")) {
 		throw error(404, "Product not found");
@@ -56,8 +39,6 @@ export const load: PageServerLoad = async ({ params, locals, url, cookies }) => 
 	}
 
 	const isWishlisted = parseWishlistCookie(cookies.get(WISHLIST_COOKIE)).includes(product.id);
-
-	await stampGroupPrices([product, ...relatedProducts], locals.customer?.id ?? null);
 
 	return {
 		product,
