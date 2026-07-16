@@ -551,8 +551,7 @@
                 bind:value={reviewComment}
                 rows="4"
                 class="w-full rounded-lg border border-gray-300 px-3 py-2"
-                placeholder="Share your experience with this product..."
-              ></textarea>
+                placeholder="Share your experience with this product..."></textarea>
             </div>
 
             <div class="flex items-center gap-3">

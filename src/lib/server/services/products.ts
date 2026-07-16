@@ -2,7 +2,7 @@
  * Product Service
  * Handles all product-related business logic and database operations
  */
-import { eq, and, desc, asc, sql, inArray, isNull, like } from "drizzle-orm";
+import { eq, and, desc, asc, sql, inArray, isNull } from "drizzle-orm";
 import { db } from "../db/index.js";
 import {
 	products,
@@ -58,9 +58,8 @@ export class ProductService {
 		}
 
 		// Get product IDs that match facet filters
-		let productIdsFromFacets: number[] | null = null;
 		if (facetFilters && Object.keys(facetFilters).length > 0) {
-			productIdsFromFacets = await this.getProductIdsByFacets(facetFilters);
+			const productIdsFromFacets = await this.getProductIdsByFacets(facetFilters);
 			if (productIdsFromFacets.length === 0) {
 				return { items: [], pagination: { total: 0, limit, offset, hasMore: false } };
 			}

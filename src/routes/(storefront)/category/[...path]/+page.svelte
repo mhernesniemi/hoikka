@@ -14,7 +14,8 @@
     );
   }
 
-  const basePath = `/category/${data.breadcrumbs.map((b) => b.slug).join("/")}`;
+  // $derived: the component is reused when navigating between categories
+  const basePath = $derived(`/category/${data.breadcrumbs.map((b) => b.slug).join("/")}`);
 </script>
 
 <svelte:head>

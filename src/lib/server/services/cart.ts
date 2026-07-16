@@ -235,7 +235,7 @@ export async function getCartView(
 			});
 			if (!validation.valid) continue;
 
-			let amount = 0;
+			let amount: number;
 			if (promo.promotionType === "product") {
 				const qualifyingProductIds = await promotionService.getQualifyingProductIds(
 					promo.id

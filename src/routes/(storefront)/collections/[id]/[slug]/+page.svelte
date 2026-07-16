@@ -4,7 +4,8 @@
 
   let { data } = $props();
 
-  const basePath = `/collections/${data.collection.id}/${data.collection.slug}`;
+  // $derived: the component is reused when navigating between collections
+  const basePath = $derived(`/collections/${data.collection.id}/${data.collection.slug}`);
 </script>
 
 <svelte:head>
