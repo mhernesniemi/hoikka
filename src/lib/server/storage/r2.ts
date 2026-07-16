@@ -7,6 +7,7 @@ import {
 	PUBLIC_PREFIX,
 	contentTypeFor,
 	randomId,
+	VARIANT_PREFIX,
 	sanitizeFolder,
 	type StorageBackend
 } from "./types.js";
@@ -48,7 +49,14 @@ export const r2Storage: StorageBackend = {
 
 	async remove(url) {
 		if (!url.startsWith(PUBLIC_PREFIX + "/")) return;
-		await bucket().delete(url.slice(PUBLIC_PREFIX.length + 1));
+		const key = url.slice(PUBLIC_PREFIX.length + 1);
+		const b = bucket();
+		await b.delete(key);
+		// Drop any persisted resized variants of the object as well
+		const variants = await b.list({ prefix: `${VARIANT_PREFIX}/${key}/` });
+		if (variants.objects.length > 0) {
+			await b.delete(variants.objects.map((obj) => obj.key));
+		}
 	},
 
 	async get(path) {

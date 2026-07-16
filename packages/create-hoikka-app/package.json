@@ -1,6 +1,6 @@
 {
 	"name": "create-hoikka-app",
-	"version": "0.1.1",
+	"version": "0.1.2",
 	"description": "Scaffold a Hoikka ecommerce store — SvelteKit + SQLite, deployable to Node.js or Cloudflare",
 	"type": "module",
 	"bin": {

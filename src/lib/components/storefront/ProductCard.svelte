@@ -9,12 +9,15 @@
     product,
     activeDiscounts = [],
     grayscale = false,
-    showFromPrice
+    showFromPrice,
+    loading = "lazy"
   }: {
     product: ProductWithRelations;
     activeDiscounts?: ActiveDiscount[];
     grayscale?: boolean;
     showFromPrice?: boolean;
+    /** Use "eager" for above-the-fold cards */
+    loading?: "lazy" | "eager";
   } = $props();
 
   const name = $derived(product.name);
@@ -64,6 +67,8 @@
         alt={name}
         width={400}
         sizes="(max-width: 640px) 50vw, 33vw"
+        {loading}
+        fetchpriority={loading === "eager" ? "high" : "auto"}
         focalX={product.featuredAsset.focalX}
         focalY={product.featuredAsset.focalY}
         class={cn(

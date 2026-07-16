@@ -153,7 +153,12 @@
           {:else}
             <div class="grid grid-cols-2 gap-4 sm:gap-6">
               {#each data.featuredProducts as product}
-                <ProductCard {product} activeDiscounts={data.activeDiscounts} grayscale />
+                <ProductCard
+                  {product}
+                  activeDiscounts={data.activeDiscounts}
+                  grayscale
+                  loading="eager"
+                />
               {/each}
             </div>
           {/if}

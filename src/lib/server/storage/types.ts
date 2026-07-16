@@ -24,6 +24,9 @@ export interface StorageBackend {
 
 export const PUBLIC_PREFIX = "/uploads";
 
+/** Bucket prefix for persisted resized variants (`_variants/<original key>/w<w>q<q>.webp`) */
+export const VARIANT_PREFIX = "_variants";
+
 const CONTENT_TYPES: Record<string, string> = {
 	".jpg": "image/jpeg",
 	".jpeg": "image/jpeg",

@@ -5,3 +5,7 @@
 export function resizeImage(): never {
 	throw new Error("sharp resizing is not available on the cloudflare target");
 }
+
+export function optimizeMasterImage(): never {
+	throw new Error("sharp resizing is not available on the cloudflare target");
+}

@@ -10,6 +10,24 @@ import { join, dirname } from "node:path";
 
 const CACHE_DIR = "data/uploads/.cache";
 
+/**
+ * Re-encode an uploaded master as webp capped at `maxWidth` (never enlarged).
+ * EXIF orientation is baked in since webp drops the metadata.
+ */
+export async function optimizeMasterImage(
+	original: Uint8Array,
+	maxWidth: number,
+	quality: number
+): Promise<Uint8Array> {
+	return new Uint8Array(
+		await sharp(original)
+			.rotate()
+			.resize({ width: maxWidth, withoutEnlargement: true })
+			.webp({ quality })
+			.toBuffer()
+	);
+}
+
 export async function resizeImage(
 	path: string,
 	original: Uint8Array,

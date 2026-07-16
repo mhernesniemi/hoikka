@@ -17,6 +17,7 @@
     focalX,
     focalY,
     loading = "lazy",
+    fetchpriority = "auto",
     class: className = ""
   }: {
     src: string;
@@ -28,6 +29,7 @@
     focalX?: number | null;
     focalY?: number | null;
     loading?: "lazy" | "eager";
+    fetchpriority?: "high" | "low" | "auto";
     class?: string;
   } = $props();
 </script>
@@ -38,6 +40,7 @@
   {sizes}
   {alt}
   {loading}
+  {fetchpriority}
   decoding="async"
   class={className}
   style="object-position: {focalPosition(focalX, focalY)}"
