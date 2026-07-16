@@ -30,6 +30,7 @@
 		"test:e2e": "playwright test",
 		"test": "vitest --run",
 		"db:migrate:cf": "wrangler d1 migrations apply hoikka-db --remote",
+		"db:migrate:cf:local": "wrangler d1 migrations apply hoikka-db --local",
 		"db:generate": "drizzle-kit generate",
 		"db:studio": "drizzle-kit studio",
 		"seed": "tsx scripts/seed.ts",

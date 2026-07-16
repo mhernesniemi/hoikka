@@ -356,6 +356,7 @@ async function main() {
 		d1Created: false,
 		r2Created: false,
 		migrationsApplied: false,
+		localMigrationsApplied: false,
 		deployed: false,
 		url: null
 	};
@@ -482,6 +483,25 @@ async function main() {
 					}
 				}
 
+				// `pnpm dev` talks to a local D1 (miniflare), not the remote one, and
+				// nothing migrates it on boot the way the node target does — so
+				// without this the dev server 500s on its first query.
+				s.start("Applying migrations to local D1");
+				try {
+					execSync(`${pm.exec} wrangler d1 migrations apply ${projectName}-db --local`, {
+						cwd: projectDir,
+						stdio: "pipe",
+						input: "y\n"
+					});
+					cf.localMigrationsApplied = true;
+					s.stop("Local D1 ready for `pnpm dev`");
+				} catch (err) {
+					s.stop(
+						"Local migration apply failed — run `pnpm db:migrate:cf:local` manually"
+					);
+					if (err.stderr) console.error(err.stderr.toString().slice(-500));
+				}
+
 				// Set the auth secret as a Worker secret
 				s.start("Setting BETTER_AUTH_SECRET");
 				try {
@@ -535,6 +555,8 @@ async function main() {
 			lines.push(`  • ${pm.run} deploy:cf`);
 		}
 		lines.push("", `Local development: cd ${projectName} && ${pm.run} dev:cf`);
+		if (!cf.localMigrationsApplied)
+			lines.push(`  (run ${pm.run} db:migrate:cf:local first — dev uses its own local D1)`);
 		p.note(lines.join("\n"), "Next steps");
 		p.outro("Happy selling! 🛍️");
 	} else {

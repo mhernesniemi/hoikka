@@ -65,6 +65,8 @@ The SQLite database is created at `./data/hoikka.db` automatically. For producti
 
 Migrations run automatically when the server starts. Create your admin account at `/admin` on first visit.
 
+That auto-migration is the node target only. On the Cloudflare target the dev server talks to its own local D1, which nothing migrates on boot, so run `pnpm db:migrate:cf:local` once — `create-hoikka-app` does it for you — otherwise `pnpm dev` answers 500 on its first query. `pnpm db:migrate:cf` is the remote equivalent.
+
 ### AI assistant (MCP)
 
 Hoikka ships a local [MCP](https://modelcontextprotocol.io) server (`pnpm mcp`) that lets an AI assistant inspect the schema, browse the catalog, create products (with search indexing handled for you), adjust stock, and read orders. It's registered in `.mcp.json`, so MCP-aware tools (e.g. Claude Code) discover it automatically — no setup beyond `pnpm install`.
