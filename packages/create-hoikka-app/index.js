@@ -184,7 +184,8 @@ async function main() {
 		"",
 		"# Better Auth",
 		`BETTER_AUTH_SECRET="${authSecret}"`,
-		`BETTER_AUTH_URL="http://localhost:5173"`,
+		"# Optional — auth derives the URL from the request. Set only to override.",
+		`# BETTER_AUTH_URL="http://localhost:5173"`,
 		"",
 		"# Optional integrations — the store runs fine without them",
 		"# GOOGLE_CLIENT_ID=",
@@ -509,19 +510,6 @@ async function main() {
 						cf.deployed = true;
 						cf.url = urlMatch?.[0] ?? null;
 						s.stop("Deployed");
-
-						// Point Better Auth at the live URL so callbacks work
-						if (cf.url) {
-							try {
-								execSync(`${pm.exec} wrangler secret put BETTER_AUTH_URL`, {
-									cwd: projectDir,
-									stdio: "pipe",
-									input: `${cf.url}\n`
-								});
-							} catch {
-								// Non-fatal — printed in the summary below
-							}
-						}
 					} catch (err) {
 						s.stop("Deploy failed — run `pnpm deploy` manually");
 						if (err.stderr) console.error(err.stderr.toString().slice(-800));
@@ -545,9 +533,6 @@ async function main() {
 				lines.push(`  • ${pm.exec} wrangler r2 bucket create ${projectName}-assets`);
 			if (!cf.migrationsApplied) lines.push(`  • ${pm.run} db:migrate:cf`);
 			lines.push(`  • ${pm.run} deploy`);
-			lines.push(
-				`  • ${pm.exec} wrangler secret put BETTER_AUTH_URL  (your workers.dev URL)`
-			);
 		}
 		lines.push("", `Local development: cd ${projectName} && ${pm.run} dev:cf`);
 		p.note(lines.join("\n"), "Next steps");
