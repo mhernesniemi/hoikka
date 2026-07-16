@@ -1,6 +1,6 @@
 {
 	// Cloudflare Workers config for the "cloudflare" deployment target.
-	// Used by `pnpm dev:cf` (local bindings via miniflare), `pnpm deploy`, and
+	// Used by `pnpm dev:cf` (local bindings via miniflare), `pnpm deploy:cf`, and
 	// `pnpm db:migrate:cf`. create-hoikka-app fills in the real database_id.
 	"$schema": "node_modules/wrangler/config-schema.json",
 	"name": "hoikka",

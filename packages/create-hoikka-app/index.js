@@ -505,13 +505,13 @@ async function main() {
 				if (!p.isCancel(deployNow) && deployNow) {
 					s.start("Building and deploying (takes a minute)");
 					try {
-						const output = await runAsync(`${pm.run} deploy`, projectDir);
+						const output = await runAsync(`${pm.run} deploy:cf`, projectDir);
 						const urlMatch = output.match(/https:\/\/[^\s]+\.workers\.dev/);
 						cf.deployed = true;
 						cf.url = urlMatch?.[0] ?? null;
 						s.stop("Deployed");
 					} catch (err) {
-						s.stop("Deploy failed — run `pnpm deploy` manually");
+						s.stop("Deploy failed — run `pnpm deploy:cf` manually");
 						if (err.stderr) console.error(err.stderr.toString().slice(-800));
 					}
 				}
@@ -532,7 +532,7 @@ async function main() {
 			if (!cf.r2Created)
 				lines.push(`  • ${pm.exec} wrangler r2 bucket create ${projectName}-assets`);
 			if (!cf.migrationsApplied) lines.push(`  • ${pm.run} db:migrate:cf`);
-			lines.push(`  • ${pm.run} deploy`);
+			lines.push(`  • ${pm.run} deploy:cf`);
 		}
 		lines.push("", `Local development: cd ${projectName} && ${pm.run} dev:cf`);
 		p.note(lines.join("\n"), "Next steps");
