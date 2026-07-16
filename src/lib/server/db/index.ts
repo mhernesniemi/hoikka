@@ -16,6 +16,7 @@ import { env } from "$env/dynamic/private";
 // $lib specifier (not "./node.js") so the cloudflare build can alias this
 // module to node-stub.ts — see resolve.alias in vite.config.ts
 import { createNodeDb, type NodeDb } from "$lib/server/db/node.js";
+import { DEFAULT_DATABASE_URL } from "./config.js";
 
 export type Db = NodeDb;
 
@@ -34,10 +35,7 @@ function currentDb(): Db {
 		// Outside request scope (startup, tests) — fall through to the Node db.
 	}
 	if (!nodeDb) {
-		if (!env.DATABASE_URL) {
-			throw new Error("No database: set DATABASE_URL (node) or bind D1 as DB (cloudflare)");
-		}
-		nodeDb = createNodeDb(env.DATABASE_URL);
+		nodeDb = createNodeDb(env.DATABASE_URL || DEFAULT_DATABASE_URL);
 	}
 	return nodeDb;
 }

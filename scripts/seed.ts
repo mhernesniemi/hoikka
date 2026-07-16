@@ -2,8 +2,8 @@
  * Seed demo catalog data into the local SQLite database.
  * Usage: pnpm seed (reads DATABASE_URL from the environment or .env)
  */
-import { readFileSync } from "node:fs";
 import { createNodeDb } from "../src/lib/server/db/node.js";
+import { resolveDatabaseUrl } from "../src/lib/server/db/config.js";
 import {
 	products,
 	productVariants,
@@ -11,19 +11,6 @@ import {
 	productCategories
 } from "../src/lib/server/db/schema.js";
 import { reindexProduct } from "../src/lib/server/services/reindex.js";
-
-function resolveDatabaseUrl(): string {
-	if (process.env.DATABASE_URL) return process.env.DATABASE_URL;
-	for (const file of [".env", ".env.local"]) {
-		try {
-			const match = /^DATABASE_URL=["']?([^"'\n]+)/m.exec(readFileSync(file, "utf8"));
-			if (match) return match[1];
-		} catch {
-			// file missing — try the next one
-		}
-	}
-	return "./local.db";
-}
 
 const db = createNodeDb(resolveDatabaseUrl());
 

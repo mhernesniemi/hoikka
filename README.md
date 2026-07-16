@@ -57,10 +57,11 @@ git clone https://github.com/mhernesniemi/hoikka.git my-store
 cd my-store
 pnpm install
 
-cp .env.example .env   # set BETTER_AUTH_SECRET (openssl rand -base64 32)
 pnpm seed              # optional demo products
 pnpm dev
 ```
+
+The SQLite database is created at `./data/hoikka.db` automatically. For production, copy `.env.example` to `.env` and set `BETTER_AUTH_SECRET` (`openssl rand -base64 32`).
 
 Migrations run automatically when the server starts. Create your admin account at `/admin` on first visit.
 
