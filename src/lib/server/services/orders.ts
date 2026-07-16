@@ -331,7 +331,9 @@ export class OrderService {
 			total: sql`${orders.total}`,
 			date: dateFallback
 		};
-		const sortCol = (sortBy && sortColumnMap[sortBy]) || dateFallback;
+		const sortCol =
+			(sortBy && Object.hasOwn(sortColumnMap, sortBy) ? sortColumnMap[sortBy] : undefined) ||
+			dateFallback;
 		const dirFn = sortOrder === "asc" ? asc : desc;
 
 		// Data query with line count subquery

@@ -95,7 +95,9 @@ export class FacetService {
 			name: sql`${facets.name}`,
 			code: sql`${facets.code}`
 		};
-		const sortCol = (sortBy && sortColumnMap[sortBy]) || sql`${facets.code}`;
+		const sortCol =
+			(sortBy && Object.hasOwn(sortColumnMap, sortBy) ? sortColumnMap[sortBy] : undefined) ||
+			sql`${facets.code}`;
 		const dirFn = sortOrder === "desc" ? desc : asc;
 
 		const items = await db

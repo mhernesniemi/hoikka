@@ -50,7 +50,9 @@ export class ContentPageService {
 			published: sql`${contentPages.published}`,
 			createdAt: sql`${contentPages.createdAt}`
 		};
-		const sortCol = (sortBy && sortColumnMap[sortBy]) || sql`${contentPages.createdAt}`;
+		const sortCol =
+			(sortBy && Object.hasOwn(sortColumnMap, sortBy) ? sortColumnMap[sortBy] : undefined) ||
+			sql`${contentPages.createdAt}`;
 		const dirFn = sortOrder === "asc" ? asc : desc;
 
 		const items = await db

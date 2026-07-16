@@ -338,7 +338,8 @@ export class CollectionService {
 			status: sql`${collections.isPrivate}`,
 			createdAt: sql`${collections.createdAt}`
 		};
-		const sortCol = sortBy && sortColumnMap[sortBy];
+		const sortCol =
+			sortBy && Object.hasOwn(sortColumnMap, sortBy) ? sortColumnMap[sortBy] : undefined;
 		const dirFn = sortOrder === "asc" ? asc : desc;
 
 		const items = await db

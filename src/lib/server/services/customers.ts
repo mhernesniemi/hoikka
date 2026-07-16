@@ -102,7 +102,9 @@ export class CustomerService {
 			phone: sql`${customers.phone}`,
 			createdAt: sql`${customers.createdAt}`
 		};
-		const sortCol = (sortBy && sortColumnMap[sortBy]) || sql`${customers.createdAt}`;
+		const sortCol =
+			(sortBy && Object.hasOwn(sortColumnMap, sortBy) ? sortColumnMap[sortBy] : undefined) ||
+			sql`${customers.createdAt}`;
 		const dirFn = sortOrder === "asc" ? asc : desc;
 
 		const items = await db

@@ -134,7 +134,9 @@ export class CustomerGroupService {
 			customerCount: sql`(SELECT count(*) FROM customer_group_members WHERE group_id = ${customerGroups.id})`,
 			createdAt: sql`${customerGroups.createdAt}`
 		};
-		const sortCol = (sortBy && sortColumnMap[sortBy]) || sql`${customerGroups.createdAt}`;
+		const sortCol =
+			(sortBy && Object.hasOwn(sortColumnMap, sortBy) ? sortColumnMap[sortBy] : undefined) ||
+			sql`${customerGroups.createdAt}`;
 		const dirFn = sortOrder === "asc" ? asc : desc;
 
 		const items = await db

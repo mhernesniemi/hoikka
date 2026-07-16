@@ -47,6 +47,24 @@ test.describe("Storefront smoke tests", () => {
 		await expect(page.getByText("Aurora Ceramic Mug").first()).toBeVisible({ timeout: 5000 });
 	});
 
+	test("category page lists scoped products", async ({ page }) => {
+		await page.goto("/category/everyday-goods");
+
+		await expect(page.locator("h1")).toContainText("Everyday Goods");
+		const productCards = page.locator('a[href^="/products/"]');
+		await expect(productCards.first()).toBeVisible({ timeout: 10000 });
+	});
+
+	test("hostile listing params don't 500", async ({ request }) => {
+		// prototype-key sort, empty facet code, junk price — all must degrade gracefully
+		for (const qs of ["?sort=toString", "?facet_=x", "?price_min=abc", "?page=-1"]) {
+			const res = await request.get(`/products${qs}`);
+			expect(res.status()).toBeLessThan(500);
+		}
+		const cat = await request.get("/category/everyday-goods?sort=constructor&facet_=x");
+		expect(cat.status()).toBeLessThan(500);
+	});
+
 	test("facet filtering works server-side", async ({ page }) => {
 		await page.goto("/products?q=mug");
 

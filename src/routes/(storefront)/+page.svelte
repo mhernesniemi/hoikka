@@ -159,9 +159,8 @@
                   <input
                     type="email"
                     id="email"
-                    readonly
                     value="admin@example.com"
-                    class="w-full cursor-not-allowed rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-gray-500"
+                    class="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-gray-600"
                   />
                 </div>
 
@@ -172,9 +171,8 @@
                   <input
                     type="password"
                     id="password"
-                    readonly
                     value="admin538"
-                    class="w-full cursor-not-allowed rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-gray-500"
+                    class="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-gray-600"
                   />
                 </div>
 

@@ -187,7 +187,9 @@ export class PromotionService {
 			status: sql`${promotions.enabled}`,
 			createdAt: sql`${promotions.createdAt}`
 		};
-		const sortCol = (sortBy && sortColumnMap[sortBy]) || sql`${promotions.createdAt}`;
+		const sortCol =
+			(sortBy && Object.hasOwn(sortColumnMap, sortBy) ? sortColumnMap[sortBy] : undefined) ||
+			sql`${promotions.createdAt}`;
 		const dirFn = sortOrder === "asc" ? asc : desc;
 
 		const items = await db

@@ -90,8 +90,9 @@ function facetConditions(facetFilters: Record<string, string[]> | undefined) {
 	if (!facetFilters) return [];
 	const conds = [];
 	for (const [facetCode, valueCodes] of Object.entries(facetFilters)) {
-		if (valueCodes.length === 0) continue;
 		const safeCode = facetCode.replace(/[^a-zA-Z0-9_-]/g, "");
+		// Skip empty codes — json_extract($.<empty>) is an invalid JSON path
+		if (!safeCode || valueCodes.length === 0) continue;
 		conds.push(sql`EXISTS (
 			SELECT 1 FROM json_each(json_extract(product_search_fts.facets, ${"$." + safeCode}))
 			WHERE json_extract(value, '$.code') IN (${sql.join(
@@ -115,10 +116,12 @@ function buildConditions(opts: {
 	const matchExpr = opts.search ? buildMatchExpression(opts.search) : null;
 	if (matchExpr) conditions.push(sql`product_search_fts MATCH ${matchExpr}`);
 
+	// Qualified rowid: the facet-count query joins json_each() tables,
+	// where a bare `rowid` is ambiguous
 	if (opts.productIds) {
 		conditions.push(
 			opts.productIds.length > 0
-				? sql`rowid IN (${sql.join(
+				? sql`product_search_fts.rowid IN (${sql.join(
 						opts.productIds.map((id) => sql`${id}`),
 						sql`, `
 					)})`
@@ -227,7 +230,9 @@ export function parseListingParams(
 ): Pick<ListingOptions, "search" | "facets" | "sort" | "page" | "priceMin" | "priceMax"> {
 	const facets: Record<string, string[]> = {};
 	for (const [key, value] of url.searchParams) {
-		if (key.startsWith("facet_")) (facets[key.slice("facet_".length)] ??= []).push(value);
+		if (!key.startsWith("facet_") || !value) continue;
+		const code = key.slice("facet_".length);
+		if (code) (facets[code] ??= []).push(value);
 	}
 	const priceMin = url.searchParams.get("price_min");
 	const priceMax = url.searchParams.get("price_max");
@@ -236,7 +241,8 @@ export function parseListingParams(
 	return {
 		search: url.searchParams.get("q") ?? undefined,
 		facets: Object.keys(facets).length > 0 ? facets : undefined,
-		sort: sort && sort in SORT_SQL ? sort : "newest",
+		// Object.hasOwn — a plain `in` would accept prototype keys like ?sort=toString
+		sort: sort && Object.hasOwn(SORT_SQL, sort) ? sort : "newest",
 		page: Math.max(1, Number(url.searchParams.get("page")) || 1),
 		priceMin: priceMin && Number(priceMin) > 0 ? Math.round(Number(priceMin) * 100) : undefined,
 		priceMax: priceMax && Number(priceMax) > 0 ? Math.round(Number(priceMax) * 100) : undefined
@@ -248,8 +254,10 @@ export async function listProducts(options: ListingOptions = {}): Promise<Listin
 	const offset = (page - 1) * limit;
 
 	const { where, matched } = buildConditions(options);
-	// Relevance order while searching (unless the user chose an explicit sort)
-	const orderBy = matched && sort === "newest" ? sql.raw("rank") : SORT_SQL[sort];
+	// Relevance order while searching (unless the user chose an explicit sort).
+	// Fall back to newest for any unrecognized sort key (defensive — parseListingParams already guards).
+	const orderBy =
+		matched && sort === "newest" ? sql.raw("rank") : (SORT_SQL[sort] ?? SORT_SQL.newest);
 
 	const countRow = (await db.get(
 		sql`SELECT count(*) AS count FROM product_search_fts WHERE ${where}`

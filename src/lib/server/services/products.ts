@@ -154,7 +154,9 @@ export class ProductService {
 			visibility: sql`${products.visibility}`,
 			createdAt: sql`${products.createdAt}`
 		};
-		const sortCol = (sortBy && sortColumnMap[sortBy]) || sql`${products.createdAt}`;
+		const sortCol =
+			(sortBy && Object.hasOwn(sortColumnMap, sortBy) ? sortColumnMap[sortBy] : undefined) ||
+			sql`${products.createdAt}`;
 		const dirFn = sortOrder === "asc" ? asc : desc;
 
 		// Fallback: if product has no featuredAssetId, use the first variant's imageUrl
