@@ -10,6 +10,7 @@ import { customers } from "$lib/server/db/schema.js";
 import { eq } from "drizzle-orm";
 import { stringify } from "devalue";
 import { env } from "$env/dynamic/private";
+import { ensureNodeScheduler } from "$lib/server/integrations/scheduler.js";
 
 // Session handler — validates session via Better Auth and syncs customer record.
 const sessionHandler: Handle = async ({ event, resolve }) => {
@@ -79,6 +80,12 @@ const sessionHandler: Handle = async ({ event, resolve }) => {
 	return resolve(event);
 };
 
+// On the node target, start the background outbox drain once (no-op on CF).
+const tasksInit: Handle = async ({ event, resolve }) => {
+	ensureNodeScheduler();
+	return resolve(event);
+};
+
 const demoGuard: Handle = async ({ event, resolve }) => {
 	if (
 		env.DEMO_MODE === "true" &&
@@ -98,7 +105,7 @@ const demoGuard: Handle = async ({ event, resolve }) => {
 	return resolve(event);
 };
 
-export const handle = sequence(demoGuard, sessionHandler);
+export const handle = sequence(tasksInit, demoGuard, sessionHandler);
 
 export const handleError: HandleServerError = async ({ error, event, status, message }) => {
 	const errorId = crypto.randomUUID();

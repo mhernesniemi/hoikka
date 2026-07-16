@@ -27,6 +27,7 @@ import {
 	customerService
 } from "$lib/server/services/index.js";
 import { digitalDeliveryService } from "$lib/server/services/digitalDelivery.js";
+import { emitEvent } from "$lib/server/integrations/events.js";
 import { CART_COOKIE, CHECKOUT_COOKIE } from "$lib/server/cart-cookie.js";
 import type { OrderWithRelations, Payment, Address } from "$lib/types.js";
 
@@ -336,6 +337,15 @@ async function completeCheckout(opts: {
 				console.error("Error delivering digital products:", e);
 				// Don't fail the order if digital delivery fails
 			}
+
+			// Record an out-of-band event (webhook / ERP sync / etc.) for the
+			// outbox to process. Durable and non-blocking — see integrations/.
+			await emitEvent("order.paid", {
+				code: paidOrder?.code,
+				total: order.total,
+				customerEmail: order.customerEmail,
+				isDigitalOnly
+			});
 		}
 	}
 

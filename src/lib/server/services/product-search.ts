@@ -69,6 +69,13 @@ interface FtsRow {
 }
 
 /**
+ * Relevance ranking: bm25 with per-column weights (declaration order: name,
+ * description, then UNINDEXED columns which never match). A name hit weighs
+ * 10x a description hit, so title matches surface first. Ascending, like `rank`.
+ */
+const RELEVANCE_SQL = sql.raw("bm25(product_search_fts, 10.0, 1.0)");
+
+/**
  * Build an FTS5 MATCH expression from free-text. Strips punctuation, treats each
  * term as a prefix (`term*`), joins with implicit AND (space).
  */
@@ -257,7 +264,7 @@ export async function listProducts(options: ListingOptions = {}): Promise<Listin
 	// Relevance order while searching (unless the user chose an explicit sort).
 	// Fall back to newest for any unrecognized sort key (defensive — parseListingParams already guards).
 	const orderBy =
-		matched && sort === "newest" ? sql.raw("rank") : (SORT_SQL[sort] ?? SORT_SQL.newest);
+		matched && sort === "newest" ? RELEVANCE_SQL : (SORT_SQL[sort] ?? SORT_SQL.newest);
 
 	const countRow = (await db.get(
 		sql`SELECT count(*) AS count FROM product_search_fts WHERE ${where}`
@@ -331,7 +338,7 @@ export async function quickSearchProducts(
 		SELECT rowid AS productId, name, min_price, featured_asset
 		FROM product_search_fts
 		WHERE visibility = 'public' AND product_search_fts MATCH ${matchExpr}
-		ORDER BY rank
+		ORDER BY ${RELEVANCE_SQL}
 		LIMIT ${limit}
 	`)) as Pick<FtsRow, "productId" | "name" | "min_price" | "featured_asset">[];
 

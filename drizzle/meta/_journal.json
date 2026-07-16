@@ -29,6 +29,13 @@
       "when": 1784144149328,
       "tag": "0003_fts_stock_price_triggers",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1784213418963,
+      "tag": "0004_marvelous_shiva",
+      "breakpoints": true
     }
   ]
 }

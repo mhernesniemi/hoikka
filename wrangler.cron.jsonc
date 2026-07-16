@@ -1,0 +1,15 @@
+{
+	// Companion cron worker that drains the outbox on the Cloudflare target.
+	// Deploy separately from the store: wrangler deploy --config wrangler.cron.jsonc
+	// Set STORE_URL (your store's URL) and TASKS_SECRET (matching the store's).
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "hoikka-cron",
+	"main": "workers/cron.ts",
+	"compatibility_date": "2026-07-01",
+	"triggers": {
+		"crons": ["* * * * *"]
+	},
+	"vars": {
+		"STORE_URL": "https://hoikka.example.workers.dev"
+	}
+}

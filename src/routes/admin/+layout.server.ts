@@ -1,6 +1,6 @@
 /**
  * Admin layout server - protects all admin routes
- * Uses Neon Auth with role-based access
+ * Role-based access via Better Auth (staff/admin only)
  */
 import { redirect } from "@sveltejs/kit";
 import type { LayoutServerLoad } from "./$types";

@@ -978,3 +978,31 @@ export const contentPageTranslations = sqliteTable(
 		index("content_page_translations_slug_idx").on(table.slug)
 	]
 );
+
+// ============================================================================
+// OUTBOX (background jobs / integrations)
+// A durable event log drained by a scheduled "tick" (CF cron / Node interval).
+// Producers INSERT rows via emitEvent; the runner processes them with retry.
+// ============================================================================
+
+export const outbox = sqliteTable(
+	"outbox",
+	{
+		id: pk(),
+		type: text("type").notNull(),
+		payload: text("payload", { mode: "json" }),
+		status: text("status", { enum: ["pending", "done", "failed"] })
+			.default("pending")
+			.notNull(),
+		attempts: integer("attempts").default(0).notNull(),
+		maxAttempts: integer("max_attempts").default(5).notNull(),
+		nextAttemptAt: ts("next_attempt_at").notNull(),
+		lastError: text("last_error"),
+		createdAt: now(),
+		updatedAt: updatedNow()
+	},
+	(table) => [
+		// The runner's hot query: pending rows whose backoff has elapsed
+		index("outbox_due_idx").on(table.status, table.nextAttemptAt)
+	]
+);
