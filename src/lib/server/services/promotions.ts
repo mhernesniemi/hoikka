@@ -2,8 +2,9 @@
  * Promotion Service
  * Handles coupon codes and discounts
  */
-import { eq, and, asc, desc, sql, gte, lte, or, isNull, inArray } from "drizzle-orm";
+import { eq, and, sql, gte, lte, or, isNull, inArray, type SQL } from "drizzle-orm";
 import { db } from "../db/index.js";
+import { paginationOf, resolveSort } from "../pagination.js";
 import {
 	promotions,
 	promotionProducts,
@@ -12,8 +13,6 @@ import {
 	orders,
 	productTranslations,
 	collectionTranslations,
-	collectionFilters,
-	productFacetValues,
 	customerGroupMembers
 } from "../db/schema.js";
 import type {
@@ -24,6 +23,7 @@ import type {
 	PaginatedResult
 } from "$lib/types.js";
 import { calculateDiscount, canCombinePromotions } from "./promotion-utils.js";
+import { collectionService } from "./collections.js";
 
 export class PromotionService {
 	/**
@@ -166,11 +166,11 @@ export class PromotionService {
 	): Promise<PaginatedResult<Promotion>> {
 		const { enabled, limit = 20, offset = 0, search, sortBy, sortOrder = "desc" } = options;
 
-		const conditions = enabled !== undefined ? [eq(promotions.enabled, enabled)] : [];
+		const conditions: SQL[] = enabled !== undefined ? [eq(promotions.enabled, enabled)] : [];
 		if (search) {
 			const pattern = `%${search}%`;
 			conditions.push(
-				sql`(${promotions.code} LIKE ${pattern} OR ${promotions.title} LIKE ${pattern})` as any
+				sql`(${promotions.code} LIKE ${pattern} OR ${promotions.title} LIKE ${pattern})`
 			);
 		}
 
@@ -180,54 +180,31 @@ export class PromotionService {
 			.where(and(...conditions));
 		const total = Number(countResult[0]?.count ?? 0);
 
-		const sortColumnMap: Record<string, ReturnType<typeof sql>> = {
-			code: sql`${promotions.code}`,
-			method: sql`${promotions.method}`,
-			promotionType: sql`${promotions.promotionType}`,
-			status: sql`${promotions.enabled}`,
-			createdAt: sql`${promotions.createdAt}`
-		};
-		const sortCol =
-			(sortBy && Object.hasOwn(sortColumnMap, sortBy) ? sortColumnMap[sortBy] : undefined) ||
-			sql`${promotions.createdAt}`;
-		const dirFn = sortOrder === "asc" ? asc : desc;
+		const orderByExpr = resolveSort(
+			{
+				code: sql`${promotions.code}`,
+				method: sql`${promotions.method}`,
+				promotionType: sql`${promotions.promotionType}`,
+				status: sql`${promotions.enabled}`,
+				createdAt: sql`${promotions.createdAt}`
+			},
+			sortBy,
+			sortOrder,
+			sql`${promotions.createdAt}`
+		);
 
 		const items = await db
 			.select()
 			.from(promotions)
 			.where(and(...conditions))
-			.orderBy(dirFn(sortCol))
+			.orderBy(orderByExpr)
 			.limit(limit)
 			.offset(offset);
 
 		return {
 			items,
-			pagination: { total, limit, offset, hasMore: offset + items.length < total }
+			pagination: paginationOf(total, limit, offset, items.length)
 		};
-	}
-
-	/**
-	 * List active promotions (enabled, within date range, not exhausted)
-	 */
-	async listActive(): Promise<Promotion[]> {
-		const now = new Date();
-
-		const items = await db
-			.select()
-			.from(promotions)
-			.where(
-				and(
-					eq(promotions.enabled, true),
-					or(isNull(promotions.startsAt), lte(promotions.startsAt, now)),
-					or(isNull(promotions.endsAt), gte(promotions.endsAt, now)),
-					or(
-						isNull(promotions.usageLimit),
-						sql`${promotions.usageCount} < ${promotions.usageLimit}`
-					)
-				)
-			);
-
-		return items;
 	}
 
 	/**
@@ -445,31 +422,12 @@ export class PromotionService {
 
 			if (collectionRows.length === 0) return [];
 
-			const collectionIds = collectionRows.map((r) => r.collectionId);
-
-			// Get filters for these collections and resolve product IDs
-			// Collections use filter-based matching; get products matching the collection filters
-			const filters = await db
-				.select()
-				.from(collectionFilters)
-				.where(inArray(collectionFilters.collectionId, collectionIds));
-
-			// For product-type filters (field='product'), extract product IDs directly
+			// A product qualifies if it is in ANY linked collection. Delegate to the
+			// collection service so every filter type is honored, not a subset.
 			const productIds = new Set<number>();
-			for (const filter of filters) {
-				if (filter.field === "product" && filter.operator === "in") {
-					const ids = filter.value as number[];
-					for (const id of ids) productIds.add(id);
-				} else if (filter.field === "facet" && filter.operator === "in") {
-					// Resolve facet-based filter to product IDs
-					const facetValueIds = filter.value as number[];
-					if (facetValueIds.length > 0) {
-						const facetProducts = await db
-							.select({ productId: productFacetValues.productId })
-							.from(productFacetValues)
-							.where(inArray(productFacetValues.facetValueId, facetValueIds));
-						for (const fp of facetProducts) productIds.add(fp.productId);
-					}
+			for (const { collectionId } of collectionRows) {
+				for (const id of await collectionService.getProductIdsForCollection(collectionId)) {
+					productIds.add(id);
 				}
 			}
 
@@ -533,13 +491,6 @@ export class PromotionService {
 		}
 	): Promise<{ valid: boolean; error?: string }> {
 		return this.validateConditions(promotion, orderAmount, options);
-	}
-
-	/**
-	 * Calculate discount amount for a promotion
-	 */
-	calculateDiscount(promotion: Promotion, orderAmount: number): number {
-		return calculateDiscount(promotion, orderAmount);
 	}
 
 	/**

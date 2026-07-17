@@ -1,9 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-	calculateDiscount,
-	calculateProductDiscount,
-	canCombinePromotions
-} from "./promotion-utils";
+import { calculateDiscount, canCombinePromotions } from "./promotion-utils";
 
 describe("calculateDiscount", () => {
 	it("calculates percentage discount", () => {
@@ -30,32 +26,6 @@ describe("calculateDiscount", () => {
 
 	it("rounds percentage discount", () => {
 		expect(calculateDiscount({ discountType: "percentage", discountValue: 15 }, 999)).toBe(150);
-	});
-});
-
-describe("calculateProductDiscount", () => {
-	it("calculates percentage discount on qualifying total", () => {
-		expect(
-			calculateProductDiscount({ discountType: "percentage", discountValue: 10 }, 5000)
-		).toBe(500);
-	});
-
-	it("calculates fixed amount discount on qualifying total", () => {
-		expect(
-			calculateProductDiscount({ discountType: "fixed_amount", discountValue: 1000 }, 5000)
-		).toBe(1000);
-	});
-
-	it("caps fixed amount at qualifying total", () => {
-		expect(
-			calculateProductDiscount({ discountType: "fixed_amount", discountValue: 3000 }, 2000)
-		).toBe(2000);
-	});
-
-	it("handles zero qualifying total", () => {
-		expect(calculateProductDiscount({ discountType: "percentage", discountValue: 50 }, 0)).toBe(
-			0
-		);
 	});
 });
 

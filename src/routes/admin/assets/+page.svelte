@@ -1,12 +1,11 @@
 <script lang="ts">
-  import { enhance } from "$app/forms";
-  import { invalidateAll } from "$app/navigation";
   import { Button } from "$lib/components/admin/ui/button";
   import { Checkbox } from "$lib/components/admin/ui/checkbox";
   import DeleteConfirmDialog from "$lib/components/admin/DeleteConfirmDialog.svelte";
   import ImagePicker from "$lib/components/admin/ImagePicker.svelte";
   import { imageUrl } from "$lib/image";
   import { formatDate, formatFileSize, cn } from "$lib/utils";
+  import { saveImages, type SelectedImage } from "$lib/admin-upload";
   import { toast } from "svelte-sonner";
   import ImageIcon from "@lucide/svelte/icons/image";
   import Plus from "@lucide/svelte/icons/plus";
@@ -37,32 +36,9 @@
     }
   }
 
-  async function handleImagesUploaded(
-    files: {
-      url: string;
-      name: string;
-      width: number;
-      height: number;
-      size: number;
-      alt: string;
-    }[]
-  ) {
-    try {
-      for (const file of files) {
-        const formData = new FormData();
-        formData.append("url", file.url);
-        formData.append("name", file.name);
-        formData.append("width", file.width.toString());
-        formData.append("height", file.height.toString());
-        formData.append("fileSize", file.size.toString());
-        formData.append("alt", file.alt);
-
-        await fetch("?/addAsset", { method: "POST", body: formData });
-      }
-      await invalidateAll();
-    } catch {
-      toast.error("Failed to save assets");
-    }
+  async function handleImagesUploaded(files: SelectedImage[]) {
+    const error = await saveImages("?/addAsset", files);
+    if (error) toast.error(error);
   }
 </script>
 

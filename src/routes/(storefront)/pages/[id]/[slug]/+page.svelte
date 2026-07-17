@@ -33,6 +33,7 @@
   <h1 class="text-3xl font-bold text-gray-900">{data.page.title}</h1>
   {#if data.page.body}
     <div class="prose prose-lg mt-6 max-w-none prose-gray">
+      <!-- eslint-disable-next-line svelte/no-at-html-tags -- sanitized on save in admin -->
       {@html data.page.body}
     </div>
   {/if}

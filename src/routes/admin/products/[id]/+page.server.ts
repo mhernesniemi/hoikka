@@ -10,6 +10,7 @@ import { sanitizeHtml } from "$lib/server/sanitize.js";
 import { TRANSLATION_LANGUAGES } from "$lib/config/languages.js";
 import { PRODUCT_TYPES } from "$lib/config/products.js";
 import { dbError } from "$lib/server/db-error.js";
+import type { SelectedImage } from "$lib/admin-upload.js";
 import { error, fail, redirect } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
 
@@ -201,27 +202,36 @@ export const actions: Actions = {
 		const productId = Number(params.id);
 		const formData = await request.formData();
 
-		const url = formData.get("url") as string;
-		const name = formData.get("name") as string;
-		const width = Number(formData.get("width")) || 0;
-		const height = Number(formData.get("height")) || 0;
-		const fileSize = Number(formData.get("fileSize")) || 0;
-		const alt = formData.get("alt") as string;
+		let files: SelectedImage[];
+		try {
+			files = formData.getAll("files").map((entry) => JSON.parse(String(entry)));
+		} catch {
+			return fail(400, { imageError: "Image data is required" });
+		}
 
-		if (!url || !name) {
+		if (files.length === 0 || files.some((file) => !file.url || !file.name)) {
 			return fail(400, { imageError: "Image data is required" });
 		}
 
 		try {
-			// Reuse existing asset if one already exists with this URL
-			const existing = await assetService.getBySource(url);
-			const asset =
-				existing ?? (await assetService.create({ name, url, width, height, fileSize }));
-			await assetService.addToProduct(productId, asset.id);
+			for (const file of files) {
+				// Reuse existing asset if one already exists with this URL
+				const existing = await assetService.getBySource(file.url);
+				const asset =
+					existing ??
+					(await assetService.create({
+						name: file.name,
+						url: file.url,
+						width: file.width || 0,
+						height: file.height || 0,
+						fileSize: file.size || 0
+					}));
+				await assetService.addToProduct(productId, asset.id);
 
-			// Update alt text if provided
-			if (alt) {
-				await assetService.updateAlt(asset.id, alt);
+				// Update alt text if provided
+				if (file.alt) {
+					await assetService.updateAlt(asset.id, file.alt);
+				}
 			}
 
 			await reindexProduct(productId);

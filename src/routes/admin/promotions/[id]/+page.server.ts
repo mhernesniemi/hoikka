@@ -4,6 +4,7 @@ import { productService } from "$lib/server/services/products.js";
 import { collectionService } from "$lib/server/services/collections.js";
 import { customerGroupService } from "$lib/server/services/customerGroups.js";
 import { dbError } from "$lib/server/db-error.js";
+import { parsePromotionUpdateForm } from "../promotion-form.server.js";
 import { error, fail, redirect, isRedirect } from "@sveltejs/kit";
 
 export const load: PageServerLoad = async ({ params }) => {
@@ -44,34 +45,22 @@ export const actions: Actions = {
 		const id = Number(params.id);
 		const data = await request.formData();
 
-		const title = data.has("title") ? (data.get("title") as string) || null : undefined;
-		const discountType = data.get("discountType") as "percentage" | "fixed_amount" | null;
-		const discountValueRaw = data.get("discountValue")
-			? Number(data.get("discountValue"))
-			: undefined;
-		const appliesTo = data.get("appliesTo") as
-			"all" | "specific_products" | "specific_collections" | null;
-		const minOrderAmountRaw = data.get("minOrderAmount")
-			? Number(data.get("minOrderAmount"))
-			: null;
-		const usageLimit = data.get("usageLimit") ? Number(data.get("usageLimit")) : null;
-		const usageLimitPerCustomer = data.get("usageLimitPerCustomer")
-			? Number(data.get("usageLimitPerCustomer"))
-			: null;
-		const combinesWithOtherPromotions = data.get("combinesWithOtherPromotions") === "on";
-		const customerGroupId = data.get("customerGroupId")
-			? Number(data.get("customerGroupId"))
-			: null;
-		const startsAt = data.get("startsAt") ? new Date(data.get("startsAt") as string) : null;
-		const endsAt = data.get("endsAt") ? new Date(data.get("endsAt") as string) : null;
-		const enabled = data.get("enabled") === "on";
-
-		const productIds = data.get("productIds")
-			? JSON.parse(data.get("productIds") as string)
-			: [];
-		const collectionIds = data.get("collectionIds")
-			? JSON.parse(data.get("collectionIds") as string)
-			: [];
+		const {
+			title,
+			discountType,
+			discountValueRaw,
+			appliesTo,
+			minOrderAmountRaw,
+			usageLimit,
+			usageLimitPerCustomer,
+			combinesWithOtherPromotions,
+			customerGroupId,
+			startsAt,
+			endsAt,
+			enabled,
+			productIds,
+			collectionIds
+		} = parsePromotionUpdateForm(data);
 
 		// Convert to cents for fixed_amount
 		const discountValue =

@@ -7,8 +7,9 @@
  * - Moderation (approve/reject)
  * - Calculating average ratings
  */
-import { eq, and, asc, desc, sql, count } from "drizzle-orm";
+import { eq, and, desc, sql, count, type SQL } from "drizzle-orm";
 import { db } from "../db/index.js";
+import { paginationOf, resolveSort } from "../pagination.js";
 import { reviews, products, customers, orders, orderLines, productVariants } from "../db/schema.js";
 import type {
 	Review,
@@ -113,12 +114,7 @@ export class ReviewService {
 				...row.review,
 				customer: row.customer
 			})),
-			pagination: {
-				total,
-				limit,
-				offset,
-				hasMore: offset + limit < total
-			}
+			pagination: paginationOf(total, limit, offset, items.length)
 		};
 	}
 
@@ -157,7 +153,7 @@ export class ReviewService {
 			sortOrder = "desc"
 		} = options;
 
-		const conditions = [];
+		const conditions: SQL[] = [];
 		if (status) {
 			conditions.push(eq(reviews.status, status));
 		}
@@ -181,17 +177,18 @@ export class ReviewService {
 			.where(whereClause);
 		const total = countResult?.count ?? 0;
 
-		const sortColumnMap: Record<string, ReturnType<typeof sql>> = {
-			comment: sql`${reviews.comment}`,
-			product: sql`${products.name}`,
-			nickname: sql`${reviews.nickname}`,
-			status: sql`${reviews.status}`,
-			createdAt: sql`${reviews.createdAt}`
-		};
-		const sortCol =
-			(sortBy && Object.hasOwn(sortColumnMap, sortBy) ? sortColumnMap[sortBy] : undefined) ||
-			sql`${reviews.createdAt}`;
-		const dirFn = sortOrder === "asc" ? asc : desc;
+		const orderByExpr = resolveSort(
+			{
+				comment: sql`${reviews.comment}`,
+				product: sql`${products.name}`,
+				nickname: sql`${reviews.nickname}`,
+				status: sql`${reviews.status}`,
+				createdAt: sql`${reviews.createdAt}`
+			},
+			sortBy,
+			sortOrder,
+			sql`${reviews.createdAt}`
+		);
 
 		const items = await db
 			.select({
@@ -203,7 +200,7 @@ export class ReviewService {
 			.innerJoin(customers, eq(reviews.customerId, customers.id))
 			.innerJoin(products, eq(reviews.productId, products.id))
 			.where(whereClause)
-			.orderBy(dirFn(sortCol))
+			.orderBy(orderByExpr)
 			.limit(limit)
 			.offset(offset);
 
@@ -213,7 +210,7 @@ export class ReviewService {
 				customer: row.customer,
 				product: row.product
 			})),
-			pagination: { total, limit, offset, hasMore: offset + limit < total }
+			pagination: paginationOf(total, limit, offset, items.length)
 		};
 	}
 
@@ -252,7 +249,7 @@ export class ReviewService {
 	 * Delete a review
 	 */
 	async delete(id: number): Promise<boolean> {
-		const result = await db.delete(reviews).where(eq(reviews.id, id));
+		await db.delete(reviews).where(eq(reviews.id, id));
 		return true;
 	}
 

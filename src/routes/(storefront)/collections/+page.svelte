@@ -43,6 +43,7 @@
           </div>
           {#if collection.description}
             <div class="prose prose-sm mt-3 line-clamp-2 max-w-none prose-gray">
+              <!-- eslint-disable-next-line svelte/no-at-html-tags -- sanitized on save in admin -->
               {@html collection.description}
             </div>
           {/if}

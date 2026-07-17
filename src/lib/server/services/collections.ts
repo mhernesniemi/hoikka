@@ -2,8 +2,9 @@
  * Collection Service
  * Smart Collections (Vendure/Shopify style) - products derived dynamically from rules
  */
-import { eq, and, asc, desc, sql, inArray, isNull, gte, lte, gt } from "drizzle-orm";
-import { db } from "../db/index.js";
+import { eq, and, asc, desc, sql, inArray, isNull, gte, lte, gt, type SQL } from "drizzle-orm";
+import { db, atomic } from "../db/index.js";
+import { paginationOf, resolveSort } from "../pagination.js";
 import {
 	collections,
 	collectionFilters,
@@ -11,8 +12,6 @@ import {
 	productVariants,
 	productFacetValues,
 	variantFacetValues,
-	facetValues,
-	productAssets,
 	assets
 } from "../db/schema.js";
 import type {
@@ -27,11 +26,13 @@ import type {
 	ProductWithRelations,
 	PaginatedResult
 } from "$lib/types.js";
+import { productService } from "./products.js";
 
-// Type for filter handler functions
+// Type for filter handler functions. Handlers only read field/operator/value,
+// so previews can pass unsaved filters without faking a full row.
 type FilterHandler = (
 	productIds: Set<number> | null,
-	filter: CollectionFilter
+	filter: Pick<CollectionFilter, "field" | "operator" | "value">
 ) => Promise<Set<number>>;
 
 /** Collection with product count */
@@ -319,10 +320,10 @@ export class CollectionService {
 	): Promise<PaginatedResult<CollectionListItem>> {
 		const { limit = 20, offset = 0, search, sortBy, sortOrder = "desc" } = options;
 
-		const conditions: ReturnType<typeof eq>[] = [];
+		const conditions: SQL[] = [];
 		if (search) {
 			const pattern = `%${search}%`;
-			conditions.push(sql`${collections.name} LIKE ${pattern}` as any);
+			conditions.push(sql`${collections.name} LIKE ${pattern}`);
 		}
 
 		const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
@@ -333,14 +334,15 @@ export class CollectionService {
 			.where(whereClause);
 		const total = Number(countResult?.count ?? 0);
 
-		const sortColumnMap: Record<string, ReturnType<typeof sql>> = {
-			name: sql`${collections.name}`,
-			status: sql`${collections.isPrivate}`,
-			createdAt: sql`${collections.createdAt}`
-		};
-		const sortCol =
-			sortBy && Object.hasOwn(sortColumnMap, sortBy) ? sortColumnMap[sortBy] : undefined;
-		const dirFn = sortOrder === "asc" ? asc : desc;
+		const orderByExpr = resolveSort(
+			{
+				name: sql`${collections.name}`,
+				status: sql`${collections.isPrivate}`,
+				createdAt: sql`${collections.createdAt}`
+			},
+			sortBy,
+			sortOrder
+		);
 
 		const items = await db
 			.select({
@@ -352,8 +354,8 @@ export class CollectionService {
 			.from(collections)
 			.where(whereClause)
 			.orderBy(
-				...(sortCol
-					? [dirFn(sortCol)]
+				...(orderByExpr
+					? [orderByExpr]
 					: [asc(collections.position), desc(collections.createdAt)])
 			)
 			.limit(limit)
@@ -369,7 +371,7 @@ export class CollectionService {
 
 		return {
 			items: itemsWithCounts,
-			pagination: { total, limit, offset, hasMore: offset + items.length < total }
+			pagination: paginationOf(total, limit, offset, items.length)
 		};
 	}
 
@@ -484,18 +486,21 @@ export class CollectionService {
 			value: unknown;
 		}[]
 	): Promise<void> {
-		await db.delete(collectionFilters).where(eq(collectionFilters.collectionId, collectionId));
-
-		if (filters.length > 0) {
-			await db.insert(collectionFilters).values(
-				filters.map((f) => ({
-					collectionId,
-					field: f.field,
-					operator: f.operator,
-					value: f.value
-				}))
-			);
-		}
+		await atomic([
+			db.delete(collectionFilters).where(eq(collectionFilters.collectionId, collectionId)),
+			...(filters.length > 0
+				? [
+						db.insert(collectionFilters).values(
+							filters.map((f) => ({
+								collectionId,
+								field: f.field,
+								operator: f.operator,
+								value: f.value
+							}))
+						)
+					]
+				: [])
+		]);
 	}
 
 	// =========================================================================
@@ -503,8 +508,35 @@ export class CollectionService {
 	// =========================================================================
 
 	/**
-	 * Get products for a collection by applying filters dynamically
+	 * Evaluate a filter list: each filter's matches are intersected (AND).
+	 * The single implementation behind every "which products match" question.
 	 */
+	private async resolveFilters(
+		filters: Pick<CollectionFilter, "field" | "operator" | "value">[]
+	): Promise<Set<number>> {
+		let matchingProductIds: Set<number> | null = null;
+
+		for (const filter of filters) {
+			const handler = this.filterHandlers[filter.field as CollectionFilterField];
+			if (!handler) continue;
+
+			const filterResults = await handler(matchingProductIds, filter);
+			if (matchingProductIds === null) {
+				matchingProductIds = filterResults;
+			} else {
+				const intersection = new Set<number>();
+				for (const id of matchingProductIds) {
+					if (filterResults.has(id)) intersection.add(id);
+				}
+				matchingProductIds = intersection;
+			}
+
+			if (matchingProductIds.size === 0) return matchingProductIds;
+		}
+
+		return matchingProductIds ?? new Set();
+	}
+
 	/**
 	 * Get all matching product IDs for a collection (evaluates filters, no pagination).
 	 */
@@ -516,27 +548,7 @@ export class CollectionService {
 
 		if (filters.length === 0) return [];
 
-		let matchingProductIds: Set<number> | null = null;
-
-		for (const filter of filters) {
-			const handler = this.filterHandlers[filter.field as CollectionFilterField];
-			if (handler) {
-				const filterResults = await handler(matchingProductIds, filter);
-
-				if (matchingProductIds === null) {
-					matchingProductIds = filterResults;
-				} else {
-					const currentIds: Set<number> = matchingProductIds;
-					matchingProductIds = new Set(
-						[...currentIds].filter((id) => filterResults.has(id))
-					);
-				}
-
-				if (matchingProductIds.size === 0) return [];
-			}
-		}
-
-		return matchingProductIds ? [...matchingProductIds] : [];
+		return [...(await this.resolveFilters(filters))];
 	}
 
 	async getProductsForCollection(
@@ -562,17 +574,13 @@ export class CollectionService {
 			.limit(limit)
 			.offset(offset);
 
-		// Load full relations
-		const items = await Promise.all(productList.map((p) => this.loadProductRelations(p)));
+		// Hydrate through the products service's batched loader (fixed query
+		// count on D1) instead of a per-product copy of it
+		const items = await productService.loadProductsRelations(productList);
 
 		return {
 			items,
-			pagination: {
-				total,
-				limit,
-				offset,
-				hasMore: offset + items.length < total
-			}
+			pagination: paginationOf(total, limit, offset, items.length)
 		};
 	}
 
@@ -593,38 +601,8 @@ export class CollectionService {
 			return { products: [], total: 0 };
 		}
 
-		// Apply filters
-		let matchingProductIds: Set<number> | null = null;
-
-		for (const filter of filters) {
-			const handler = this.filterHandlers[filter.field];
-			if (handler) {
-				const mockFilter = {
-					id: 0,
-					collectionId: 0,
-					field: filter.field,
-					operator: filter.operator,
-					value: filter.value,
-					createdAt: new Date()
-				};
-				const filterResults = await handler(matchingProductIds, mockFilter);
-
-				if (matchingProductIds === null) {
-					matchingProductIds = filterResults;
-				} else {
-					const currentIds: Set<number> = matchingProductIds;
-					matchingProductIds = new Set(
-						[...currentIds].filter((id) => filterResults.has(id))
-					);
-				}
-
-				if (matchingProductIds.size === 0) {
-					return { products: [], total: 0 };
-				}
-			}
-		}
-
-		if (!matchingProductIds || matchingProductIds.size === 0) {
+		const matchingProductIds = await this.resolveFilters(filters);
+		if (matchingProductIds.size === 0) {
 			return { products: [], total: 0 };
 		}
 
@@ -639,7 +617,7 @@ export class CollectionService {
 			.orderBy(desc(products.createdAt))
 			.limit(limit);
 
-		const items = await Promise.all(productList.map((p) => this.loadProductRelations(p)));
+		const items = await productService.loadProductsRelations(productList);
 
 		return { products: items, total };
 	}
@@ -648,53 +626,37 @@ export class CollectionService {
 	 * Get count of products in a collection
 	 */
 	async getProductCount(collectionId: number): Promise<number> {
-		const result = await this.getProductsForCollection(collectionId, {
-			limit: 1000000,
-			offset: 0
-		});
-		return result.pagination.total;
+		return (await this.getProductIdsForCollection(collectionId)).length;
 	}
 
 	/**
 	 * Get all collections that contain a given product
 	 */
 	async getCollectionsForProduct(productId: number): Promise<CollectionWithRelations[]> {
-		const allCollections = await db
-			.select()
-			.from(collections)
-			.orderBy(collections.position, desc(collections.createdAt));
+		const [allCollections, allFilters] = await Promise.all([
+			db
+				.select()
+				.from(collections)
+				.orderBy(collections.position, desc(collections.createdAt)),
+			db.select().from(collectionFilters)
+		]);
+
+		const filtersByCollection = new Map<number, CollectionFilter[]>();
+		for (const filter of allFilters) {
+			const list = filtersByCollection.get(filter.collectionId) ?? [];
+			list.push(filter);
+			filtersByCollection.set(filter.collectionId, list);
+		}
 
 		const matched: CollectionWithRelations[] = [];
 
 		for (const collection of allCollections) {
-			const filters = await db
-				.select()
-				.from(collectionFilters)
-				.where(eq(collectionFilters.collectionId, collection.id));
+			const filters = filtersByCollection.get(collection.id);
+			if (!filters || filters.length === 0) continue;
 
-			if (filters.length === 0) continue;
-
-			let matchingProductIds: Set<number> | null = null;
-
-			for (const filter of filters) {
-				const handler = this.filterHandlers[filter.field as CollectionFilterField];
-				if (handler) {
-					const filterResults = await handler(matchingProductIds, filter);
-					if (matchingProductIds === null) {
-						matchingProductIds = filterResults;
-					} else {
-						const currentIds: Set<number> = matchingProductIds;
-						matchingProductIds = new Set(
-							[...currentIds].filter((id) => filterResults.has(id))
-						);
-					}
-					if (matchingProductIds.size === 0) break;
-				}
-			}
-
-			if (matchingProductIds?.has(productId)) {
-				const raw = await this.loadCollectionRelations(collection);
-				matched.push(raw);
+			const matchingProductIds = await this.resolveFilters(filters);
+			if (matchingProductIds.has(productId)) {
+				matched.push(await this.loadCollectionRelations(collection));
 			}
 		}
 
@@ -724,92 +686,6 @@ export class CollectionService {
 		return {
 			...collection,
 			filters,
-			featuredAsset: featuredAsset[0] ?? null
-		};
-	}
-
-	/**
-	 * Load product with all relations (copied from ProductService for self-containment)
-	 */
-	private async loadProductRelations(
-		product: typeof products.$inferSelect
-	): Promise<ProductWithRelations> {
-		// Load variants with their relations
-		const variantList = await db
-			.select()
-			.from(productVariants)
-			.where(
-				and(eq(productVariants.productId, product.id), isNull(productVariants.deletedAt))
-			);
-
-		const variants = await Promise.all(
-			variantList.map(async (v) => {
-				const variantFacetValueIds = await db
-					.select({ facetValueId: variantFacetValues.facetValueId })
-					.from(variantFacetValues)
-					.where(eq(variantFacetValues.variantId, v.id));
-
-				const variantFacetValuesData =
-					variantFacetValueIds.length > 0
-						? await db
-								.select()
-								.from(facetValues)
-								.where(
-									inArray(
-										facetValues.id,
-										variantFacetValueIds.map((fv) => fv.facetValueId)
-									)
-								)
-						: [];
-
-				return {
-					...v,
-					facetValues: variantFacetValuesData,
-					assets: [],
-					featuredAsset: null
-				};
-			})
-		);
-
-		// Load product facet values
-		const productFacetValueIds = await db
-			.select({ facetValueId: productFacetValues.facetValueId })
-			.from(productFacetValues)
-			.where(eq(productFacetValues.productId, product.id));
-
-		const productFacetValuesData =
-			productFacetValueIds.length > 0
-				? await db
-						.select()
-						.from(facetValues)
-						.where(
-							inArray(
-								facetValues.id,
-								productFacetValueIds.map((fv) => fv.facetValueId)
-							)
-						)
-				: [];
-
-		// Load assets
-		const productAssetsList = await db
-			.select({ asset: assets, position: productAssets.position })
-			.from(productAssets)
-			.innerJoin(assets, eq(productAssets.assetId, assets.id))
-			.where(eq(productAssets.productId, product.id))
-			.orderBy(productAssets.position);
-
-		const productAssetsData = productAssetsList.map((pa) => pa.asset);
-
-		// Load featured asset
-		const featuredAsset = product.featuredAssetId
-			? await db.select().from(assets).where(eq(assets.id, product.featuredAssetId)).limit(1)
-			: [];
-
-		return {
-			...product,
-			variants,
-			facetValues: productFacetValuesData,
-			assets: productAssetsData,
 			featuredAsset: featuredAsset[0] ?? null
 		};
 	}

@@ -1,6 +1,6 @@
 /**
  * Drains the outbox on demand. Called by:
- *   - Cloudflare: the Worker's scheduled (cron) handler — see src/hooks.server.ts
+ *   - Cloudflare: the companion cron worker — see workers/cron.ts + wrangler.cron.jsonc
  *   - Node: the startup interval — see src/hooks.server.ts
  *   - You / an external cron: `curl -H "authorization: Bearer $TASKS_SECRET" .../api/tasks/run`
  *

@@ -4,6 +4,7 @@
  */
 import { eq, and, desc, asc, sql, inArray, isNull } from "drizzle-orm";
 import { db } from "../db/index.js";
+import { paginationOf, resolveSort } from "../pagination.js";
 import {
 	products,
 	productVariants,
@@ -96,12 +97,7 @@ export class ProductService {
 
 		return {
 			items,
-			pagination: {
-				total,
-				limit,
-				offset,
-				hasMore: offset + items.length < total
-			}
+			pagination: paginationOf(total, limit, offset, items.length)
 		};
 	}
 
@@ -148,16 +144,17 @@ export class ProductService {
 
 		// Resolve sort column
 		const variantCountExpr = sql<number>`(SELECT count(*) FROM product_variants WHERE product_id = ${products.id} AND deleted_at IS NULL)`;
-		const sortColumnMap: Record<string, ReturnType<typeof sql>> = {
-			name: sql`${products.name}`,
-			variants: variantCountExpr,
-			visibility: sql`${products.visibility}`,
-			createdAt: sql`${products.createdAt}`
-		};
-		const sortCol =
-			(sortBy && Object.hasOwn(sortColumnMap, sortBy) ? sortColumnMap[sortBy] : undefined) ||
-			sql`${products.createdAt}`;
-		const dirFn = sortOrder === "asc" ? asc : desc;
+		const orderByExpr = resolveSort(
+			{
+				name: sql`${products.name}`,
+				variants: variantCountExpr,
+				visibility: sql`${products.visibility}`,
+				createdAt: sql`${products.createdAt}`
+			},
+			sortBy,
+			sortOrder,
+			sql`${products.createdAt}`
+		);
 
 		// Fallback: if product has no featuredAssetId, use the first variant's imageUrl
 		const variantImageFallback = sql<string>`(
@@ -180,7 +177,7 @@ export class ProductService {
 			.from(products)
 			.leftJoin(assets, eq(products.featuredAssetId, assets.id))
 			.where(and(...conditions))
-			.orderBy(dirFn(sortCol))
+			.orderBy(orderByExpr)
 			.limit(limit)
 			.offset(offset);
 
@@ -190,7 +187,7 @@ export class ProductService {
 				variantCount: Number(item.variantCount),
 				featuredAssetSource: item.featuredAssetSource ?? null
 			})),
-			pagination: { total, limit, offset, hasMore: offset + items.length < total }
+			pagination: paginationOf(total, limit, offset, items.length)
 		};
 	}
 
@@ -577,8 +574,11 @@ export class ProductService {
 	 * Per-row lookups are cheap on local SQLite but each query is a network
 	 * round trip on D1, so this stays at 5 queries however many products
 	 * (and variants/facets/assets) are involved.
+	 *
+	 * Public because collectionService hydrates its product lists through this
+	 * too — there must be exactly one implementation of this loader.
 	 */
-	private async loadProductsRelations(productList: Product[]): Promise<ProductWithRelations[]> {
+	async loadProductsRelations(productList: Product[]): Promise<ProductWithRelations[]> {
 		if (productList.length === 0) return [];
 		const productIds = productList.map((p) => p.id);
 		const featuredAssetIds = productList
@@ -717,34 +717,46 @@ export class ProductService {
 	}
 
 	private async getProductIdsByFacets(facetFilters: Record<string, string[]>): Promise<number[]> {
-		// Get all facet value IDs for the given filters
+		const groups = Object.entries(facetFilters).filter(([, codes]) => codes.length > 0);
+		if (groups.length === 0) return [];
+
+		const valueRows = await db
+			.select({
+				valueId: facetValues.id,
+				valueCode: facetValues.code,
+				facetCode: facets.code
+			})
+			.from(facetValues)
+			.innerJoin(facets, eq(facets.id, facetValues.facetId))
+			.where(
+				inArray(
+					facets.code,
+					groups.map(([code]) => code)
+				)
+			);
+
+		// Same semantics as the FTS path: facets are AND'd, values within a facet
+		// are OR'd. Unknown facets/values are skipped rather than matching nothing.
 		const allValueIds: number[] = [];
-
-		for (const [facetCode, valueCodes] of Object.entries(facetFilters)) {
-			if (valueCodes.length === 0) continue;
-
-			const facet = await db.select().from(facets).where(eq(facets.code, facetCode)).limit(1);
-
-			if (!facet[0]) continue;
-
-			const values = await db
-				.select()
-				.from(facetValues)
-				.where(
-					and(eq(facetValues.facetId, facet[0].id), inArray(facetValues.code, valueCodes))
-				);
-
-			allValueIds.push(...values.map((v) => v.id));
+		let facetCount = 0;
+		for (const [facetCode, valueCodes] of groups) {
+			const ids = valueRows
+				.filter((r) => r.facetCode === facetCode && valueCodes.includes(r.valueCode))
+				.map((r) => r.valueId);
+			if (ids.length === 0) continue;
+			allValueIds.push(...ids);
+			facetCount++;
 		}
 
 		if (allValueIds.length === 0) return [];
 
-		// Find products that have ALL the specified facet values
 		const productMatches = await db
 			.select({ productId: productFacetValues.productId })
 			.from(productFacetValues)
+			.innerJoin(facetValues, eq(facetValues.id, productFacetValues.facetValueId))
 			.where(inArray(productFacetValues.facetValueId, allValueIds))
-			.groupBy(productFacetValues.productId);
+			.groupBy(productFacetValues.productId)
+			.having(sql`count(distinct ${facetValues.facetId}) = ${facetCount}`);
 
 		return productMatches.map((p) => p.productId);
 	}

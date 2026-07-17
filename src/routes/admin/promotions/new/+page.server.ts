@@ -4,6 +4,7 @@ import { productService } from "$lib/server/services/products.js";
 import { collectionService } from "$lib/server/services/collections.js";
 import { customerGroupService } from "$lib/server/services/customerGroups.js";
 import { dbError } from "$lib/server/db-error.js";
+import { parsePromotionCreateForm } from "../promotion-form.server.js";
 import { fail, redirect, isRedirect } from "@sveltejs/kit";
 
 export const load: PageServerLoad = async () => {
@@ -35,37 +36,24 @@ export const actions: Actions = {
 	default: async ({ request }) => {
 		const data = await request.formData();
 
-		const method = (data.get("method") as "code" | "automatic") ?? "code";
-		const code = data.get("code") as string;
-		const title = data.get("title") as string;
-		const promotionType = data.get("promotionType") as "order" | "product" | "free_shipping";
-		const discountType = data.get("discountType") as "percentage" | "fixed_amount";
-		const discountValueRaw = Number(data.get("discountValue"));
-		const appliesTo = data.get("appliesTo") as
-			"all" | "specific_products" | "specific_collections";
-		const minOrderAmountRaw = data.get("minOrderAmount")
-			? Number(data.get("minOrderAmount"))
-			: undefined;
-		const usageLimit = data.get("usageLimit") ? Number(data.get("usageLimit")) : undefined;
-		const usageLimitPerCustomer = data.get("usageLimitPerCustomer")
-			? Number(data.get("usageLimitPerCustomer"))
-			: undefined;
-		const combinesWithOtherPromotions = data.get("combinesWithOtherPromotions") === "on";
-		const customerGroupId = data.get("customerGroupId")
-			? Number(data.get("customerGroupId"))
-			: null;
-		const startsAt = data.get("startsAt")
-			? new Date(data.get("startsAt") as string)
-			: undefined;
-		const endsAt = data.get("endsAt") ? new Date(data.get("endsAt") as string) : undefined;
-
-		// Parse product/collection IDs from JSON hidden field
-		const productIds = data.get("productIds")
-			? JSON.parse(data.get("productIds") as string)
-			: [];
-		const collectionIds = data.get("collectionIds")
-			? JSON.parse(data.get("collectionIds") as string)
-			: [];
+		const {
+			method,
+			code,
+			title,
+			promotionType,
+			discountType,
+			discountValueRaw,
+			appliesTo,
+			minOrderAmountRaw,
+			usageLimit,
+			usageLimitPerCustomer,
+			combinesWithOtherPromotions,
+			customerGroupId,
+			startsAt,
+			endsAt,
+			productIds,
+			collectionIds
+		} = parsePromotionCreateForm(data);
 
 		if (!promotionType) {
 			return fail(400, { error: "Promotion type is required" });

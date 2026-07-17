@@ -1,19 +1,7 @@
 import { vitePreprocess } from "@sveltejs/vite-plugin-svelte";
-import { readFileSync } from "node:fs";
+import { resolveTarget } from "./hoikka-target.js";
 
-// The single deployment switch: HOIKKA_TARGET=node (default) or cloudflare.
-// Read from the environment first, then from .env so `pnpm build` works
-// without exporting anything.
-const target =
-	process.env.HOIKKA_TARGET ??
-	(() => {
-		try {
-			return /^HOIKKA_TARGET=["']?(\w+)/m.exec(readFileSync(".env", "utf8"))?.[1];
-		} catch {
-			return undefined;
-		}
-	})() ??
-	"node";
+const target = resolveTarget();
 
 const adapter =
 	target === "cloudflare"

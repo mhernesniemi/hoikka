@@ -1,6 +1,5 @@
 <script lang="ts">
   import { deserialize, enhance } from "$app/forms";
-  import { invalidateAll } from "$app/navigation";
   import { page } from "$app/state";
   import { onMount } from "svelte";
   import { toast } from "svelte-sonner";
@@ -17,25 +16,19 @@
   import DeleteConfirmDialog from "$lib/components/admin/DeleteConfirmDialog.svelte";
   import CreateDialog from "$lib/components/admin/CreateDialog.svelte";
   import ImagePicker from "$lib/components/admin/ImagePicker.svelte";
-  import {
-    translationsToMap,
-    LANGUAGES,
-    DEFAULT_LANGUAGE,
-    TRANSLATION_LANGUAGES
-  } from "$lib/config/languages.js";
-  import { cn, BASE_CURRENCY } from "$lib/utils";
+  import MultiSelectCombobox from "$lib/components/admin/MultiSelectCombobox.svelte";
+  import TranslationEditor from "$lib/components/admin/TranslationEditor.svelte";
+  import { translationsToMap } from "$lib/config/languages.js";
+  import { BASE_CURRENCY } from "$lib/utils";
   import { imageUrl } from "$lib/image";
+  import { saveImages, type SelectedImage } from "$lib/admin-upload";
   import UnsavedChangesDialog from "$lib/components/admin/UnsavedChangesDialog.svelte";
   import * as Dialog from "$lib/components/admin/ui/dialog";
-  import * as Popover from "$lib/components/admin/ui/popover";
-  import * as Command from "$lib/components/admin/ui/command";
   import * as DropdownMenu from "$lib/components/admin/ui/dropdown-menu";
   import X from "@lucide/svelte/icons/x";
 
   import ChevronLeft from "@lucide/svelte/icons/chevron-left";
   import ExternalLink from "@lucide/svelte/icons/external-link";
-  import ChevronsUpDown from "@lucide/svelte/icons/chevrons-up-down";
-  import Check from "@lucide/svelte/icons/check";
   import Package from "@lucide/svelte/icons/package";
   import Plus from "@lucide/svelte/icons/plus";
   import Pencil from "@lucide/svelte/icons/pencil";
@@ -61,7 +54,6 @@
 
   let isSubmitting = $state(false);
   let showDelete = $state(false);
-  let activeLanguageTab = $state(DEFAULT_LANGUAGE);
   const translationMap = $derived(translationsToMap(data.translations));
   let showImagePicker = $state(false);
   let isSavingImages = $state(false);
@@ -140,44 +132,14 @@
   });
 
   // ── Image handling ────────────────────────────────────────────────────
-  async function handleImagesSelected(
-    files: {
-      url: string;
-      name: string;
-      width: number;
-      height: number;
-      size: number;
-      alt: string;
-    }[]
-  ) {
+  async function handleImagesSelected(files: SelectedImage[]) {
     isSavingImages = true;
-
-    try {
-      for (const file of files) {
-        const saveForm = new FormData();
-        saveForm.append("url", file.url);
-        saveForm.append("name", file.name);
-        saveForm.append("width", file.width.toString());
-        saveForm.append("height", file.height.toString());
-        saveForm.append("fileSize", file.size.toString());
-        saveForm.append("alt", file.alt);
-
-        await fetch(`?/addImage`, {
-          method: "POST",
-          body: saveForm
-        });
-      }
-
-      await invalidateAll();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to save images");
-    } finally {
-      isSavingImages = false;
-    }
+    const error = await saveImages("?/addImage", files);
+    if (error) toast.error(error);
+    isSavingImages = false;
   }
 
   // ── Filter helpers ───────────────────────────────────────────────────
-  let openPopover = $state<number | null>(null);
   let addFilterOpen = $state(false);
 
   const filterTypes = [
@@ -214,16 +176,9 @@
       ...localFilters,
       { key, field, operator, value: structuredClone(defaultValues[field] ?? "") }
     ];
-    if (field === "facet" || field === "product") {
-      // Wait a tick for the DOM to render, then open the popover
-      requestAnimationFrame(() => {
-        openPopover = key;
-      });
-    }
   }
 
   function removeFilter(index: number) {
-    openPopover = null;
     localFilters = localFilters.filter((_, i) => i !== index);
   }
 
@@ -237,30 +192,24 @@
   }
 
   // ── Display helpers ──────────────────────────────────────────────────
-  type FlatFacetValue = { id: number; name: string; facetName: string };
-  const flatFacetValues: FlatFacetValue[] = $derived(
+  const facetItems = $derived(
     data.facets.flatMap((facet) => {
       return facet.values.map((value) => ({
         id: value.id,
-        name: value.name ?? value.code,
-        facetName: facet.name ?? facet.code
+        label: value.name ?? value.code,
+        group: facet.name ?? facet.code,
+        badgeLabel: `${facet.name ?? facet.code}: ${value.name ?? value.code}`
       }));
     })
   );
-
-  function getFacetValueName(id: number): string {
-    const fv = flatFacetValues.find((v) => v.id === id);
-    return fv ? `${fv.facetName}: ${fv.name}` : `ID: ${id}`;
-  }
 
   function getProductName(product: (typeof data.products)[0]): string {
     return product.name ?? `Product #${product.id}`;
   }
 
-  function getProductNameById(id: number): string {
-    const product = data.products.find((p) => p.id === id);
-    return product ? getProductName(product) : `Product #${id}`;
-  }
+  const productItems = $derived(
+    data.products.map((product) => ({ id: product.id, label: getProductName(product) }))
+  );
 
   // ── Preview table ────────────────────────────────────────────────────
 
@@ -387,92 +336,40 @@
         <input type="hidden" name="is_private" value={isPrivate ? "on" : ""} />
 
         <div class="overflow-hidden rounded-lg bg-surface shadow">
-          <!-- Language Tabs -->
-          {#if TRANSLATION_LANGUAGES.length > 0}
-            <div class="flex border-b border-border">
-              {#each LANGUAGES as lang}
-                <button
-                  type="button"
-                  class={cn(
-                    "border-b-2 border-transparent px-4 py-2.5 text-sm font-medium",
-                    activeLanguageTab === lang.code
-                      ? "border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                  onclick={() => (activeLanguageTab = lang.code)}
-                >
-                  {lang.name}
-                </button>
-              {/each}
-            </div>
-          {/if}
-
-          <!-- Default language fields -->
-          <div class={cn(activeLanguageTab !== DEFAULT_LANGUAGE && "hidden")}>
-            <div class="space-y-4 p-6">
-              <div class="grid grid-cols-2 gap-4">
-                <div>
-                  <Label for="name">Name <span class="text-red-500">*</span></Label>
-                  <Input type="text" id="name" name="name" bind:value={name} required />
-                </div>
-                <div>
-                  <Label for="slug">Slug <span class="text-red-500">*</span></Label>
-                  <Input type="text" id="slug" name="slug" bind:value={slug} required />
-                </div>
+          <div class="space-y-4 p-6">
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <Label for="name">Name <span class="text-red-500">*</span></Label>
+                <Input type="text" id="name" name="name" bind:value={name} required />
               </div>
               <div>
-                <Label for="description">Description</Label>
-                <RichTextEditor
-                  name="description"
-                  content={description}
-                  placeholder="Write collection description..."
-                  onchange={(html) => (description = html)}
-                />
+                <Label for="slug">Slug <span class="text-red-500">*</span></Label>
+                <Input type="text" id="slug" name="slug" bind:value={slug} required />
               </div>
+            </div>
+            <div>
+              <Label for="description">Description</Label>
+              <RichTextEditor
+                name="description"
+                content={description}
+                placeholder="Write collection description..."
+                onchange={(html) => (description = html)}
+              />
             </div>
           </div>
-
-          <!-- Translation language fields -->
-          {#each TRANSLATION_LANGUAGES as lang}
-            <div class={cn(activeLanguageTab !== lang.code && "hidden")}>
-              <div class="space-y-4 p-6">
-                <div class="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label for="translation_{lang.code}_name">Name</Label>
-                    <Input
-                      type="text"
-                      id="translation_{lang.code}_name"
-                      name="name_{lang.code}"
-                      value={translationMap[lang.code]?.name ?? ""}
-                    />
-                  </div>
-                  <div>
-                    <Label for="translation_{lang.code}_slug">Slug</Label>
-                    <Input
-                      type="text"
-                      id="translation_{lang.code}_slug"
-                      name="slug_{lang.code}"
-                      value={translationMap[lang.code]?.slug ?? ""}
-                    />
-                  </div>
-                </div>
-                <div>
-                  <Label for="translation_{lang.code}_description">Description</Label>
-                  <RichTextEditor
-                    name="description_{lang.code}"
-                    content={translationMap[lang.code]?.description ?? ""}
-                    placeholder="Write collection description..."
-                  />
-                </div>
-
-                <p class="text-xs text-muted-foreground">
-                  Leave empty to use the {LANGUAGES.find((l) => l.code === DEFAULT_LANGUAGE)?.name} value.
-                </p>
-              </div>
-            </div>
-          {/each}
         </div>
       </form>
+
+      <!-- Translations -->
+      <TranslationEditor
+        fields={[
+          { name: "name", label: "Name", type: "text" },
+          { name: "slug", label: "Slug", type: "text" },
+          { name: "description", label: "Description", type: "richtext" }
+        ]}
+        translations={translationMap}
+        formId="collection-form"
+      />
 
       <!-- Collection Filters -->
       <AdminCard title="Filters">
@@ -533,125 +430,26 @@
                     {@const selected = Array.isArray(filter.value)
                       ? (filter.value as number[])
                       : []}
-                    <Popover.Root
-                      open={openPopover === filter.key}
-                      onOpenChange={(open) => (openPopover = open ? filter.key : null)}
-                    >
-                      <Popover.Trigger
-                        class="flex items-center justify-between rounded-lg border border-input-border bg-surface px-3 py-2 text-sm hover:bg-hover"
-                        aria-expanded={openPopover === filter.key}
-                        aria-haspopup="listbox"
-                      >
-                        <span class="text-muted-foreground">Select facet values</span>
-                        <ChevronsUpDown class="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                      </Popover.Trigger>
-                      <Popover.Content class="w-72 p-0" align="start">
-                        <Command.Root>
-                          <Command.Input placeholder="Search facet values..." />
-                          <Command.List class="max-h-64">
-                            <Command.Empty>No facet values found.</Command.Empty>
-                            {#each data.facets as facet}
-                              <Command.Group heading={facet.name ?? facet.code}>
-                                {#each facet.values as value}
-                                  <Command.Item
-                                    value="{facet.name ?? facet.code} {value.name ?? value.code}"
-                                    onSelect={() => toggleArrayValue(index, value.id)}
-                                    class="cursor-pointer"
-                                  >
-                                    <div class="flex w-full items-center gap-2">
-                                      <div class="flex h-4 w-4 items-center justify-center">
-                                        {#if selected.includes(value.id)}
-                                          <Check class="h-4 w-4" />
-                                        {/if}
-                                      </div>
-                                      <span>{value.name ?? value.code}</span>
-                                    </div>
-                                  </Command.Item>
-                                {/each}
-                              </Command.Group>
-                            {/each}
-                          </Command.List>
-                        </Command.Root>
-                      </Popover.Content>
-                    </Popover.Root>
-                    {#if selected.length > 0}
-                      <div class="mt-3 flex flex-wrap gap-1.5">
-                        {#each selected as id}
-                          <Badge class="gap-1 text-sm">
-                            {getFacetValueName(id)}
-                            <button
-                              type="button"
-                              onclick={() => toggleArrayValue(index, id)}
-                              class="ml-0.5 rounded-full p-0.5 hover:bg-blue-200 dark:hover:bg-blue-500/20"
-                              aria-label="Remove {getFacetValueName(id)}"
-                            >
-                              <X class="h-3 w-3" />
-                            </button>
-                          </Badge>
-                        {/each}
-                      </div>
-                    {/if}
+                    <MultiSelectCombobox
+                      items={facetItems}
+                      {selected}
+                      onToggle={(id) => toggleArrayValue(index, id)}
+                      placeholder="Select facet values"
+                      searchPlaceholder="Search facet values..."
+                      emptyText="No facet values found."
+                    />
                   {:else if filter.field === "product"}
                     {@const selected = Array.isArray(filter.value)
                       ? (filter.value as number[])
                       : []}
-                    <Popover.Root
-                      open={openPopover === filter.key}
-                      onOpenChange={(open) => (openPopover = open ? filter.key : null)}
-                    >
-                      <Popover.Trigger
-                        class="flex items-center justify-between rounded-lg border border-input-border bg-surface px-3 py-2 text-sm hover:bg-hover"
-                        aria-expanded={openPopover === filter.key}
-                        aria-haspopup="listbox"
-                      >
-                        <span class="text-muted-foreground">Select products</span>
-                        <ChevronsUpDown class="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                      </Popover.Trigger>
-                      <Popover.Content
-                        class="w-[var(--bits-popover-trigger-width)] p-0"
-                        align="start"
-                      >
-                        <Command.Root>
-                          <Command.Input placeholder="Search products..." />
-                          <Command.List class="max-h-60">
-                            <Command.Empty>No products found.</Command.Empty>
-                            {#each data.products as product}
-                              <Command.Item
-                                value={getProductName(product)}
-                                onSelect={() => toggleArrayValue(index, product.id)}
-                                class="cursor-pointer"
-                              >
-                                <div class="flex w-full items-center gap-2">
-                                  <div class="flex h-4 w-4 items-center justify-center">
-                                    {#if selected.includes(product.id)}
-                                      <Check class="h-4 w-4" />
-                                    {/if}
-                                  </div>
-                                  <span>{getProductName(product)}</span>
-                                </div>
-                              </Command.Item>
-                            {/each}
-                          </Command.List>
-                        </Command.Root>
-                      </Popover.Content>
-                    </Popover.Root>
-                    {#if selected.length > 0}
-                      <div class="mt-3 flex flex-wrap gap-1.5">
-                        {#each selected as id}
-                          <Badge class="gap-1 text-sm">
-                            {getProductNameById(id)}
-                            <button
-                              type="button"
-                              onclick={() => toggleArrayValue(index, id)}
-                              class="ml-0.5 rounded-full p-0.5 hover:bg-muted-strong"
-                              aria-label="Remove {getProductNameById(id)}"
-                            >
-                              <X class="h-3 w-3" />
-                            </button>
-                          </Badge>
-                        {/each}
-                      </div>
-                    {/if}
+                    <MultiSelectCombobox
+                      items={productItems}
+                      {selected}
+                      onToggle={(id) => toggleArrayValue(index, id)}
+                      placeholder="Select products"
+                      searchPlaceholder="Search products..."
+                      emptyText="No products found."
+                    />
                   {:else if filter.field === "price"}
                     <div class="flex items-center gap-3">
                       <SelectNative

@@ -56,9 +56,10 @@
     {/if}
 
     <div class="p-4">
+      <!-- Inactive languages stay mounted (hidden) so every language's fields submit -->
       {#each TRANSLATION_LANGUAGES as lang}
-        {#if activeTab === lang.code}
-          {@const textFieldCount = fields.filter((f) => f.type === "text").length}
+        {@const textFieldCount = fields.filter((f) => f.type === "text").length}
+        <div class={cn(activeTab !== lang.code && "hidden")}>
           <div class={cn("grid grid-cols-1 gap-4", textFieldCount > 1 && "sm:grid-cols-2")}>
             {#each fields as field}
               <div class={cn(field.type !== "text" && textFieldCount > 1 && "sm:col-span-2")}>
@@ -95,7 +96,7 @@
             Leave empty to use the default ({LANGUAGES.find((l) => l.code === DEFAULT_LANGUAGE)
               ?.name}) value.
           </p>
-        {/if}
+        </div>
       {/each}
     </div>
   </div>

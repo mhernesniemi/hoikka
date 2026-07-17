@@ -2,8 +2,9 @@
  * Facet Service
  * Handles facets and facet values for product filtering
  */
-import { eq, and, asc, desc, sql } from "drizzle-orm";
+import { eq, and, sql, type SQL } from "drizzle-orm";
 import { db } from "../db/index.js";
+import { paginationOf, resolveSort } from "../pagination.js";
 import { facets, facetValues, productFacetValues } from "../db/schema.js";
 import type {
 	Facet,
@@ -75,11 +76,11 @@ export class FacetService {
 	): Promise<PaginatedResult<FacetListItem>> {
 		const { limit = 20, offset = 0, search, sortBy, sortOrder = "asc" } = options;
 
-		const conditions: ReturnType<typeof eq>[] = [];
+		const conditions: SQL[] = [];
 		if (search) {
 			const pattern = `%${search}%`;
 			conditions.push(
-				sql`(${facets.name} LIKE ${pattern} OR ${facets.code} LIKE ${pattern})` as any
+				sql`(${facets.name} LIKE ${pattern} OR ${facets.code} LIKE ${pattern})`
 			);
 		}
 
@@ -91,14 +92,15 @@ export class FacetService {
 			.where(whereClause);
 		const total = Number(countResult?.count ?? 0);
 
-		const sortColumnMap: Record<string, ReturnType<typeof sql>> = {
-			name: sql`${facets.name}`,
-			code: sql`${facets.code}`
-		};
-		const sortCol =
-			(sortBy && Object.hasOwn(sortColumnMap, sortBy) ? sortColumnMap[sortBy] : undefined) ||
-			sql`${facets.code}`;
-		const dirFn = sortOrder === "desc" ? desc : asc;
+		const orderByExpr = resolveSort(
+			{
+				name: sql`${facets.name}`,
+				code: sql`${facets.code}`
+			},
+			sortBy,
+			sortOrder,
+			sql`${facets.code}`
+		);
 
 		const items = await db
 			.select({
@@ -109,13 +111,13 @@ export class FacetService {
 			})
 			.from(facets)
 			.where(whereClause)
-			.orderBy(dirFn(sortCol))
+			.orderBy(orderByExpr)
 			.limit(limit)
 			.offset(offset);
 
 		return {
 			items: items.map((item) => ({ ...item, valueCount: Number(item.valueCount) })),
-			pagination: { total, limit, offset, hasMore: offset + items.length < total }
+			pagination: paginationOf(total, limit, offset, items.length)
 		};
 	}
 

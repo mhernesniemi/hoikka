@@ -1,9 +1,9 @@
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vitest/config";
 import { sveltekit } from "@sveltejs/kit/vite";
-import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import type { Plugin } from "vite";
+import { resolveTarget } from "./hoikka-target.js";
 
 // Workaround: Cursor CLI uses eval which breaks on SvelteKit paths
 // with special characters like (storefront) and [id].
@@ -13,16 +13,7 @@ process.env.LAUNCH_EDITOR ??= "./scripts/open-in-cursor.sh";
 // Same HOIKKA_TARGET switch as svelte.config.js. On the cloudflare target,
 // node-only modules (better-sqlite3, node:fs storage) are swapped for stubs
 // so they never enter the Workers bundle.
-const target =
-	process.env.HOIKKA_TARGET ??
-	(() => {
-		try {
-			return /^HOIKKA_TARGET=["']?(\w+)/m.exec(readFileSync(".env", "utf8"))?.[1];
-		} catch {
-			return undefined;
-		}
-	})() ??
-	"node";
+const target = resolveTarget();
 
 const stub = (path: string) => fileURLToPath(new URL(path, import.meta.url));
 

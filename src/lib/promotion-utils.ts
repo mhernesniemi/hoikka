@@ -8,6 +8,22 @@ export type ActiveDiscount = {
 };
 
 /**
+ * The single implementation of the discount formula: percentage rounds,
+ * fixed amount is clamped to the base amount. Shared by storefront display
+ * and server-side order math — drift here would desync the shown discount
+ * from the charged one.
+ */
+export function calculateDiscount(
+	discount: { discountType: string; discountValue: number },
+	amount: number
+): number {
+	if (discount.discountType === "percentage") {
+		return Math.round(amount * (discount.discountValue / 100));
+	}
+	return Math.min(discount.discountValue, amount);
+}
+
+/**
  * Find the best applicable discount for a product at a given price.
  * Returns the discount that saves the most money, or null if none apply.
  */
@@ -24,11 +40,7 @@ export function findBestDiscount(
 	for (const d of discounts) {
 		if (d.productIds !== null && !d.productIds.includes(productId)) continue;
 
-		const amount =
-			d.discountType === "percentage"
-				? Math.round(price * (d.discountValue / 100))
-				: Math.min(d.discountValue, price);
-
+		const amount = calculateDiscount(d, price);
 		if (amount > bestAmount) {
 			bestAmount = amount;
 			best = d;
@@ -42,8 +54,5 @@ export function findBestDiscount(
  * Calculate the discounted price after applying a discount.
  */
 export function getDiscountedPrice(discount: ActiveDiscount, price: number): number {
-	if (discount.discountType === "percentage") {
-		return price - Math.round(price * (discount.discountValue / 100));
-	}
-	return Math.max(0, price - discount.discountValue);
+	return Math.max(0, price - calculateDiscount(discount, price));
 }

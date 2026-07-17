@@ -14,37 +14,6 @@ export type WithElementRef<T, E extends HTMLElement = HTMLElement> = T & {
 
 export type WithoutChildrenOrChild<T> = Omit<T, "children" | "child">;
 
-/**
- * Throttle function calls to max once per wait period
- */
-export function throttle<T extends (...args: Parameters<T>) => void>(
-	fn: T,
-	wait: number
-): (...args: Parameters<T>) => void {
-	let lastCall = 0;
-	let timeout: ReturnType<typeof setTimeout> | null = null;
-
-	return (...args: Parameters<T>) => {
-		const now = Date.now();
-		const remaining = wait - (now - lastCall);
-
-		if (remaining <= 0) {
-			if (timeout) {
-				clearTimeout(timeout);
-				timeout = null;
-			}
-			lastCall = now;
-			fn(...args);
-		} else if (!timeout) {
-			timeout = setTimeout(() => {
-				lastCall = Date.now();
-				timeout = null;
-				fn(...args);
-			}, remaining);
-		}
-	};
-}
-
 // ============================================================================
 // CURRENCY UTILITIES
 // ============================================================================
@@ -86,35 +55,6 @@ export function formatPrice(cents: number, currencyCode: string = BASE_CURRENCY)
 
 	// Fallback for unsupported currencies
 	return `${amount.toFixed(2)} ${currencyCode}`;
-}
-
-/**
- * Format a price without currency symbol (just the number)
- *
- * @param cents - Amount in minor units
- * @param currencyCode - ISO 4217 currency code for locale
- * @returns Formatted number string (e.g., "29.99")
- */
-export function formatPriceNumber(cents: number, currencyCode: string = BASE_CURRENCY): string {
-	const amount = cents / 100;
-	const config = CURRENCY_CONFIG[currencyCode];
-	const locale = config?.locale ?? "en-US";
-
-	return new Intl.NumberFormat(locale, {
-		minimumFractionDigits: 2,
-		maximumFractionDigits: 2
-	}).format(amount);
-}
-
-/**
- * Convert price from base currency (EUR) to target currency
- *
- * @param centsInBaseCurrency - Amount in EUR cents
- * @param exchangeRate - Exchange rate from EUR to target currency
- * @returns Amount in target currency cents
- */
-export function convertPrice(centsInBaseCurrency: number, exchangeRate: number): number {
-	return Math.round(centsInBaseCurrency * exchangeRate);
 }
 
 /**

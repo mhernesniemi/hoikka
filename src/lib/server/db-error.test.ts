@@ -1,69 +1,105 @@
 import { describe, it, expect } from "vitest";
+import Database from "better-sqlite3";
+import { drizzle } from "drizzle-orm/better-sqlite3";
+import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
 import { dbError } from "./db-error";
 
 describe("dbError", () => {
-	it("returns friendly message for unique constraint with field and value", () => {
+	it("handles better-sqlite3 unique violation", () => {
 		const err = {
-			code: "23505",
-			detail: "Key (email)=(test@example.com) already exists"
-		};
-		expect(dbError(err, "Something went wrong")).toBe(
-			'Email "test@example.com" is already in use'
-		);
-	});
-
-	it("returns friendly message for unique constraint with sku field", () => {
-		const err = {
-			code: "23505",
-			detail: "Key (sku)=(ABC-123) already exists"
-		};
-		expect(dbError(err, "Something went wrong")).toBe('SKU "ABC-123" is already in use');
-	});
-
-	it("returns friendly message for constraint name only", () => {
-		const err = {
-			code: "23505",
-			message: 'unique constraint "products_slug_unique"'
+			code: "SQLITE_CONSTRAINT_UNIQUE",
+			message: "UNIQUE constraint failed: products.slug"
 		};
 		expect(dbError(err, "Something went wrong")).toBe("This slug is already in use");
 	});
 
-	it("returns generic unique message when no details match", () => {
+	it("labels known fields (SKU)", () => {
 		const err = {
-			code: "23505",
-			message: "duplicate key value"
+			code: "SQLITE_CONSTRAINT_UNIQUE",
+			message: "UNIQUE constraint failed: product_variants.sku"
 		};
-		expect(dbError(err, "Something went wrong")).toBe(
-			"A record with this value already exists"
-		);
+		expect(dbError(err, "Something went wrong")).toBe("This SKU is already in use");
 	});
 
-	it("returns friendly message for FK violation", () => {
+	it("handles D1's prefixed/suffixed message shape", () => {
+		const err = new Error("D1_ERROR: UNIQUE constraint failed: user.email: SQLITE_CONSTRAINT");
+		expect(dbError(err, "Something went wrong")).toBe("This email is already in use");
+	});
+
+	it("uses the first column of a composite unique constraint", () => {
 		const err = {
-			code: "23503",
-			message: "foreign key violation"
+			message:
+				"UNIQUE constraint failed: product_translations.product_id, product_translations.language_code"
 		};
-		expect(dbError(err, "Something went wrong")).toBe(
+		expect(dbError(err, "Something went wrong")).toBe("This product id is already in use");
+	});
+
+	it("handles FK violations from both drivers", () => {
+		expect(dbError({ message: "FOREIGN KEY constraint failed" }, "Something went wrong")).toBe(
 			"Cannot complete this action because related data still exists"
 		);
+		expect(
+			dbError(
+				new Error("D1_ERROR: FOREIGN KEY constraint failed: SQLITE_CONSTRAINT"),
+				"Something went wrong"
+			)
+		).toBe("Cannot complete this action because related data still exists");
 	});
 
-	it("returns fallback for unknown pg error code", () => {
-		const err = { code: "42601", message: "syntax error" };
-		expect(dbError(err, "Something went wrong")).toBe("Something went wrong");
+	it("handles NOT NULL violations", () => {
+		const err = { message: "NOT NULL constraint failed: products.name" };
+		expect(dbError(err, "Something went wrong")).toBe("A required field is missing");
 	});
 
-	it("returns fallback for non-pg error", () => {
-		const err = new Error("random error");
-		expect(dbError(err, "Something went wrong")).toBe("Something went wrong");
+	it("extracts the driver error from err.cause (Drizzle wrapping)", () => {
+		const inner = { message: "UNIQUE constraint failed: products.slug" };
+		const err = { message: "Failed query", cause: inner };
+		expect(dbError(err, "Something went wrong")).toBe("This slug is already in use");
 	});
 
-	it("extracts pg error from err.cause (Drizzle wrapping)", () => {
-		const inner = {
-			code: "23505",
-			detail: "Key (email)=(a@b.com) already exists"
-		};
-		const err = { message: "Drizzle error", cause: inner };
-		expect(dbError(err, "Something went wrong")).toBe('Email "a@b.com" is already in use');
+	it("returns fallback for non-constraint errors", () => {
+		expect(dbError(new Error("random error"), "Something went wrong")).toBe(
+			"Something went wrong"
+		);
+		expect(dbError({ code: "42601", message: "syntax error" }, "Something went wrong")).toBe(
+			"Something went wrong"
+		);
+		expect(dbError(null, "Something went wrong")).toBe("Something went wrong");
+	});
+});
+
+// Errors from the real driver, not hand-built shapes — this is the gap that let
+// the previous (Postgres-era) parser pass its tests while being dead in production.
+describe("dbError against the real driver", () => {
+	const t = sqliteTable("t", {
+		id: integer("id").primaryKey(),
+		slug: text("slug").unique(),
+		other: integer("other_id")
+	});
+	const sqlite = new Database(":memory:");
+	sqlite.exec(
+		"CREATE TABLE t (id integer primary key, slug text unique, other_id integer references t(id)); PRAGMA foreign_keys=ON;"
+	);
+	const db = drizzle(sqlite);
+
+	it("maps a real unique violation", async () => {
+		await db.insert(t).values({ id: 1, slug: "a" });
+		const caught = await db
+			.insert(t)
+			.values({ id: 2, slug: "a" })
+			.then(() => null)
+			.catch((e) => e);
+		expect(dbError(caught, "FALLBACK")).toBe("This slug is already in use");
+	});
+
+	it("maps a real FK violation", async () => {
+		const caught = await db
+			.insert(t)
+			.values({ id: 3, slug: "c", other: 999 })
+			.then(() => null)
+			.catch((e) => e);
+		expect(dbError(caught, "FALLBACK")).toBe(
+			"Cannot complete this action because related data still exists"
+		);
 	});
 });

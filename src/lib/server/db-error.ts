@@ -1,67 +1,49 @@
 /**
  * Extract a user-friendly message from a database error.
- * Handles PostgreSQL error codes like unique-constraint violations.
- * Drizzle wraps the original NeonDbError in err.cause, so we check both levels.
+ *
+ * Both SQLite drivers surface the same message text:
+ * - better-sqlite3: SqliteError with message "UNIQUE constraint failed: products.slug"
+ * - D1: Error with message "D1_ERROR: UNIQUE constraint failed: products.slug: SQLITE_CONSTRAINT"
+ * so we match on the message rather than driver-specific codes.
+ * Drizzle wraps the driver error in err.cause, so we check both levels.
  */
 export function dbError(err: unknown, fallback: string): string {
-	const pg = extractPgError(err) ?? extractPgError((err as { cause?: unknown })?.cause);
-	if (!pg) return fallback;
+	const message = sqliteMessage(err) ?? sqliteMessage((err as { cause?: unknown })?.cause);
+	if (!message) return fallback;
 
-	if (pg.code === "23505") {
-		const match = pg.message?.match(
-			/unique constraint "(\w+)"|Key \((\w+)\)=\((.+?)\) already exists/
-		);
-		if (match) {
-			const constraint = match[1];
-			const field = match[2];
-			const value = match[3];
-			if (field && value) {
-				const label = FIELD_LABELS[field] ?? formatColumn(field);
-				return `${label} "${value}" is already in use`;
-			}
-			if (constraint) {
-				const col = constraint
-					.replace(/_idx$|_unique$|_key$/, "")
-					.split("_")
-					.pop();
-				if (col) {
-					const label = FIELD_LABELS[col] ?? formatColumn(col);
-					return `This ${label.toLowerCase()} is already in use`;
-				}
-			}
+	const unique = message.match(/UNIQUE constraint failed: ([\w.]+(?:, [\w.]+)*)/);
+	if (unique) {
+		// "products.slug" or composite "t.col_a, t.col_b" — the first column names the field
+		const col = unique[1].split(",")[0].trim().split(".").pop();
+		if (col) {
+			const label = FIELD_LABELS[col] ?? col.replace(/_/g, " ");
+			return `This ${label} is already in use`;
 		}
 		return "A record with this value already exists";
 	}
 
-	if (pg.code === "23503") {
+	if (message.includes("FOREIGN KEY constraint failed")) {
 		return "Cannot complete this action because related data still exists";
+	}
+
+	if (message.includes("NOT NULL constraint failed")) {
+		return "A required field is missing";
 	}
 
 	return fallback;
 }
 
-function extractPgError(obj: unknown): { code: string; message?: string } | null {
-	if (
-		obj &&
-		typeof obj === "object" &&
-		"code" in obj &&
-		typeof (obj as { code: unknown }).code === "string"
-	) {
-		const { code, message, detail } = obj as {
-			code: string;
-			message?: string;
-			detail?: string;
-		};
-		return { code, message: detail ?? message };
+function sqliteMessage(obj: unknown): string | null {
+	if (obj && typeof obj === "object" && "message" in obj) {
+		const message = (obj as { message: unknown }).message;
+		if (typeof message === "string" && message.includes("constraint failed")) {
+			return message;
+		}
 	}
 	return null;
 }
 
 const FIELD_LABELS: Record<string, string> = {
 	sku: "SKU",
-	email: "Email"
+	email: "email"
 };
-
-function formatColumn(col: string): string {
-	return col.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-}

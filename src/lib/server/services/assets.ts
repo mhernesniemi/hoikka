@@ -10,7 +10,7 @@ import {
 	productVariants,
 	collections
 } from "$lib/server/db/schema.js";
-import { eq, asc, desc, isNotNull, isNull, notInArray } from "drizzle-orm";
+import { and, eq, asc, desc, isNotNull, isNull, notInArray } from "drizzle-orm";
 import { remove as removeFile } from "$lib/server/storage/index.js";
 
 const MIME_TYPES: Record<string, string> = {
@@ -159,7 +159,7 @@ class AssetService {
 	async removeFromProduct(productId: number, assetId: number) {
 		await db
 			.delete(productAssets)
-			.where(eq(productAssets.productId, productId) && eq(productAssets.assetId, assetId));
+			.where(and(eq(productAssets.productId, productId), eq(productAssets.assetId, assetId)));
 
 		// Check if this was the featured asset
 		const [product] = await db.select().from(products).where(eq(products.id, productId));
@@ -220,9 +220,11 @@ class AssetService {
 			.select({ imageUrl: productVariants.imageUrl })
 			.from(productVariants)
 			.where(
-				isNotNull(productVariants.imageUrl) &&
-					isNull(productVariants.deletedAt) &&
+				and(
+					isNotNull(productVariants.imageUrl),
+					isNull(productVariants.deletedAt),
 					notInArray(productVariants.imageUrl, existingUrls)
+				)
 			);
 
 		for (const row of untracked) {

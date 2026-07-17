@@ -11,6 +11,8 @@
  */
 import { getRequestEvent } from "$app/server";
 import { drizzle as drizzleD1 } from "drizzle-orm/d1";
+import { sql } from "drizzle-orm";
+import type { BatchItem } from "drizzle-orm/batch";
 import * as schema from "./schema.js";
 import { env } from "$env/dynamic/private";
 // $lib specifier (not "./node.js") so the cloudflare build can alias this
@@ -18,7 +20,10 @@ import { env } from "$env/dynamic/private";
 import { createNodeDb, type NodeDb } from "$lib/server/db/node.js";
 import { DEFAULT_DATABASE_URL } from "./config.js";
 
-export type Db = NodeDb;
+// The shared surface of both drivers. `transaction` is deliberately excluded:
+// it type-checks on better-sqlite3 but D1 has no interactive transactions, so
+// it would blow up in production. Use `atomic()` for multi-statement writes.
+export type Db = Omit<NodeDb, "transaction">;
 
 let nodeDb: NodeDb | null = null;
 
@@ -47,3 +52,30 @@ export const db = new Proxy({} as Db, {
 		return typeof value === "function" ? value.bind(real) : value;
 	}
 });
+
+/**
+ * Run several write statements atomically on both targets.
+ *
+ * D1 has no interactive transactions but executes `batch()` as one implicit
+ * transaction; better-sqlite3 has no `batch()` but supports BEGIN/COMMIT on
+ * its single connection. Pass unexecuted drizzle statements (don't await them
+ * yourself).
+ */
+export async function atomic(statements: readonly BatchItem<"sqlite">[]): Promise<void> {
+	if (statements.length === 0) return;
+	const backend = currentDb();
+	if ("batch" in backend && typeof backend.batch === "function") {
+		await (backend as { batch(s: readonly BatchItem<"sqlite">[]): Promise<unknown> }).batch(
+			statements
+		);
+		return;
+	}
+	await backend.run(sql`BEGIN`);
+	try {
+		for (const statement of statements) await statement;
+		await backend.run(sql`COMMIT`);
+	} catch (err) {
+		await backend.run(sql`ROLLBACK`);
+		throw err;
+	}
+}

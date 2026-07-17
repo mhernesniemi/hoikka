@@ -20,7 +20,7 @@ import type { CartLine } from "../cart-cookie.js";
 import { taxService } from "./tax.js";
 import { categoryService } from "./categories.js";
 import { promotionService } from "./promotions.js";
-import { calculateDiscount, calculateProductDiscount } from "./promotion-utils.js";
+import { calculateDiscount } from "./promotion-utils.js";
 
 export interface CartViewLine {
 	variantId: number;
@@ -247,7 +247,7 @@ export async function getCartView(
 							qualifyingProductIds.includes(l.productId)
 					)
 					.reduce((sum, l) => sum + l.lineTotal, 0);
-				amount = calculateProductDiscount(promo, qualifyingTotal);
+				amount = calculateDiscount(promo, qualifyingTotal);
 			} else {
 				amount = calculateDiscount(promo, subtotal);
 			}

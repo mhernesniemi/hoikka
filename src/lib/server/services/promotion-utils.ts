@@ -3,6 +3,10 @@
  * No database or environment dependencies
  */
 
+// The discount formula itself lives in the client-safe module so the
+// storefront display and the order math can never drift apart.
+export { calculateDiscount } from "$lib/promotion-utils.js";
+
 export interface PromotionData {
 	discountType: "percentage" | "fixed_amount";
 	discountValue: number;
@@ -10,33 +14,6 @@ export interface PromotionData {
 
 export interface PromotionCombineData {
 	combinesWithOtherPromotions: boolean;
-}
-
-/**
- * Calculate discount amount for a promotion applied to the full order
- */
-export function calculateDiscount(promotion: PromotionData, orderAmount: number): number {
-	if (promotion.discountType === "percentage") {
-		return Math.round(orderAmount * (promotion.discountValue / 100));
-	}
-
-	// Fixed amount - don't exceed order amount
-	return Math.min(promotion.discountValue, orderAmount);
-}
-
-/**
- * Calculate discount amount for a promotion applied to qualifying products only
- */
-export function calculateProductDiscount(
-	promotion: PromotionData,
-	qualifyingLineTotal: number
-): number {
-	if (promotion.discountType === "percentage") {
-		return Math.round(qualifyingLineTotal * (promotion.discountValue / 100));
-	}
-
-	// Fixed amount - don't exceed qualifying total
-	return Math.min(promotion.discountValue, qualifyingLineTotal);
 }
 
 /**

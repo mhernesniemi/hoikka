@@ -8,8 +8,9 @@
  * Orders with `active=true, state=created` are draft checkouts, identified by
  * the `checkout_token` cookie; they become real orders at `payment_pending`.
  */
-import { eq, and, asc, desc, sql, isNull, inArray, exists } from "drizzle-orm";
-import { db } from "../db/index.js";
+import { eq, and, desc, sql, inArray, exists } from "drizzle-orm";
+import { db, atomic } from "../db/index.js";
+import { paginationOf, resolveSort } from "../pagination.js";
 import {
 	orders,
 	orderLines,
@@ -18,10 +19,7 @@ import {
 	promotions,
 	orderShipping,
 	products,
-	assets,
-	customers,
-	productVariantGroupPrices,
-	customerGroupMembers
+	assets
 } from "../db/schema.js";
 import type {
 	Order,
@@ -34,9 +32,9 @@ import type {
 import { nanoid } from "nanoid";
 import { reservationService } from "./reservations.js";
 import { taxService, taxRateFromDb, taxRateToDb } from "./tax.js";
-import { STATE_TRANSITIONS, isValidTransition } from "./order-utils.js";
+import { STATE_TRANSITIONS, isValidTransition, calculateOrderTotals } from "./order-utils.js";
 import { promotionService } from "./promotions.js";
-import { calculateDiscount, calculateProductDiscount } from "./promotion-utils.js";
+import { calculateDiscount } from "./promotion-utils.js";
 import { getCartView } from "./cart.js";
 import { bumpCatalogVersion } from "$lib/server/edge-cache.js";
 
@@ -162,13 +160,13 @@ export class OrderService {
 			// come from getCartView — the same batched computation the cart sheet
 			// shows, so what the customer saw is exactly what gets snapshotted.
 			await reservationService.releaseForOrder(draft.id);
-			await db.delete(orderLines).where(eq(orderLines.orderId, draft.id));
 
 			const view = await getCartView(cartLines, opts.customerId ?? null, {
 				skipPromotions: true
 			});
 			const viewByVariant = new Map(view.lines.map((l) => [l.variantId, l]));
 
+			const lineValues = [];
 			for (const cartLine of cartLines) {
 				const line = viewByVariant.get(cartLine.variantId);
 				if (!line) {
@@ -183,30 +181,44 @@ export class OrderService {
 					stockErrors.push(`${line.productName}: only ${line.quantity} available`);
 				}
 
-				const [inserted] = await db
-					.insert(orderLines)
-					.values({
-						orderId: draft.id,
-						variantId: line.variantId,
-						quantity: line.quantity,
-						unitPrice: line.unitPrice,
-						lineTotal: line.lineTotal,
-						taxCode: line.taxCode,
-						taxRate: taxRateToDb(line.taxRate),
-						taxAmount: line.taxAmount,
-						unitPriceNet: line.unitPriceNet,
-						lineTotalNet: line.lineTotalNet,
-						productName: line.productName,
-						variantName: line.variantName,
-						sku: line.sku
-					})
-					.returning();
+				lineValues.push({
+					orderId: draft.id,
+					variantId: line.variantId,
+					quantity: line.quantity,
+					unitPrice: line.unitPrice,
+					lineTotal: line.lineTotal,
+					taxCode: line.taxCode,
+					taxRate: taxRateToDb(line.taxRate),
+					taxAmount: line.taxAmount,
+					unitPriceNet: line.unitPriceNet,
+					lineTotalNet: line.lineTotalNet,
+					productName: line.productName,
+					variantName: line.variantName,
+					sku: line.sku
+				});
+			}
 
+			// One atomic wipe-and-rebuild so a mid-sequence failure can't leave a
+			// half-built draft (and one insert instead of one per line).
+			await atomic([
+				db.delete(orderLines).where(eq(orderLines.orderId, draft.id)),
+				...(lineValues.length > 0 ? [db.insert(orderLines).values(lineValues)] : [])
+			]);
+
+			const insertedLines = await db
+				.select({
+					id: orderLines.id,
+					variantId: orderLines.variantId,
+					quantity: orderLines.quantity
+				})
+				.from(orderLines)
+				.where(eq(orderLines.orderId, draft.id));
+			for (const inserted of insertedLines) {
 				await reservationService.reserve(
-					line.variantId,
+					inserted.variantId,
 					draft.id,
 					inserted.id,
-					line.quantity
+					inserted.quantity
 				);
 			}
 
@@ -325,17 +337,18 @@ export class OrderService {
 
 		// Resolve sort column
 		const dateFallback = sql`COALESCE(${orders.orderPlacedAt}, ${orders.createdAt})`;
-		const sortColumnMap: Record<string, ReturnType<typeof sql>> = {
-			code: sql`${orders.code}`,
-			customer: sql`${orders.shippingFullName}`,
-			state: sql`${orders.state}`,
-			total: sql`${orders.total}`,
-			date: dateFallback
-		};
-		const sortCol =
-			(sortBy && Object.hasOwn(sortColumnMap, sortBy) ? sortColumnMap[sortBy] : undefined) ||
-			dateFallback;
-		const dirFn = sortOrder === "asc" ? asc : desc;
+		const orderByExpr = resolveSort(
+			{
+				code: sql`${orders.code}`,
+				customer: sql`${orders.shippingFullName}`,
+				state: sql`${orders.state}`,
+				total: sql`${orders.total}`,
+				date: dateFallback
+			},
+			sortBy,
+			sortOrder,
+			dateFallback
+		);
 
 		// Data query with line count subquery
 		const items = await db
@@ -352,13 +365,13 @@ export class OrderService {
 			})
 			.from(orders)
 			.where(and(...conditions, hasLines))
-			.orderBy(dirFn(sortCol))
+			.orderBy(orderByExpr)
 			.limit(limit)
 			.offset(offset);
 
 		return {
 			items: items.map((item) => ({ ...item, lineCount: Number(item.lineCount) })),
-			pagination: { total, limit, offset, hasMore: offset + items.length < total }
+			pagination: paginationOf(total, limit, offset, items.length)
 		};
 	}
 
@@ -512,28 +525,17 @@ export class OrderService {
 				.from(orderPromotions)
 				.where(eq(orderPromotions.orderId, orderId));
 
-			for (const op of appliedPromotions) {
-				await db
-					.update(promotions)
-					.set({ usageCount: sql`${promotions.usageCount} + 1` })
-					.where(eq(promotions.id, op.promotionId));
-			}
-
-			// Decrease stock for tracked variants
-			for (const line of order.lines) {
-				const [v] = await db
-					.select({ trackInventory: productVariants.trackInventory })
-					.from(productVariants)
-					.where(eq(productVariants.id, line.variantId));
-				if (v?.trackInventory) {
-					await db
-						.update(productVariants)
-						.set({
-							stock: sql`${productVariants.stock} - ${line.quantity}`
-						})
-						.where(eq(productVariants.id, line.variantId));
-				}
-			}
+			// Promotion usage bumps and stock decrements happen atomically so a
+			// mid-sequence failure can't leave an order paid with stock intact.
+			await atomic([
+				...appliedPromotions.map((op) =>
+					db
+						.update(promotions)
+						.set({ usageCount: sql`${promotions.usageCount} + 1` })
+						.where(eq(promotions.id, op.promotionId))
+				),
+				...(await this.stockAdjustments(order.lines, -1))
+			]);
 
 			// Release reservations since stock has been permanently deducted
 			await reservationService.releaseForOrder(orderId);
@@ -543,20 +545,7 @@ export class OrderService {
 		if (newState === "cancelled") {
 			// If order was paid, restore stock for tracked variants
 			if (currentState === "paid" || currentState === "shipped") {
-				for (const line of order.lines) {
-					const [v] = await db
-						.select({ trackInventory: productVariants.trackInventory })
-						.from(productVariants)
-						.where(eq(productVariants.id, line.variantId));
-					if (v?.trackInventory) {
-						await db
-							.update(productVariants)
-							.set({
-								stock: sql`${productVariants.stock} + ${line.quantity}`
-							})
-							.where(eq(productVariants.id, line.variantId));
-					}
-				}
+				await atomic(await this.stockAdjustments(order.lines, 1));
 			}
 			// Release any remaining reservations
 			await reservationService.releaseForOrder(orderId);
@@ -644,6 +633,38 @@ export class OrderService {
 		}
 
 		return { valid: errors.length === 0, errors };
+	}
+
+	/**
+	 * Build stock update statements (±quantity) for the tracked variants among
+	 * the given lines. One lookup for all lines; execute the result via atomic().
+	 */
+	private async stockAdjustments(
+		lines: { variantId: number; quantity: number }[],
+		direction: 1 | -1
+	) {
+		if (lines.length === 0) return [];
+		const tracked = await db
+			.select({ id: productVariants.id })
+			.from(productVariants)
+			.where(
+				and(
+					inArray(
+						productVariants.id,
+						lines.map((l) => l.variantId)
+					),
+					eq(productVariants.trackInventory, true)
+				)
+			);
+		const trackedIds = new Set(tracked.map((t) => t.id));
+		return lines
+			.filter((line) => trackedIds.has(line.variantId))
+			.map((line) =>
+				db
+					.update(productVariants)
+					.set({ stock: sql`${productVariants.stock} + ${direction * line.quantity}` })
+					.where(eq(productVariants.id, line.variantId))
+			);
 	}
 
 	/**
@@ -776,7 +797,7 @@ export class OrderService {
 
 		if (promo.promotionType === "product") {
 			const qualifyingTotal = await this.qualifyingLineTotal(orderId, promo.id);
-			return { amount: calculateProductDiscount(promo, qualifyingTotal), type: "product" };
+			return { amount: calculateDiscount(promo, qualifyingTotal), type: "product" };
 		}
 
 		return { amount: calculateDiscount(promo, subtotal), type: "order" };
@@ -812,41 +833,6 @@ export class OrderService {
 					eq(orderPromotions.promotionId, promotionId)
 				)
 			);
-	}
-
-	private async resolveEffectivePrice(
-		variantPrice: number,
-		variantId: number,
-		customerId: number | null
-	): Promise<number> {
-		if (!customerId) return variantPrice;
-
-		// Get customer's group memberships
-		const memberships = await db
-			.select({ groupId: customerGroupMembers.groupId })
-			.from(customerGroupMembers)
-			.where(eq(customerGroupMembers.customerId, customerId));
-
-		if (memberships.length === 0) return variantPrice;
-
-		const groupIds = memberships.map((m) => m.groupId);
-
-		// Get matching group prices for this variant
-		const groupPrices = await db
-			.select({ price: productVariantGroupPrices.price })
-			.from(productVariantGroupPrices)
-			.where(
-				and(
-					eq(productVariantGroupPrices.variantId, variantId),
-					inArray(productVariantGroupPrices.groupId, groupIds)
-				)
-			);
-
-		if (groupPrices.length === 0) return variantPrice;
-
-		// Return the lowest of all matching group prices and the base price
-		const allPrices = [variantPrice, ...groupPrices.map((gp) => gp.price)];
-		return Math.min(...allPrices);
 	}
 
 	private async loadOrderRelations(order: Order): Promise<OrderWithRelations> {
@@ -888,18 +874,14 @@ export class OrderService {
 		};
 	}
 
-	private async recalculateTotals(orderId: number, skipAutoPromotions = false): Promise<void> {
-		// Apply automatic promotions first (unless we're called from within applyAutomaticPromotions)
-		if (!skipAutoPromotions) {
-			await this.applyAutomaticPromotions(orderId);
-		}
+	private async recalculateTotals(orderId: number): Promise<void> {
+		// Apply automatic promotions first
+		await this.applyAutomaticPromotions(orderId);
 
 		// Get all lines
 		const lines = await db.select().from(orderLines).where(eq(orderLines.orderId, orderId));
 
 		const subtotal = lines.reduce((sum, line) => sum + line.lineTotal, 0);
-		const taxTotal = lines.reduce((sum, line) => sum + line.taxAmount, 0);
-		const subtotalNet = lines.reduce((sum, line) => sum + line.lineTotalNet, 0);
 
 		// Get applied discounts
 		const appliedPromotions = await db
@@ -937,14 +919,6 @@ export class OrderService {
 			}
 		}
 
-		// Split discounts: order/product vs shipping
-		const orderProductDiscount = appliedPromotions
-			.filter((op) => op.type === "order" || op.type === "product")
-			.reduce((sum, op) => sum + op.discountAmount, 0);
-		const shippingDiscount = appliedPromotions
-			.filter((op) => op.type === "shipping")
-			.reduce((sum, op) => sum + op.discountAmount, 0);
-
 		// Get shipping cost from order_shipping table
 		const [shippingRecord] = await db
 			.select()
@@ -953,49 +927,46 @@ export class OrderService {
 			.limit(1);
 		const rawShipping = shippingRecord?.price ?? 0;
 
-		// Update free shipping promo amounts when shipping method changes
-		if (shippingDiscount > 0) {
-			const shippingPromos = appliedPromotions.filter((op) => op.type === "shipping");
-			for (const sp of shippingPromos) {
-				if (sp.discountAmount !== rawShipping) {
-					await db
-						.update(orderPromotions)
-						.set({ discountAmount: rawShipping })
-						.where(
-							and(
-								eq(orderPromotions.orderId, orderId),
-								eq(orderPromotions.promotionId, sp.promotionId)
-							)
-						);
-				}
+		// A shipping promotion means free shipping: keep its discount amount in
+		// sync with the (possibly changed) shipping method, in the DB and in the
+		// local rows the totals are computed from.
+		for (const sp of appliedPromotions) {
+			if (sp.type !== "shipping") continue;
+			if (sp.discountAmount !== rawShipping) {
+				await db
+					.update(orderPromotions)
+					.set({ discountAmount: rawShipping })
+					.where(
+						and(
+							eq(orderPromotions.orderId, orderId),
+							eq(orderPromotions.promotionId, sp.promotionId)
+						)
+					);
+				sp.discountAmount = rawShipping;
 			}
 		}
-
-		// Recalculate shipping discount after potential update
-		const effectiveShippingDiscount = appliedPromotions.some((op) => op.type === "shipping")
-			? rawShipping
-			: 0;
-		const effectiveShipping = Math.max(0, rawShipping - effectiveShippingDiscount);
-		const discount = orderProductDiscount + effectiveShippingDiscount;
 
 		// Get order to check tax exemption status
 		const [order] = await db.select().from(orders).where(eq(orders.id, orderId));
 		const isTaxExempt = order ? await taxService.isCustomerTaxExempt(order.customerId) : false;
 
-		const total = Math.max(0, subtotal - orderProductDiscount + effectiveShipping);
-		const totalNet = isTaxExempt
-			? total
-			: Math.max(0, subtotalNet - orderProductDiscount + effectiveShipping);
+		// The actual math lives in the pure, unit-tested helper
+		const totals = calculateOrderTotals({
+			lines,
+			appliedPromotions,
+			shipping: rawShipping,
+			isTaxExempt
+		});
 
 		await db
 			.update(orders)
 			.set({
-				subtotal,
-				discount,
-				shipping: effectiveShipping,
-				total,
-				taxTotal: isTaxExempt ? 0 : taxTotal,
-				totalNet,
+				subtotal: totals.subtotal,
+				discount: totals.discount,
+				shipping: totals.shipping,
+				total: totals.total,
+				taxTotal: totals.taxTotal,
+				totalNet: totals.totalNet,
 				isTaxExempt
 			})
 			.where(eq(orders.id, orderId));

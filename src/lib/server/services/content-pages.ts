@@ -2,8 +2,9 @@
  * Content Page Service
  * Simple CMS pages (About, FAQ, Terms, etc.)
  */
-import { eq, and, asc, desc, sql } from "drizzle-orm";
+import { eq, and, desc, sql, type SQL } from "drizzle-orm";
 import { db } from "../db/index.js";
+import { paginationOf, resolveSort } from "../pagination.js";
 import { contentPages } from "../db/schema.js";
 import type { ContentPage, PaginatedResult } from "$lib/types.js";
 
@@ -28,11 +29,11 @@ export class ContentPageService {
 	): Promise<PaginatedResult<ContentPage>> {
 		const { limit = 20, offset = 0, search, sortBy, sortOrder = "desc" } = options;
 
-		const conditions: ReturnType<typeof eq>[] = [];
+		const conditions: SQL[] = [];
 		if (search) {
 			const pattern = `%${search}%`;
 			conditions.push(
-				sql`(${contentPages.title} LIKE ${pattern} OR ${contentPages.slug} LIKE ${pattern})` as any
+				sql`(${contentPages.title} LIKE ${pattern} OR ${contentPages.slug} LIKE ${pattern})`
 			);
 		}
 
@@ -44,28 +45,29 @@ export class ContentPageService {
 			.where(whereClause);
 		const total = Number(countResult?.count ?? 0);
 
-		const sortColumnMap: Record<string, ReturnType<typeof sql>> = {
-			title: sql`${contentPages.title}`,
-			slug: sql`${contentPages.slug}`,
-			published: sql`${contentPages.published}`,
-			createdAt: sql`${contentPages.createdAt}`
-		};
-		const sortCol =
-			(sortBy && Object.hasOwn(sortColumnMap, sortBy) ? sortColumnMap[sortBy] : undefined) ||
-			sql`${contentPages.createdAt}`;
-		const dirFn = sortOrder === "asc" ? asc : desc;
+		const orderByExpr = resolveSort(
+			{
+				title: sql`${contentPages.title}`,
+				slug: sql`${contentPages.slug}`,
+				published: sql`${contentPages.published}`,
+				createdAt: sql`${contentPages.createdAt}`
+			},
+			sortBy,
+			sortOrder,
+			sql`${contentPages.createdAt}`
+		);
 
 		const items = await db
 			.select()
 			.from(contentPages)
 			.where(whereClause)
-			.orderBy(dirFn(sortCol))
+			.orderBy(orderByExpr)
 			.limit(limit)
 			.offset(offset);
 
 		return {
 			items,
-			pagination: { total, limit, offset, hasMore: offset + items.length < total }
+			pagination: paginationOf(total, limit, offset, items.length)
 		};
 	}
 

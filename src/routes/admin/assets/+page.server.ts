@@ -1,5 +1,6 @@
 import { assetService } from "$lib/server/services/assets.js";
 import { dbError } from "$lib/server/db-error.js";
+import type { SelectedImage } from "$lib/admin-upload.js";
 import { fail } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
 
@@ -12,21 +13,30 @@ export const load: PageServerLoad = async () => {
 export const actions: Actions = {
 	addAsset: async ({ request }) => {
 		const formData = await request.formData();
-		const url = formData.get("url") as string;
-		const name = formData.get("name") as string;
-		const width = Number(formData.get("width")) || 0;
-		const height = Number(formData.get("height")) || 0;
-		const fileSize = Number(formData.get("fileSize")) || 0;
-		const alt = formData.get("alt") as string;
 
-		if (!url || !name) {
+		let files: SelectedImage[];
+		try {
+			files = formData.getAll("files").map((entry) => JSON.parse(String(entry)));
+		} catch {
+			return fail(400, { error: "Image data is required" });
+		}
+
+		if (files.length === 0 || files.some((file) => !file.url || !file.name)) {
 			return fail(400, { error: "Image data is required" });
 		}
 
 		try {
-			const asset = await assetService.create({ name, url, width, height, fileSize });
-			if (alt) {
-				await assetService.updateAlt(asset.id, alt);
+			for (const file of files) {
+				const asset = await assetService.create({
+					name: file.name,
+					url: file.url,
+					width: file.width || 0,
+					height: file.height || 0,
+					fileSize: file.size || 0
+				});
+				if (file.alt) {
+					await assetService.updateAlt(asset.id, file.alt);
+				}
 			}
 			return { success: true };
 		} catch (e) {

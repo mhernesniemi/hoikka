@@ -36,6 +36,7 @@
     <h1 class="text-3xl font-bold text-gray-900">{data.collection.name}</h1>
     {#if data.collection.description}
       <div class="prose prose-lg mt-2 max-w-none prose-gray">
+        <!-- eslint-disable-next-line svelte/no-at-html-tags -- sanitized on save in admin -->
         {@html data.collection.description}
       </div>
     {/if}

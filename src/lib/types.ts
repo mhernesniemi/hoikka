@@ -25,7 +25,6 @@ import type {
 	promotions,
 	promotionProducts,
 	promotionCollections,
-	orderPromotions,
 	shippingMethods,
 	orderShipping,
 	collections,
@@ -43,20 +42,7 @@ import type {
 // ============================================================================
 
 export type Product = InferSelectModel<typeof products>;
-export type NewProduct = InferInsertModel<typeof products>;
-
-export type ProductTranslation = InferSelectModel<typeof productTranslations>;
-export type NewProductTranslation = InferInsertModel<typeof productTranslations>;
-
 export type ProductVariant = InferSelectModel<typeof productVariants>;
-export type NewProductVariant = InferInsertModel<typeof productVariants>;
-
-export type ProductVariantTranslation = InferSelectModel<typeof productVariantTranslations>;
-export type NewProductVariantTranslation = InferInsertModel<typeof productVariantTranslations>;
-
-export type ProductVariantGroupPrice = InferSelectModel<typeof productVariantGroupPrices>;
-export type NewProductVariantGroupPrice = InferInsertModel<typeof productVariantGroupPrices>;
-
 /** Product visibility - derived from schema enum */
 export type ProductVisibility = Product["visibility"];
 
@@ -134,17 +120,7 @@ export interface ProductVariantWithRelations extends ProductVariant {
 // ============================================================================
 
 export type Facet = InferSelectModel<typeof facets>;
-export type NewFacet = InferInsertModel<typeof facets>;
-
-export type FacetTranslation = InferSelectModel<typeof facetTranslations>;
-export type NewFacetTranslation = InferInsertModel<typeof facetTranslations>;
-
 export type FacetValue = InferSelectModel<typeof facetValues>;
-export type NewFacetValue = InferInsertModel<typeof facetValues>;
-
-export type FacetValueTranslation = InferSelectModel<typeof facetValueTranslations>;
-export type NewFacetValueTranslation = InferInsertModel<typeof facetValueTranslations>;
-
 /** Facet with all values */
 export interface FacetWithValues extends Facet {
 	values: FacetValue[];
@@ -155,11 +131,6 @@ export interface FacetWithValues extends Facet {
 // ============================================================================
 
 export type Asset = InferSelectModel<typeof assets>;
-export type NewAsset = InferInsertModel<typeof assets>;
-
-/** Asset type - derived from schema enum */
-export type AssetType = Asset["type"];
-
 // ============================================================================
 // CUSTOMER GROUPS (B2B)
 // ============================================================================
@@ -167,27 +138,15 @@ export type AssetType = Asset["type"];
 export type CustomerGroup = InferSelectModel<typeof customerGroups>;
 export type NewCustomerGroup = InferInsertModel<typeof customerGroups>;
 
-export type CustomerGroupMember = InferSelectModel<typeof customerGroupMembers>;
-export type NewCustomerGroupMember = InferInsertModel<typeof customerGroupMembers>;
-
 // ============================================================================
 // CUSTOMER TYPES
 // ============================================================================
 
 export type Customer = InferSelectModel<typeof customers>;
-export type NewCustomer = InferInsertModel<typeof customers>;
-
 export type Address = InferSelectModel<typeof addresses>;
-export type NewAddress = InferInsertModel<typeof addresses>;
-
 /** Customer with addresses */
 export interface CustomerWithAddresses extends Customer {
 	addresses: Address[];
-}
-
-/** Customer with groups */
-export interface CustomerWithGroups extends Customer {
-	groups: CustomerGroup[];
 }
 
 // ============================================================================
@@ -195,27 +154,13 @@ export interface CustomerWithGroups extends Customer {
 // ============================================================================
 
 export type Order = InferSelectModel<typeof orders>;
-export type NewOrder = InferInsertModel<typeof orders>;
-
 export type OrderLine = InferSelectModel<typeof orderLines>;
-export type NewOrderLine = InferInsertModel<typeof orderLines>;
-
 export type Payment = InferSelectModel<typeof payments>;
 export type NewPayment = InferInsertModel<typeof payments>;
 
 export type PaymentMethod = InferSelectModel<typeof paymentMethods>;
-export type NewPaymentMethod = InferInsertModel<typeof paymentMethods>;
-
-/** Payment with method details */
-export interface PaymentWithMethod extends Payment {
-	paymentMethod: PaymentMethod;
-}
-
 /** Order state - derived from schema enum */
 export type OrderState = Order["state"];
-
-/** Payment state - derived from schema enum */
-export type PaymentState = Payment["state"];
 
 /** Lightweight order for admin list views */
 export interface OrderListItem {
@@ -248,45 +193,24 @@ export interface OrderLineWithVariant extends OrderLine {
 // STOCK RESERVATION TYPES
 // ============================================================================
 
-export type StockReservation = InferSelectModel<typeof stockReservations>;
-export type NewStockReservation = InferInsertModel<typeof stockReservations>;
-
 // ============================================================================
 // TAX RATE TYPES
 // ============================================================================
-
-export type TaxRate = InferSelectModel<typeof taxRates>;
-export type NewTaxRate = InferInsertModel<typeof taxRates>;
-
-/** Tax code - common codes */
-export type TaxCode = "standard" | "food" | "books" | "zero";
 
 // ============================================================================
 // PROMOTION TYPES
 // ============================================================================
 
 export type Promotion = InferSelectModel<typeof promotions>;
-export type NewPromotion = InferInsertModel<typeof promotions>;
-
-export type PromotionProduct = InferSelectModel<typeof promotionProducts>;
-export type PromotionCollection = InferSelectModel<typeof promotionCollections>;
-
-export type OrderPromotion = InferSelectModel<typeof orderPromotions>;
 
 /** Discount type - derived from schema enum */
 export type DiscountType = Promotion["discountType"];
-
-/** Promotion method - code or automatic */
-export type PromotionMethod = Promotion["method"];
 
 /** Promotion type - order, product, or free_shipping */
 export type PromotionType = Promotion["promotionType"];
 
 /** Promotion applies to - all, specific_products, or specific_collections */
 export type PromotionAppliesTo = Promotion["appliesTo"];
-
-/** Order promotion type - order, product, or shipping */
-export type OrderPromotionType = OrderPromotion["type"];
 
 /** Promotion with related products and collections */
 export interface PromotionWithRelations extends Promotion {
@@ -299,37 +223,15 @@ export interface PromotionWithRelations extends Promotion {
 // ============================================================================
 
 export type ShippingMethod = InferSelectModel<typeof shippingMethods>;
-export type NewShippingMethod = InferInsertModel<typeof shippingMethods>;
-
 export type OrderShipping = InferSelectModel<typeof orderShipping>;
 export type NewOrderShipping = InferInsertModel<typeof orderShipping>;
-
-/** Shipping status - derived from schema enum */
-export type ShippingStatus = OrderShipping["status"];
-
-/** Order with shipping info */
-export interface OrderWithShipping extends Omit<OrderWithRelations, "shipping"> {
-	shipping?: OrderShippingWithMethod | null;
-}
-
-/** Order shipping with method details */
-export interface OrderShippingWithMethod extends OrderShipping {
-	shippingMethod: ShippingMethod;
-}
 
 // ============================================================================
 // COLLECTION TYPES (Smart Collections - Vendure/Shopify style)
 // ============================================================================
 
 export type Collection = InferSelectModel<typeof collections>;
-export type NewCollection = InferInsertModel<typeof collections>;
-
-export type CollectionTranslation = InferSelectModel<typeof collectionTranslations>;
-export type NewCollectionTranslation = InferInsertModel<typeof collectionTranslations>;
-
 export type CollectionFilter = InferSelectModel<typeof collectionFilters>;
-export type NewCollectionFilter = InferInsertModel<typeof collectionFilters>;
-
 /** Collection filter field - derived from schema enum */
 export type CollectionFilterField = CollectionFilter["field"];
 
@@ -351,8 +253,6 @@ export interface CollectionWithRelations extends Collection {
 // ============================================================================
 
 export type Review = InferSelectModel<typeof reviews>;
-export type NewReview = InferInsertModel<typeof reviews>;
-
 /** Review status - derived from schema enum */
 export type ReviewStatus = Review["status"];
 
@@ -372,11 +272,6 @@ export interface ReviewWithRelations extends Review {
 // ============================================================================
 
 export type ContentPage = InferSelectModel<typeof contentPages>;
-export type NewContentPage = InferInsertModel<typeof contentPages>;
-
-export type ContentPageTranslation = InferSelectModel<typeof contentPageTranslations>;
-export type NewContentPageTranslation = InferInsertModel<typeof contentPageTranslations>;
-
 // ============================================================================
 // SORT TYPES
 // ============================================================================
@@ -543,13 +438,6 @@ export interface UpdateCollectionInput {
 	name?: string;
 	slug?: string;
 	description?: string;
-}
-
-export interface AddCollectionFilterInput {
-	collectionId: number;
-	field: CollectionFilterField;
-	operator: CollectionFilterOperator;
-	value: unknown;
 }
 
 export interface CreateReviewInput {

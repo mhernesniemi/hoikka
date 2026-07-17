@@ -28,11 +28,12 @@ const TAX_RATE_SCALE = 10_000;
 export const taxRateFromDb = (n: number) => n / TAX_RATE_SCALE;
 export const taxRateToDb = (n: number) => Math.round(n * TAX_RATE_SCALE);
 
-// Default tax rates for Finland
+// Default tax rates for Finland (standard 25.5% since 2024-09,
+// reduced 13.5% since 2026-01; books moved from 10% to the reduced band in 2025)
 const DEFAULT_TAX_RATES: TaxRateInfo[] = [
-	{ code: "standard", rate: 0.24, name: "Standard VAT (24%)" },
-	{ code: "food", rate: 0.14, name: "Food VAT (14%)" },
-	{ code: "books", rate: 0.1, name: "Books/Newspapers VAT (10%)" },
+	{ code: "standard", rate: 0.255, name: "Standard VAT (25.5%)" },
+	{ code: "food", rate: 0.135, name: "Food VAT (13.5%)" },
+	{ code: "books", rate: 0.135, name: "Books VAT (13.5%)" },
 	{ code: "zero", rate: 0, name: "Zero VAT (0%)" }
 ];
 
@@ -40,7 +41,7 @@ export class TaxService {
 	async getTaxRate(taxCode: string): Promise<number> {
 		const [rate] = await db.select().from(taxRates).where(eq(taxRates.code, taxCode));
 		if (rate) return taxRateFromDb(rate.rate);
-		return DEFAULT_TAX_RATES.find((r) => r.code === taxCode)?.rate ?? 0.24;
+		return DEFAULT_TAX_RATES.find((r) => r.code === taxCode)?.rate ?? 0.255;
 	}
 
 	async getAllTaxRates(): Promise<TaxRateInfo[]> {

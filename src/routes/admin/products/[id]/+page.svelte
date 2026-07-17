@@ -1,6 +1,6 @@
 <script lang="ts">
   import { enhance } from "$app/forms";
-  import { goto, invalidateAll } from "$app/navigation";
+  import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import { onMount } from "svelte";
   import { toast } from "svelte-sonner";
@@ -21,20 +21,14 @@
     TableCell
   } from "$lib/components/admin/ui/table";
   import * as Dialog from "$lib/components/admin/ui/dialog";
-  import * as Popover from "$lib/components/admin/ui/popover";
-  import * as Command from "$lib/components/admin/ui/command";
   import { Badge } from "$lib/components/admin/ui/badge";
   import IconButton from "$lib/components/admin/IconButton.svelte";
   import ImagePicker from "$lib/components/admin/ImagePicker.svelte";
+  import MultiSelectCombobox from "$lib/components/admin/MultiSelectCombobox.svelte";
+  import TranslationEditor from "$lib/components/admin/TranslationEditor.svelte";
   import { RichTextEditor } from "$lib/components/admin/ui/rich-text-editor";
-  import {
-    translationsToMap,
-    LANGUAGES,
-    DEFAULT_LANGUAGE,
-    TRANSLATION_LANGUAGES
-  } from "$lib/config/languages.js";
-  import Check from "@lucide/svelte/icons/check";
-  import ChevronsUpDown from "@lucide/svelte/icons/chevrons-up-down";
+  import { translationsToMap, TRANSLATION_LANGUAGES } from "$lib/config/languages.js";
+  import { saveImages, type SelectedImage } from "$lib/admin-upload";
   import X from "@lucide/svelte/icons/x";
   import Plus from "@lucide/svelte/icons/plus";
   import Pencil from "@lucide/svelte/icons/pencil";
@@ -104,28 +98,18 @@
   // Selected facet values and categories
   let selectedProductFacets = $state<number[]>(data.product.facetValues.map((fv) => fv.id));
   let selectedCategories = $state<number[]>(data.productCategories.map((c) => c.id));
-  let facetComboboxOpen = $state(false);
 
   // Flatten facet values for combobox display (derived from data)
-  type FlatFacetValue = {
-    id: number;
-    name: string;
-    facetName: string;
-  };
-
-  const flatFacetValues: FlatFacetValue[] = $derived(
+  const facetItems = $derived(
     data.facets.flatMap((facet) =>
       facet.values.map((value) => ({
         id: value.id,
-        name: value.name,
-        facetName: facet.name
+        label: value.name,
+        group: facet.name,
+        badgeLabel: `${facet.name}: ${value.name}`
       }))
     )
   );
-
-  function getSelectedFacetValueObjects() {
-    return flatFacetValues.filter((fv) => selectedProductFacets.includes(fv.id));
-  }
 
   function toggleFacetValue(id: number) {
     if (selectedProductFacets.includes(id)) {
@@ -133,10 +117,6 @@
     } else {
       selectedProductFacets = [...selectedProductFacets, id];
     }
-  }
-
-  function removeFacetValue(id: number) {
-    selectedProductFacets = selectedProductFacets.filter((fv) => fv !== id);
   }
 
   // Flatten tree into list with depth info for display
@@ -204,7 +184,6 @@
   let productName = $state(data.product.name);
   let productSlug = $state(data.product.slug);
   let productDescription = $state(data.product.description ?? "");
-  let activeLanguageTab = $state(DEFAULT_LANGUAGE);
   const translationMap = $derived(translationsToMap(data.translations));
 
   const hasUnsavedChanges = $derived.by(() => {
@@ -231,41 +210,11 @@
     );
   });
 
-  async function handleImagesSelected(
-    files: {
-      url: string;
-      name: string;
-      width: number;
-      height: number;
-      size: number;
-      alt: string;
-    }[]
-  ) {
+  async function handleImagesSelected(files: SelectedImage[]) {
     isSavingImages = true;
-
-    try {
-      for (const file of files) {
-        const saveForm = new FormData();
-        saveForm.append("url", file.url);
-        saveForm.append("name", file.name);
-        saveForm.append("width", file.width.toString());
-        saveForm.append("height", file.height.toString());
-        saveForm.append("fileSize", file.size.toString());
-        saveForm.append("alt", file.alt);
-
-        await fetch(`?/addImage`, {
-          method: "POST",
-          body: saveForm
-        });
-      }
-
-      // Refresh server data without losing form state
-      await invalidateAll();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to save images");
-    } finally {
-      isSavingImages = false;
-    }
+    const error = await saveImages("?/addImage", files);
+    if (error) toast.error(error);
+    isSavingImages = false;
   }
 </script>
 
@@ -345,95 +294,41 @@
         }}
         class="overflow-hidden rounded-lg bg-surface shadow"
       >
-        <!-- Language Tabs -->
-        {#if TRANSLATION_LANGUAGES.length > 0}
-          <div class="flex border-b border-border">
-            {#each LANGUAGES as lang}
-              <button
-                type="button"
-                class={cn(
-                  "border-b-2 border-transparent px-4 py-2.5 text-sm font-medium",
-                  activeLanguageTab === lang.code
-                    ? "border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-                onclick={() => (activeLanguageTab = lang.code)}
-              >
-                {lang.name}
-              </button>
-            {/each}
-          </div>
-        {/if}
-
-        <!-- Default language fields -->
-        <div class={cn(activeLanguageTab !== DEFAULT_LANGUAGE && "hidden")}>
-          <div class="space-y-4 p-6">
-            <div class="grid grid-cols-2 gap-4">
-              <div>
-                <Label for="name">Name <span class="text-red-500">*</span></Label>
-                <Input type="text" id="name" name="name" bind:value={productName} required />
-              </div>
-
-              <div>
-                <Label for="slug">Slug <span class="text-red-500">*</span></Label>
-                <Input type="text" id="slug" name="slug" bind:value={productSlug} required />
-              </div>
+        <div class="space-y-4 p-6">
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <Label for="name">Name <span class="text-red-500">*</span></Label>
+              <Input type="text" id="name" name="name" bind:value={productName} required />
             </div>
 
             <div>
-              <Label for="description">Description</Label>
-              <RichTextEditor
-                name="description"
-                content={data.product.description ?? ""}
-                placeholder="Write product description..."
-                onchange={(html) => (productDescription = html)}
-              />
+              <Label for="slug">Slug <span class="text-red-500">*</span></Label>
+              <Input type="text" id="slug" name="slug" bind:value={productSlug} required />
             </div>
+          </div>
+
+          <div>
+            <Label for="description">Description</Label>
+            <RichTextEditor
+              name="description"
+              content={data.product.description ?? ""}
+              placeholder="Write product description..."
+              onchange={(html) => (productDescription = html)}
+            />
           </div>
         </div>
-
-        <!-- Translation language fields -->
-        {#each TRANSLATION_LANGUAGES as lang}
-          <div class={cn(activeLanguageTab !== lang.code && "hidden")}>
-            <div class="space-y-4 p-6">
-              <div class="grid grid-cols-2 gap-4">
-                <div>
-                  <Label for="translation_{lang.code}_name">Name</Label>
-                  <Input
-                    type="text"
-                    id="translation_{lang.code}_name"
-                    name="name_{lang.code}"
-                    value={translationMap[lang.code]?.name ?? ""}
-                  />
-                </div>
-
-                <div>
-                  <Label for="translation_{lang.code}_slug">Slug</Label>
-                  <Input
-                    type="text"
-                    id="translation_{lang.code}_slug"
-                    name="slug_{lang.code}"
-                    value={translationMap[lang.code]?.slug ?? ""}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Label for="translation_{lang.code}_description">Description</Label>
-                <RichTextEditor
-                  name="description_{lang.code}"
-                  content={translationMap[lang.code]?.description ?? ""}
-                  placeholder="Write product description..."
-                />
-              </div>
-
-              <p class="text-xs text-muted-foreground">
-                Leave empty to use the {LANGUAGES.find((l) => l.code === DEFAULT_LANGUAGE)?.name} value.
-              </p>
-            </div>
-          </div>
-        {/each}
       </form>
+
+      <!-- Translations -->
+      <TranslationEditor
+        fields={[
+          { name: "name", label: "Name", type: "text" },
+          { name: "slug", label: "Slug", type: "text" },
+          { name: "description", label: "Description", type: "richtext" }
+        ]}
+        translations={translationMap}
+        formId="product-form"
+      />
 
       <!-- Images Section -->
       <AdminCard title="Images">
@@ -692,68 +587,16 @@
         {#if data.facets.length === 0}
           <p class="text-sm text-muted-foreground">No facets defined.</p>
         {:else}
-          <!-- Combobox -->
-          <Popover.Root bind:open={facetComboboxOpen}>
-            <Popover.Trigger
-              class="flex w-full items-center justify-between rounded-lg border border-input-border bg-surface px-3 py-2 text-sm hover:bg-hover"
-              aria-expanded={facetComboboxOpen}
-              aria-controls="facet-listbox"
-              aria-haspopup="listbox"
-            >
-              <span class="text-muted-foreground">Select facet values...</span>
-              <ChevronsUpDown class="ml-2 h-4 w-4 shrink-0 opacity-50" />
-            </Popover.Trigger>
-            <Popover.Content class="w-72 p-0" align="start">
-              <Command.Root>
-                <Command.Input placeholder="Search facet values..." />
-                <Command.List id="facet-listbox" class="max-h-64">
-                  <Command.Empty>No facet value found.</Command.Empty>
-                  {#each data.facets as facet}
-                    {#if facet.values.length > 0}
-                      <Command.Group heading={facet.name}>
-                        {#each facet.values as value}
-                          <Command.Item
-                            value="{facet.name} {value.name}"
-                            onSelect={() => toggleFacetValue(value.id)}
-                            class="cursor-pointer"
-                          >
-                            <div class="flex w-full items-center gap-2">
-                              <div class="flex h-4 w-4 items-center justify-center">
-                                {#if selectedProductFacets.includes(value.id)}
-                                  <Check class="h-4 w-4" />
-                                {/if}
-                              </div>
-                              <span>{value.name}</span>
-                            </div>
-                          </Command.Item>
-                        {/each}
-                      </Command.Group>
-                    {/if}
-                  {/each}
-                </Command.List>
-              </Command.Root>
-            </Popover.Content>
-          </Popover.Root>
-
-          <!-- Selected facet values -->
-          {#if selectedProductFacets.length > 0}
-            <div class="mt-3 flex flex-wrap gap-1.5">
-              {#each getSelectedFacetValueObjects() as fv}
-                <Badge class="gap-1">
-                  {fv.facetName}: {fv.name}
-                  <button
-                    type="button"
-                    onclick={() => removeFacetValue(fv.id)}
-                    class="ml-0.5 rounded-full p-0.5 hover:bg-blue-200 dark:hover:bg-blue-500/20"
-                    aria-label="Remove {fv.name}"
-                  >
-                    <X class="h-3 w-3" />
-                  </button>
-                </Badge>
-                <input form="product-form" type="hidden" name="facetValueIds" value={fv.id} />
-              {/each}
-            </div>
-          {/if}
+          <MultiSelectCombobox
+            items={facetItems}
+            selected={selectedProductFacets}
+            onToggle={toggleFacetValue}
+            placeholder="Select facet values..."
+            searchPlaceholder="Search facet values..."
+            emptyText="No facet value found."
+            form="product-form"
+            name="facetValueIds"
+          />
         {/if}
       </AdminCard>
 

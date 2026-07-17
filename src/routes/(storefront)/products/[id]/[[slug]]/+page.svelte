@@ -149,7 +149,8 @@
     />
   {/if}
 
-  <!-- JSON-LD Structured Data -->
+  <!-- JSON-LD Structured Data (code-generated, not user input) -->
+  <!-- eslint-disable-next-line svelte/no-at-html-tags -->
   {@html productJsonLd(product, data.rating)}
 </svelte:head>
 
@@ -241,6 +242,7 @@
 
       {#if product.description}
         <div class="prose mb-8 max-w-none prose-gray">
+          <!-- eslint-disable-next-line svelte/no-at-html-tags -- sanitized on save in admin -->
           {@html product.description}
         </div>
       {/if}

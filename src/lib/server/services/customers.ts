@@ -2,8 +2,9 @@
  * Customer Service
  * Handles customer management and addresses
  */
-import { eq, and, asc, desc, isNull, sql } from "drizzle-orm";
+import { eq, and, desc, isNull, sql, type SQL } from "drizzle-orm";
 import { db } from "../db/index.js";
+import { paginationOf, resolveSort } from "../pagination.js";
 import { customers, addresses } from "../db/schema.js";
 import type {
 	Customer,
@@ -82,11 +83,11 @@ export class CustomerService {
 	): Promise<PaginatedResult<Customer>> {
 		const { limit = 20, offset = 0, search, sortBy, sortOrder = "desc" } = options;
 
-		const conditions = [isNull(customers.deletedAt)];
+		const conditions: SQL[] = [isNull(customers.deletedAt)];
 		if (search) {
 			const pattern = `%${search}%`;
 			conditions.push(
-				sql`(${customers.firstName} LIKE ${pattern} OR ${customers.lastName} LIKE ${pattern} OR ${customers.email} LIKE ${pattern})` as any
+				sql`(${customers.firstName} LIKE ${pattern} OR ${customers.lastName} LIKE ${pattern} OR ${customers.email} LIKE ${pattern})`
 			);
 		}
 
@@ -96,28 +97,29 @@ export class CustomerService {
 			.where(and(...conditions));
 		const total = Number(countResult[0]?.count ?? 0);
 
-		const sortColumnMap: Record<string, ReturnType<typeof sql>> = {
-			name: sql`${customers.lastName}`,
-			email: sql`${customers.email}`,
-			phone: sql`${customers.phone}`,
-			createdAt: sql`${customers.createdAt}`
-		};
-		const sortCol =
-			(sortBy && Object.hasOwn(sortColumnMap, sortBy) ? sortColumnMap[sortBy] : undefined) ||
-			sql`${customers.createdAt}`;
-		const dirFn = sortOrder === "asc" ? asc : desc;
+		const orderByExpr = resolveSort(
+			{
+				name: sql`${customers.lastName}`,
+				email: sql`${customers.email}`,
+				phone: sql`${customers.phone}`,
+				createdAt: sql`${customers.createdAt}`
+			},
+			sortBy,
+			sortOrder,
+			sql`${customers.createdAt}`
+		);
 
 		const items = await db
 			.select()
 			.from(customers)
 			.where(and(...conditions))
-			.orderBy(dirFn(sortCol))
+			.orderBy(orderByExpr)
 			.limit(limit)
 			.offset(offset);
 
 		return {
 			items,
-			pagination: { total, limit, offset, hasMore: offset + items.length < total }
+			pagination: paginationOf(total, limit, offset, items.length)
 		};
 	}
 

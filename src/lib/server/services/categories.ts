@@ -3,7 +3,7 @@
  * Handles hierarchical product categories for navigation and breadcrumbs
  */
 import { eq, and, isNull, asc, inArray, sql } from "drizzle-orm";
-import { db } from "../db/index.js";
+import { db, atomic } from "../db/index.js";
 import { categories, productCategories } from "../db/schema.js";
 
 export type Category = typeof categories.$inferSelect;
@@ -218,13 +218,16 @@ export class CategoryService {
 	 * Set categories for a product (replaces existing)
 	 */
 	async setProductCategories(productId: number, categoryIds: number[]): Promise<void> {
-		await db.delete(productCategories).where(eq(productCategories.productId, productId));
-
-		if (categoryIds.length > 0) {
-			await db
-				.insert(productCategories)
-				.values(categoryIds.map((categoryId) => ({ productId, categoryId })));
-		}
+		await atomic([
+			db.delete(productCategories).where(eq(productCategories.productId, productId)),
+			...(categoryIds.length > 0
+				? [
+						db
+							.insert(productCategories)
+							.values(categoryIds.map((categoryId) => ({ productId, categoryId })))
+					]
+				: [])
+		]);
 	}
 
 	/**

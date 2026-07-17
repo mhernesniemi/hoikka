@@ -80,10 +80,10 @@ describe("getCartView", () => {
 		expect(view.lines[0].unitPrice).toBe(1000);
 		expect(view.lines[0].quantity).toBe(2);
 		expect(view.lines[0].lineTotal).toBe(2000);
-		// Standard Finnish VAT 24% is included in the gross price;
+		// Standard Finnish VAT 25.5% is included in the gross price;
 		// the net unit price is rounded per unit, then multiplied
-		expect(view.lines[0].taxRate).toBe(0.24);
-		expect(view.lines[0].taxAmount).toBe(2000 - Math.round(1000 / 1.24) * 2);
+		expect(view.lines[0].taxRate).toBe(0.255);
+		expect(view.lines[0].taxAmount).toBe(2000 - Math.round(1000 / 1.255) * 2);
 		expect(view.subtotal).toBe(2000);
 		expect(view.total).toBe(2000);
 		expect(view.itemCount).toBe(2);

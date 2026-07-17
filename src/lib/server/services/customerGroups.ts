@@ -2,8 +2,9 @@
  * Customer Groups Service
  * Handles B2B customer group management
  */
-import { eq, asc, desc, sql, and, like } from "drizzle-orm";
-import { db } from "../db/index.js";
+import { eq, desc, sql, and, like, type SQL } from "drizzle-orm";
+import { db, atomic } from "../db/index.js";
+import { paginationOf, resolveSort } from "../pagination.js";
 import { customerGroups, customerGroupMembers, customers } from "../db/schema.js";
 import type {
 	CustomerGroup,
@@ -112,11 +113,11 @@ export class CustomerGroupService {
 	): Promise<PaginatedResult<CustomerGroupListItem>> {
 		const { limit = 20, offset = 0, search, sortBy, sortOrder = "desc" } = options;
 
-		const conditions: ReturnType<typeof eq>[] = [];
+		const conditions: SQL[] = [];
 		if (search) {
 			const pattern = `%${search}%`;
 			conditions.push(
-				sql`(${customerGroups.name} LIKE ${pattern} OR ${customerGroups.description} LIKE ${pattern})` as any
+				sql`(${customerGroups.name} LIKE ${pattern} OR ${customerGroups.description} LIKE ${pattern})`
 			);
 		}
 
@@ -128,16 +129,17 @@ export class CustomerGroupService {
 			.where(whereClause);
 		const total = Number(countResult?.count ?? 0);
 
-		const sortColumnMap: Record<string, ReturnType<typeof sql>> = {
-			name: sql`${customerGroups.name}`,
-			description: sql`${customerGroups.description}`,
-			customerCount: sql`(SELECT count(*) FROM customer_group_members WHERE group_id = ${customerGroups.id})`,
-			createdAt: sql`${customerGroups.createdAt}`
-		};
-		const sortCol =
-			(sortBy && Object.hasOwn(sortColumnMap, sortBy) ? sortColumnMap[sortBy] : undefined) ||
-			sql`${customerGroups.createdAt}`;
-		const dirFn = sortOrder === "asc" ? asc : desc;
+		const orderByExpr = resolveSort(
+			{
+				name: sql`${customerGroups.name}`,
+				description: sql`${customerGroups.description}`,
+				customerCount: sql`(SELECT count(*) FROM customer_group_members WHERE group_id = ${customerGroups.id})`,
+				createdAt: sql`${customerGroups.createdAt}`
+			},
+			sortBy,
+			sortOrder,
+			sql`${customerGroups.createdAt}`
+		);
 
 		const items = await db
 			.select({
@@ -149,13 +151,13 @@ export class CustomerGroupService {
 			})
 			.from(customerGroups)
 			.where(whereClause)
-			.orderBy(dirFn(sortCol))
+			.orderBy(orderByExpr)
 			.limit(limit)
 			.offset(offset);
 
 		return {
 			items: items.map((item) => ({ ...item, customerCount: Number(item.customerCount) })),
-			pagination: { total, limit, offset, hasMore: offset + items.length < total }
+			pagination: paginationOf(total, limit, offset, items.length)
 		};
 	}
 
@@ -260,13 +262,17 @@ export class CustomerGroupService {
 	 * Set the full list of customers in a group (sync)
 	 */
 	async setCustomers(groupId: number, customerIds: number[]): Promise<void> {
-		await db.delete(customerGroupMembers).where(eq(customerGroupMembers.groupId, groupId));
-		if (customerIds.length > 0) {
-			await db
-				.insert(customerGroupMembers)
-				.values(customerIds.map((customerId) => ({ groupId, customerId })))
-				.onConflictDoNothing();
-		}
+		await atomic([
+			db.delete(customerGroupMembers).where(eq(customerGroupMembers.groupId, groupId)),
+			...(customerIds.length > 0
+				? [
+						db
+							.insert(customerGroupMembers)
+							.values(customerIds.map((customerId) => ({ groupId, customerId })))
+							.onConflictDoNothing()
+					]
+				: [])
+		]);
 	}
 
 	/**
