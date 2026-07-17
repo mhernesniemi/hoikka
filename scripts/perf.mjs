@@ -26,6 +26,20 @@ if (urls.length === 0) {
 	process.exit(2);
 }
 
+// Warm the edge caches before measuring. A deploy invalidates every cached
+// page (the build version is part of the cache key), so a run triggered right
+// after one would otherwise measure cold SSR instead of steady state. Two hits:
+// the first populates the caches, the second confirms they serve.
+for (const url of urls) {
+	for (let i = 0; i < 2; i++) {
+		try {
+			await fetch(url, { headers: { "user-agent": "hoikka-perf-warmup" } });
+		} catch {
+			// unreachable URLs fail loudly in the Lighthouse run below
+		}
+	}
+}
+
 const work = mkdtempSync(join(tmpdir(), "perf-"));
 let failed = false;
 

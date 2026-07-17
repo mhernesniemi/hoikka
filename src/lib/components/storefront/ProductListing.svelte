@@ -412,10 +412,13 @@
         class="grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-3"
         data-sveltekit-preload-data="viewport"
       >
-        {#each listing.items as product (product.id)}
+        {#each listing.items as product, index (product.id)}
+          <!-- First grid rows are above the fold — eager-load them so the LCP
+               image isn't queued behind lazy-loading (2-col mobile grid) -->
           <ProductCard
             product={toProductCard(product)}
             {activeDiscounts}
+            loading={index < 4 ? "eager" : "lazy"}
             showFromPrice={product.minPrice !== null &&
               product.maxPrice !== null &&
               product.minPrice !== product.maxPrice}
