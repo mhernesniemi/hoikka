@@ -33,6 +33,7 @@
 		"db:migrate:cf:local": "wrangler d1 migrations apply hoikka-db --local",
 		"db:generate": "drizzle-kit generate",
 		"db:studio": "drizzle-kit studio",
+		"perf": "node scripts/perf.mjs",
 		"seed": "tsx scripts/seed.ts",
 		"mcp": "tsx scripts/mcp.ts"
 	},

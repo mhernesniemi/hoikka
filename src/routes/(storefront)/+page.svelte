@@ -151,7 +151,7 @@
               </a>
             </div>
           {:else}
-            <div class="grid grid-cols-2 gap-4 sm:gap-6">
+            <div class="grid grid-cols-2 gap-4 sm:gap-6" data-sveltekit-preload-data="viewport">
               {#each data.featuredProducts as product}
                 <ProductCard
                   {product}

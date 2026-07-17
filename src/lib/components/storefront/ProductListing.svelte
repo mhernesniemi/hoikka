@@ -406,7 +406,12 @@
         {/if}
       </div>
     {:else}
-      <div class="grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-3">
+      <!-- viewport preload: card data is fetched as cards scroll into view,
+           so clicking renders from memory (pages are edge-cached anyway) -->
+      <div
+        class="grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-3"
+        data-sveltekit-preload-data="viewport"
+      >
         {#each listing.items as product (product.id)}
           <ProductCard
             product={toProductCard(product)}

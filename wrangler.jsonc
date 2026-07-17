@@ -36,6 +36,13 @@
 			"id": "00000000000000000000000000000000"
 		}
 	],
+	// Run the worker near D1 instead of near the visitor: multi-query
+	// requests (checkout, admin, logged-in SSR) pay one long client hop
+	// instead of a network round trip per query. Cached guest pages are
+	// unaffected — they never reach the origin worker logic anyway.
+	"placement": {
+		"mode": "smart"
+	},
 	"observability": {
 		"enabled": true
 	}
