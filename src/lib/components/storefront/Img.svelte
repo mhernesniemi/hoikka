@@ -37,7 +37,7 @@
 <img
   src={imageUrl(src, width, quality)}
   srcset={imageSrcset(src, width, quality)}
-  {sizes}
+  sizes={sizes ?? `${width}px`}
   {alt}
   {loading}
   {fetchpriority}

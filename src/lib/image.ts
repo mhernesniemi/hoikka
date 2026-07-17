@@ -12,14 +12,36 @@ export function imageUrl(source: string, width?: number, quality = 80): string {
 	return `${source}?w=${width}&q=${quality}`;
 }
 
-/** 1x/2x srcset for local uploads; undefined for external URLs. */
+/**
+ * Cloudflare Images silently falls back from AVIF to (much heavier) webp
+ * above roughly 1.2 megapixels of output, so candidates are capped where a
+ * 4:5 portrait still encodes as AVIF. A 960px AVIF beats a 1200px webp on
+ * bytes by an order of magnitude, and high-density screens hide the
+ * difference.
+ */
+const MAX_SRCSET_WIDTH = 960;
+
+/** 1x/1.5x/2x srcset for local uploads; undefined for external URLs. */
 export function imageSrcset(source: string, width: number, quality = 80): string | undefined {
 	if (!source.startsWith("/uploads/")) return undefined;
-	// Retina pixel density hides compression artifacts, so the 2x candidate
-	// takes noticeably heavier compression at no visible cost — the 2x file
-	// is the biggest download on the page, this roughly halves it
-	const retinaQuality = Math.max(40, Math.round(quality * 0.75));
-	return `${imageUrl(source, width, quality)} 1x, ${imageUrl(source, width * 2, retinaQuality)} 2x`;
+	// Width descriptors, not 1x/2x: browsers ignore `sizes` with density
+	// descriptors, which forces phones to fetch the 2x file into half-width
+	// slots. Quality drops as width rises — high-density rendering hides the
+	// compression, and the biggest candidate is the biggest download.
+	const candidates: [number, number][] = [
+		[width, quality],
+		[Math.round(width * 1.5), Math.max(40, Math.round(quality * 0.85))],
+		[width * 2, Math.max(40, Math.round(quality * 0.75))]
+	];
+	const seen = new Set<number>();
+	const parts = [];
+	for (const [w, q] of candidates) {
+		const capped = Math.min(w, MAX_SRCSET_WIDTH);
+		if (seen.has(capped)) continue;
+		seen.add(capped);
+		parts.push(`${imageUrl(source, capped, q)} ${capped}w`);
+	}
+	return parts.join(", ");
 }
 
 /**

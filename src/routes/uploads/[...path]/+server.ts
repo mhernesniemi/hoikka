@@ -33,15 +33,21 @@ export const GET: RequestHandler = async ({ params, url, request, platform }) =>
 	const width = transformable ? clamp(url.searchParams.get("w"), 16, 2400, 0) : 0;
 	const quality = clamp(url.searchParams.get("q"), 30, 95, 80);
 
+	// AVIF beats webp substantially, especially for illustration-style art.
+	// Negotiated via Accept, so format is part of every cache identity below.
+	const wantsAvif = request.headers.get("accept")?.includes("image/avif") ?? false;
+	const format = wantsAvif ? "avif" : "webp";
+
 	// On Cloudflare, answer transformed variants from the edge cache when possible
 	const edgeCache = platform?.caches?.default;
+	const edgeKey = `${url.origin}${url.pathname}${url.search}&__f=${format}`;
 	if (width && edgeCache) {
-		const cached = await edgeCache.match(request.url);
+		const cached = await edgeCache.match(edgeKey);
 		if (cached) return cached;
 	}
 
 	const bucket = platform?.env?.ASSETS_BUCKET;
-	const variantKey = `${VARIANT_PREFIX}/${params.path}/w${width}q${quality}.webp`;
+	const variantKey = `${VARIANT_PREFIX}/${params.path}/w${width}q${quality}.${format}`;
 
 	let response: Response | undefined;
 
@@ -51,8 +57,9 @@ export const GET: RequestHandler = async ({ params, url, request, platform }) =>
 		if (stored) {
 			response = new Response(stored.body as unknown as BodyInit, {
 				headers: {
-					"content-type": "image/webp",
+					"content-type": `image/${format}`,
 					"content-length": String(stored.size),
+					vary: "accept",
 					...CACHE_HEADERS
 				}
 			});
@@ -81,13 +88,14 @@ export const GET: RequestHandler = async ({ params, url, request, platform }) =>
 			>[0];
 			const result = await platform.env.IMAGES.input(body)
 				.transform({ width })
-				.output({ format: "image/webp", quality });
+				.output({ format: format === "avif" ? "image/avif" : "image/webp", quality });
 			// Buffered (variants are small) so the bytes can also be persisted to R2
 			const image = await new Response(result.image() as unknown as BodyInit).arrayBuffer();
 			response = new Response(image, {
 				headers: {
 					"content-type": result.contentType(),
 					"content-length": String(image.byteLength),
+					vary: "accept",
 					...CACHE_HEADERS
 				}
 			});
@@ -121,7 +129,7 @@ export const GET: RequestHandler = async ({ params, url, request, platform }) =>
 	}
 
 	if (width && edgeCache && response.status === 200) {
-		platform?.ctx?.waitUntil(edgeCache.put(request.url, response.clone()));
+		platform?.ctx?.waitUntil(edgeCache.put(edgeKey, response.clone()));
 	}
 
 	return response;

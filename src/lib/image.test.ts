@@ -14,14 +14,27 @@ describe("imageUrl", () => {
 });
 
 describe("imageSrcset", () => {
-	it("serves the 2x candidate at reduced quality", () => {
+	it("emits width descriptors with quality dropping as width rises", () => {
 		expect(imageSrcset("/uploads/products/a.png", 400)).toBe(
-			"/uploads/products/a.png?w=400&q=80 1x, /uploads/products/a.png?w=800&q=60 2x"
+			"/uploads/products/a.png?w=400&q=80 400w, " +
+				"/uploads/products/a.png?w=600&q=68 600w, " +
+				"/uploads/products/a.png?w=800&q=60 800w"
 		);
 	});
 
 	it("never drops below the quality floor", () => {
-		expect(imageSrcset("/uploads/products/a.png", 400, 45)).toContain("w=800&q=40 2x");
+		expect(imageSrcset("/uploads/products/a.png", 400, 45)).toContain("w=800&q=40 800w");
+	});
+
+	it("caps candidates at the AVIF-safe width and dedupes", () => {
+		expect(imageSrcset("/uploads/products/a.png", 600)).toBe(
+			"/uploads/products/a.png?w=600&q=80 600w, " +
+				"/uploads/products/a.png?w=900&q=68 900w, " +
+				"/uploads/products/a.png?w=960&q=60 960w"
+		);
+		expect(imageSrcset("/uploads/products/a.png", 960)).toBe(
+			"/uploads/products/a.png?w=960&q=80 960w"
+		);
 	});
 
 	it("returns undefined for external URLs", () => {

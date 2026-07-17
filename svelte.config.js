@@ -36,6 +36,10 @@ const config = {
 
 	kit: {
 		adapter,
+		// Inline page CSS into the HTML: removes the render-blocking stylesheet
+		// request, which is the FCP floor on throttled mobile. Pages are
+		// edge-cached, so the extra document bytes are effectively free.
+		inlineStyleThreshold: 24 * 1024,
 		experimental: {
 			remoteFunctions: true
 		}
