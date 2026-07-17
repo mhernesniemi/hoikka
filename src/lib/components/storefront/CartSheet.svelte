@@ -18,7 +18,6 @@
   import Minus from "@lucide/svelte/icons/minus";
   import Plus from "@lucide/svelte/icons/plus";
   import Trash2 from "@lucide/svelte/icons/trash-2";
-  import LoaderCircle from "@lucide/svelte/icons/loader-circle";
 
   // Fallback badge count for first paint, before the cart query resolves
   let { initialItemCount = 0 }: { initialItemCount?: number } = $props();
@@ -32,8 +31,10 @@
   const itemCount = $derived(cart?.itemCount ?? initialItemCount);
   const isLoading = $derived(!cart && (cartQuery?.loading ?? true));
 
-  let pendingMutations = $state(0);
-  const isUpdating = $derived(pendingMutations > 0);
+  // In-flight mutations are tracked in the store so adds initiated elsewhere
+  // (product page, wishlist) also register — while busy the sheet holds the
+  // last known state instead of flashing loading/empty placeholders
+  const isUpdating = $derived(cartStore.isBusy);
 
   function formatPrice(cents: number): string {
     return (cents / 100).toFixed(2);
@@ -42,13 +43,10 @@
   const isOnCheckout = $derived(page.url.pathname === "/checkout");
 
   async function mutate(action: () => Promise<unknown>) {
-    pendingMutations++;
     try {
-      await action();
+      await cartStore.track(action);
     } catch {
       // The refreshed cart query is authoritative either way
-    } finally {
-      pendingMutations--;
     }
     if (isOnCheckout) {
       // The checkout draft order is rebuilt from the cookie on load, then the
@@ -114,14 +112,18 @@
           {/each}
         </div>
       {:else if lines.length === 0}
-        <div class="flex flex-col items-center justify-center py-16 text-center">
-          <div class="mb-4 rounded-full bg-gray-100 p-4">
-            <ShoppingCart class="h-10 w-10 text-gray-400" />
+        <!-- While an add is in flight the sheet stays blank instead of
+             flashing "empty" for the beat before the item lands -->
+        {#if !isUpdating}
+          <div class="flex flex-col items-center justify-center py-16 text-center">
+            <div class="mb-4 rounded-full bg-gray-100 p-4">
+              <ShoppingCart class="h-10 w-10 text-gray-400" />
+            </div>
+            <p class="mb-1 font-medium text-gray-900">Your cart is empty</p>
+            <p class="mb-6 text-sm text-gray-500">Add some items to get started</p>
+            <Button onclick={() => cartStore.close()}>Continue Shopping</Button>
           </div>
-          <p class="mb-1 font-medium text-gray-900">Your cart is empty</p>
-          <p class="mb-6 text-sm text-gray-500">Add some items to get started</p>
-          <Button onclick={() => cartStore.close()}>Continue Shopping</Button>
-        </div>
+        {/if}
       {:else}
         <div class="divide-y divide-gray-200">
           {#each lines as line (line.variantId)}
@@ -201,13 +203,10 @@
 
     {#if lines.length > 0}
       <SheetFooter class="mt-auto border-t border-gray-200 bg-gray-50/50 px-6 pt-4 pb-2">
-        <div class="w-full space-y-4">
-          {#if isUpdating}
-            <div class="flex items-center justify-center py-3">
-              <LoaderCircle class="h-4 w-4 animate-spin text-gray-400" />
-              <span class="ml-2 text-sm text-gray-500">Updating...</span>
-            </div>
-          {:else if cart}
+        <!-- Totals hold their last values while a mutation is in flight —
+             a subtle dim beats swapping the block for a spinner -->
+        <div class="w-full space-y-4 transition-opacity" class:opacity-50={isUpdating}>
+          {#if cart}
             <div class="space-y-2">
               <div class="flex justify-between text-sm">
                 <span class="text-gray-500">Subtotal</span>

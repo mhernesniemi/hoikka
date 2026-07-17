@@ -22,7 +22,7 @@
     addingId = variantId;
     cartStore.open();
     try {
-      await addToCart({ variantId, quantity: 1 });
+      await cartStore.track(() => addToCart({ variantId, quantity: 1 }));
     } catch {
       // The cart sheet shows the authoritative state either way
     } finally {

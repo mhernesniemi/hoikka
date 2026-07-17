@@ -192,8 +192,9 @@
     cartStore.open();
 
     try {
-      // Single-flight mutation: the refreshed cart rides back on this response
-      await addToCart({ variantId: selectedVariantId, quantity });
+      // Single-flight mutation: the refreshed cart rides back on this response.
+      // Tracked so the open sheet holds steady UI instead of flashing "empty".
+      await cartStore.track(() => addToCart({ variantId: selectedVariantId!, quantity }));
     } catch (error) {
       cartStore.close();
       message = {
