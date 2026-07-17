@@ -1,5 +1,6 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
+  import { commandErrorMessage } from "$lib/utils";
   import {
     getCheckout,
     setShippingAddress,
@@ -130,13 +131,7 @@
     }
   });
 
-  function errMsg(e: unknown): string {
-    if (e && typeof e === "object" && "body" in e) {
-      const body = (e as { body?: { message?: string } }).body;
-      if (body?.message) return body.message;
-    }
-    return e instanceof Error ? e.message : "Something went wrong";
-  }
+  const errMsg = commandErrorMessage;
 
   /** Run a command, routing failures to the top-of-page error alert. */
   async function run(action: () => Promise<void>) {

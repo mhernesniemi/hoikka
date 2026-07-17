@@ -198,3 +198,16 @@ export function stripHtml(html: string | null | undefined): string {
 	if (!html) return "";
 	return html.replace(/<[^>]*>/g, "").trim();
 }
+
+/**
+ * Human-readable message from a failed remote command. Expected business
+ * errors are thrown server-side with `error(400, message)` and arrive as an
+ * HttpError whose body carries the message; anything else falls back.
+ */
+export function commandErrorMessage(e: unknown, fallback = "Something went wrong"): string {
+	if (e && typeof e === "object" && "body" in e) {
+		const body = (e as { body?: { message?: string } }).body;
+		if (body?.message) return body.message;
+	}
+	return e instanceof Error && e.message ? e.message : fallback;
+}

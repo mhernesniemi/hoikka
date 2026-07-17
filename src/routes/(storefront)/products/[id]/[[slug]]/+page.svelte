@@ -8,7 +8,7 @@
   import { withAddedLine } from "$lib/cart-optimistic";
   import { toggleWishlist, isProductWishlisted } from "$lib/remote/wishlist.remote";
   import { cartStore } from "$lib/stores/cart.svelte";
-  import { formatPrice, stripHtml } from "$lib/utils";
+  import { formatPrice, stripHtml, commandErrorMessage } from "$lib/utils";
   import { findBestDiscount, getDiscountedPrice } from "$lib/promotion-utils";
   import ProductCard from "$lib/components/storefront/ProductCard.svelte";
   import { Button, buttonVariants } from "$lib/components/storefront/ui/button";
@@ -221,7 +221,7 @@
       cartStore.close();
       message = {
         type: "error",
-        text: error instanceof Error ? error.message : "Failed to add item to cart"
+        text: commandErrorMessage(error, "Failed to add item to cart")
       };
     }
   }

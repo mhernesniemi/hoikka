@@ -116,6 +116,21 @@ export class ReservationService {
 	}
 
 	/**
+	 * Release an order's reservations for one variant (the shopper dropped it
+	 * from the cart mid-checkout — its stock should free up immediately)
+	 */
+	async releaseForVariant(orderId: number, variantId: number): Promise<void> {
+		await db
+			.delete(stockReservations)
+			.where(
+				and(
+					eq(stockReservations.orderId, orderId),
+					eq(stockReservations.variantId, variantId)
+				)
+			);
+	}
+
+	/**
 	 * Delete expired reservations (called opportunistically at checkout entry)
 	 */
 	async deleteExpired(): Promise<void> {

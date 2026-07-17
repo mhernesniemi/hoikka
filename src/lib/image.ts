@@ -28,11 +28,13 @@ export function imageSrcset(source: string, width: number, quality = 80): string
 	// descriptors, which forces phones to fetch the 2x file into half-width
 	// slots. Density is capped at 1.5x — a full 2x roughly doubles the bytes
 	// for a difference high-density rendering hides, and on slow links total
-	// image bytes are the page load time. The 1.5x candidate also drops
-	// quality, which density hides as well.
+	// image bytes are the page load time. The 1.5x candidate drops quality
+	// hard for the same reason: at density, AVIF q≈45 is indistinguishable
+	// from q80 but weighs the same as the 1x file — phones get sharp images
+	// without paying more than desktops.
 	const candidates: [number, number][] = [
 		[width, quality],
-		[Math.round(width * 1.5), Math.max(40, Math.round(quality * 0.8))]
+		[Math.round(width * 1.5), Math.max(40, Math.round(quality * 0.55))]
 	];
 	const seen = new Set<number>();
 	const parts = [];
