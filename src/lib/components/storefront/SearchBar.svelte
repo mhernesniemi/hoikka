@@ -17,7 +17,26 @@
     return () => clearTimeout(timer);
   });
 
-  const searchResults = $derived(debouncedQuery ? (quickSearch(debouncedQuery).current ?? []) : []);
+  const activeQuery = $derived(debouncedQuery ? quickSearch(debouncedQuery) : null);
+
+  // Hold the previous term's results while the next term's query is in
+  // flight — swapping to [] mid-flight flashes "No products found"
+  let searchResults = $state<NonNullable<ReturnType<typeof quickSearch>["current"]>>([]);
+  $effect(() => {
+    if (!debouncedQuery) {
+      searchResults = [];
+      return;
+    }
+    const current = activeQuery?.current;
+    if (current !== undefined) searchResults = current;
+  });
+
+  // "No products found" only for a settled result of what's actually typed
+  const settledEmpty = $derived(
+    searchResults.length === 0 &&
+      activeQuery?.current !== undefined &&
+      debouncedQuery === searchQuery.trim()
+  );
 
   function handleSelect() {
     searchQuery = "";
@@ -51,12 +70,16 @@
       bind:value={searchQuery}
       onfocus={() => (showResults = true)}
     />
-    {#if showResults && searchQuery.length >= 1}
+    <!-- Mounted only once there is something to show — an empty bordered
+         container collapses into a stray 1px line under the input -->
+    {#if showResults && searchQuery.length >= 1 && (searchResults.length > 0 || settledEmpty)}
       <div
         class="absolute top-full right-0 left-0 z-50 mt-1 rounded-lg border border-gray-200 bg-white shadow-lg"
       >
         <Command.List class="max-h-96">
-          <Command.Empty>No products found</Command.Empty>
+          {#if settledEmpty}
+            <Command.Empty>No products found</Command.Empty>
+          {/if}
           {#each searchResults as product (product.id)}
             <Command.LinkItem
               value={product.name}
