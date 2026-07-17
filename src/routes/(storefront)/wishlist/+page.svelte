@@ -5,8 +5,7 @@
   import { cn } from "$lib/utils";
   import { imageUrl } from "$lib/image";
   import { cartStore } from "$lib/stores/cart.svelte";
-  import { addToCart, getCart } from "$lib/remote/cart.remote";
-  import { withAddedLine } from "$lib/cart-optimistic";
+  import { addVariantToCart, optimisticSeed } from "$lib/cart-actions";
   import { getWishlistCount } from "$lib/remote/wishlist.remote";
   import type { PageData, ActionData } from "./$types";
   import Heart from "@lucide/svelte/icons/heart";
@@ -20,31 +19,12 @@
   let addingId = $state<number | null>(null);
 
   async function handleAddToCart(item: (typeof items)[0], variantId: number) {
+    const variant = item.product.variants.find((v) => v.id === variantId);
+    if (!variant) return;
     addingId = variantId;
     cartStore.open();
     try {
-      // Optimistic: the line shows in the sheet immediately; the refreshed
-      // server cart replaces it (or rolls it back) when the command settles
-      await cartStore.track(() =>
-        addToCart({ variantId, quantity: 1 }).updates(
-          getCart().withOverride((cart) =>
-            cart
-              ? withAddedLine(
-                  cart,
-                  {
-                    variantId,
-                    productId: item.product.id,
-                    productName: item.product.name,
-                    variantName: null,
-                    imageUrl: getImage(item),
-                    unitPrice: item.product.variants[0]?.price ?? 0
-                  },
-                  1
-                )
-              : cart
-          )
-        )
-      );
+      await addVariantToCart(optimisticSeed(item.product, variant), 1);
     } catch {
       // The cart sheet shows the authoritative state either way
     } finally {
