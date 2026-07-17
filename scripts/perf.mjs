@@ -41,9 +41,8 @@ for (const url of urls) {
 }
 
 const work = mkdtempSync(join(tmpdir(), "perf-"));
-let failed = false;
 
-for (const url of urls) {
+function measure(url) {
 	const out = join(work, "report.json");
 	execFileSync(
 		"npx",
@@ -68,12 +67,30 @@ for (const url of urls) {
 	const cls = report.audits["cumulative-layout-shift"].numericValue;
 	const tbt = report.audits["total-blocking-time"].numericValue;
 
-	const checks = [
+	return [
 		["performance", score, BUDGETS.performanceScore, score >= BUDGETS.performanceScore],
 		["LCP", `${Math.round(lcp)}ms`, `${BUDGETS.lcpMs}ms`, lcp <= BUDGETS.lcpMs],
 		["CLS", cls.toFixed(3), BUDGETS.clsMax, cls <= BUDGETS.clsMax],
 		["TBT", `${Math.round(tbt)}ms`, `${BUDGETS.tbtMs}ms`, tbt <= BUDGETS.tbtMs]
 	];
+}
+
+// Discarded bootstrap run: the first Lighthouse invocation on a fresh runner
+// pays the npx download and Chrome's first launch, which inflated whatever URL
+// was measured first (observed 482-1422ms TBT for the same page that measures
+// ~190ms once the runner is warm).
+measure(urls[0]);
+
+let failed = false;
+
+for (const url of urls) {
+	let checks = measure(url);
+	// One retry on a failed budget, same policy as Playwright's CI retries:
+	// a single throttled run on a shared runner jitters; a real regression
+	// fails twice.
+	if (checks.some(([, , , ok]) => !ok)) {
+		checks = measure(url);
+	}
 
 	console.log(`\n${url}`);
 	for (const [name, actual, budget, ok] of checks) {
