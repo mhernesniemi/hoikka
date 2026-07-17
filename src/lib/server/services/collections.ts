@@ -574,8 +574,7 @@ export class CollectionService {
 			.limit(limit)
 			.offset(offset);
 
-		// Hydrate through the products service's batched loader (fixed query
-		// count on D1) instead of a per-product copy of it
+		// Hydrate through the products service's batched loader (fixed query count on D1)
 		const items = await productService.loadProductsRelations(productList);
 
 		return {

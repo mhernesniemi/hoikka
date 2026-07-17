@@ -199,7 +199,7 @@ export class OrderService {
 			}
 
 			// One atomic wipe-and-rebuild so a mid-sequence failure can't leave a
-			// half-built draft (and one insert instead of one per line).
+			// half-built draft.
 			await atomic([
 				db.delete(orderLines).where(eq(orderLines.orderId, draft.id)),
 				...(lineValues.length > 0 ? [db.insert(orderLines).values(lineValues)] : [])
@@ -875,7 +875,6 @@ export class OrderService {
 	}
 
 	private async recalculateTotals(orderId: number): Promise<void> {
-		// Apply automatic promotions first
 		await this.applyAutomaticPromotions(orderId);
 
 		// Get all lines
@@ -950,7 +949,6 @@ export class OrderService {
 		const [order] = await db.select().from(orders).where(eq(orders.id, orderId));
 		const isTaxExempt = order ? await taxService.isCustomerTaxExempt(order.customerId) : false;
 
-		// The actual math lives in the pure, unit-tested helper
 		const totals = calculateOrderTotals({
 			lines,
 			appliedPromotions,

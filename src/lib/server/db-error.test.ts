@@ -68,8 +68,7 @@ describe("dbError", () => {
 	});
 });
 
-// Errors from the real driver, not hand-built shapes — this is the gap that let
-// the previous (Postgres-era) parser pass its tests while being dead in production.
+// Real-driver errors, not hand-built shapes — so mock-shaped tests can't rot.
 describe("dbError against the real driver", () => {
 	const t = sqliteTable("t", {
 		id: integer("id").primaryKey(),
