@@ -14,23 +14,22 @@ describe("imageUrl", () => {
 });
 
 describe("imageSrcset", () => {
-	it("emits width descriptors with quality dropping as width rises", () => {
+	it("emits 1x and 1.5x width descriptors, quality dropping at density", () => {
 		expect(imageSrcset("/uploads/products/a.png", 400)).toBe(
-			"/uploads/products/a.png?w=400&q=80 400w, " +
-				"/uploads/products/a.png?w=600&q=68 600w, " +
-				"/uploads/products/a.png?w=800&q=60 800w"
+			"/uploads/products/a.png?w=400&q=80 400w, /uploads/products/a.png?w=600&q=64 600w"
+		);
+		expect(imageSrcset("/uploads/products/a.png", 600)).toBe(
+			"/uploads/products/a.png?w=600&q=80 600w, /uploads/products/a.png?w=900&q=64 900w"
 		);
 	});
 
 	it("never drops below the quality floor", () => {
-		expect(imageSrcset("/uploads/products/a.png", 400, 45)).toContain("w=800&q=40 800w");
+		expect(imageSrcset("/uploads/products/a.png", 400, 45)).toContain("w=600&q=40 600w");
 	});
 
 	it("caps candidates at the AVIF-safe width and dedupes", () => {
-		expect(imageSrcset("/uploads/products/a.png", 600)).toBe(
-			"/uploads/products/a.png?w=600&q=80 600w, " +
-				"/uploads/products/a.png?w=900&q=68 900w, " +
-				"/uploads/products/a.png?w=960&q=60 960w"
+		expect(imageSrcset("/uploads/products/a.png", 700)).toBe(
+			"/uploads/products/a.png?w=700&q=80 700w, /uploads/products/a.png?w=960&q=64 960w"
 		);
 		expect(imageSrcset("/uploads/products/a.png", 960)).toBe(
 			"/uploads/products/a.png?w=960&q=80 960w"

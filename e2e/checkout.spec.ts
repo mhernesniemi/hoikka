@@ -9,10 +9,14 @@ test.describe("Full checkout flow", () => {
 		await page.click('button:has-text("Add to Cart")');
 		await expect(page.locator('a[href="/checkout"]')).toBeVisible({ timeout: 5000 });
 
-		// The cart lives in a cookie, not the database
-		const cartCookie = (await context.cookies()).find((c) => c.name === "cart");
-		expect(cartCookie).toBeDefined();
-		expect(cartCookie!.value).toContain("%5B1%2C"); // url-encoded `[1,` version prefix
+		// The sheet updates optimistically, but the cart itself is a cookie
+		// written when the addToCart command settles — poll for it
+		await expect
+			.poll(
+				async () => (await context.cookies()).find((c) => c.name === "cart")?.value ?? "",
+				{ timeout: 5000 }
+			)
+			.toContain("%5B1%2C"); // url-encoded `[1,` version prefix
 
 		// Enter checkout — this creates the draft order
 		await page.goto("/checkout");

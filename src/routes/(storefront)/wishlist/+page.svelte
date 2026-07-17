@@ -5,7 +5,8 @@
   import { cn } from "$lib/utils";
   import { imageUrl } from "$lib/image";
   import { cartStore } from "$lib/stores/cart.svelte";
-  import { addToCart } from "$lib/remote/cart.remote";
+  import { addToCart, getCart } from "$lib/remote/cart.remote";
+  import { withAddedLine } from "$lib/cart-optimistic";
   import { getWishlistCount } from "$lib/remote/wishlist.remote";
   import type { PageData, ActionData } from "./$types";
   import Heart from "@lucide/svelte/icons/heart";
@@ -18,11 +19,32 @@
   let removingId = $state<number | null>(null);
   let addingId = $state<number | null>(null);
 
-  async function handleAddToCart(variantId: number) {
+  async function handleAddToCart(item: (typeof items)[0], variantId: number) {
     addingId = variantId;
     cartStore.open();
     try {
-      await cartStore.track(() => addToCart({ variantId, quantity: 1 }));
+      // Optimistic: the line shows in the sheet immediately; the refreshed
+      // server cart replaces it (or rolls it back) when the command settles
+      await cartStore.track(() =>
+        addToCart({ variantId, quantity: 1 }).updates(
+          getCart().withOverride((cart) =>
+            cart
+              ? withAddedLine(
+                  cart,
+                  {
+                    variantId,
+                    productId: item.product.id,
+                    productName: item.product.name,
+                    variantName: null,
+                    imageUrl: getImage(item),
+                    unitPrice: item.product.variants[0]?.price ?? 0
+                  },
+                  1
+                )
+              : cart
+          )
+        )
+      );
     } catch {
       // The cart sheet shows the authoritative state either way
     } finally {
@@ -169,7 +191,7 @@
                   <Button
                     size="sm"
                     disabled={addingId === variantId}
-                    onclick={() => handleAddToCart(variantId)}
+                    onclick={() => handleAddToCart(item, variantId)}
                   >
                     {addingId === variantId ? "Adding..." : "Add to Cart"}
                   </Button>

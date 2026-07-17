@@ -4,6 +4,7 @@
   import { page } from "$app/state";
   import { getCart, setCartQuantity, removeCartLine } from "$lib/remote/cart.remote";
   import { getCheckout } from "$lib/remote/checkout.remote";
+  import { withQuantity } from "$lib/cart-optimistic";
   import Img from "$lib/components/storefront/Img.svelte";
   import { cartStore } from "$lib/stores/cart.svelte";
   import {
@@ -60,9 +61,21 @@
     }
   }
 
+  // Optimistic stepper: lines and counts change in the same frame as the
+  // click, then the command's single-flight refresh replaces the override
+  // (or rolls it back on error) — see $lib/cart-optimistic for the policy.
   const updateQuantity = (variantId: number, quantity: number) =>
-    mutate(() => setCartQuantity({ variantId, quantity }));
-  const removeLine = (variantId: number) => mutate(() => removeCartLine({ variantId }));
+    mutate(() =>
+      setCartQuantity({ variantId, quantity }).updates(
+        getCart().withOverride((cart) => (cart ? withQuantity(cart, variantId, quantity) : cart))
+      )
+    );
+  const removeLine = (variantId: number) =>
+    mutate(() =>
+      removeCartLine({ variantId }).updates(
+        getCart().withOverride((cart) => (cart ? withQuantity(cart, variantId, 0) : cart))
+      )
+    );
 </script>
 
 <Sheet
@@ -240,10 +253,16 @@
           {/if}
 
           <div class="mb-8">
+            <!-- Inert while a mutation is in flight: checkout rebuilds from the
+                 cart cookie, which only lands when the command settles — the
+                 optimistic line must not race a faster-than-network click -->
             <a
               href="/checkout"
               onclick={() => cartStore.close()}
-              class={buttonVariants({ size: "xl" }) + " w-full"}
+              aria-disabled={isUpdating}
+              class={buttonVariants({ size: "xl" }) +
+                " w-full" +
+                (isUpdating ? " pointer-events-none" : "")}
             >
               Proceed to Checkout
             </a>

@@ -21,17 +21,18 @@ export function imageUrl(source: string, width?: number, quality = 80): string {
  */
 const MAX_SRCSET_WIDTH = 960;
 
-/** 1x/1.5x/2x srcset for local uploads; undefined for external URLs. */
+/** 1x/1.5x srcset for local uploads; undefined for external URLs. */
 export function imageSrcset(source: string, width: number, quality = 80): string | undefined {
 	if (!source.startsWith("/uploads/")) return undefined;
 	// Width descriptors, not 1x/2x: browsers ignore `sizes` with density
 	// descriptors, which forces phones to fetch the 2x file into half-width
-	// slots. Quality drops as width rises — high-density rendering hides the
-	// compression, and the biggest candidate is the biggest download.
+	// slots. Density is capped at 1.5x — a full 2x roughly doubles the bytes
+	// for a difference high-density rendering hides, and on slow links total
+	// image bytes are the page load time. The 1.5x candidate also drops
+	// quality, which density hides as well.
 	const candidates: [number, number][] = [
 		[width, quality],
-		[Math.round(width * 1.5), Math.max(40, Math.round(quality * 0.85))],
-		[width * 2, Math.max(40, Math.round(quality * 0.75))]
+		[Math.round(width * 1.5), Math.max(40, Math.round(quality * 0.8))]
 	];
 	const seen = new Set<number>();
 	const parts = [];

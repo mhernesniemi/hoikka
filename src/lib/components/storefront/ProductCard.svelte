@@ -10,7 +10,8 @@
     activeDiscounts = [],
     grayscale = false,
     showFromPrice,
-    loading = "lazy"
+    loading = "lazy",
+    sizes = "(max-width: 640px) 50vw, 33vw"
   }: {
     product: ProductWithRelations;
     activeDiscounts?: ActiveDiscount[];
@@ -18,6 +19,8 @@
     showFromPrice?: boolean;
     /** Use "eager" for above-the-fold cards */
     loading?: "lazy" | "eager";
+    /** Match the actual grid slot — an overstated value over-fetches */
+    sizes?: string;
   } = $props();
 
   const name = $derived(product.name);
@@ -66,7 +69,7 @@
         src={product.featuredAsset.source}
         alt={name}
         width={400}
-        sizes="(max-width: 640px) 50vw, 33vw"
+        {sizes}
         {loading}
         fetchpriority={loading === "eager" ? "high" : "auto"}
         focalX={product.featuredAsset.focalX}

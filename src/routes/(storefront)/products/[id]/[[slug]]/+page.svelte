@@ -4,7 +4,8 @@
   import { cn } from "$lib/utils";
   import { imageUrl, imageSrcset } from "$lib/image";
   import Img from "$lib/components/storefront/Img.svelte";
-  import { addToCart } from "$lib/remote/cart.remote";
+  import { addToCart, getCart } from "$lib/remote/cart.remote";
+  import { withAddedLine } from "$lib/cart-optimistic";
   import { toggleWishlist, isProductWishlisted } from "$lib/remote/wishlist.remote";
   import { cartStore } from "$lib/stores/cart.svelte";
   import { formatPrice, stripHtml } from "$lib/utils";
@@ -186,15 +187,36 @@
   }
 
   async function handleAddToCart() {
-    if (!selectedVariantId) return;
+    const variant = selectedVariant;
+    if (!variant) return;
     message = null;
 
     cartStore.open();
 
     try {
-      // Single-flight mutation: the refreshed cart rides back on this response.
-      // Tracked so the open sheet holds steady UI instead of flashing "empty".
-      await cartStore.track(() => addToCart({ variantId: selectedVariantId!, quantity }));
+      // Optimistic: the line appears in the sheet in the same frame; the
+      // command's single-flight refresh then replaces it with the server
+      // cart (and rolls back automatically if the add fails)
+      await cartStore.track(() =>
+        addToCart({ variantId: variant.id, quantity }).updates(
+          getCart().withOverride((cart) =>
+            cart
+              ? withAddedLine(
+                  cart,
+                  {
+                    variantId: variant.id,
+                    productId: product.id,
+                    productName: product.name,
+                    variantName: product.variants.length > 1 ? getVariantName(variant) : null,
+                    imageUrl: variant.imageUrl ?? product.featuredAsset?.source ?? null,
+                    unitPrice: variant.effectivePrice ?? variant.price
+                  },
+                  quantity
+                )
+              : cart
+          )
+        )
+      );
     } catch (error) {
       cartStore.close();
       message = {
@@ -676,7 +698,11 @@
         data-sveltekit-preload-data="viewport"
       >
         {#each data.relatedProducts as relatedProduct}
-          <ProductCard product={relatedProduct} activeDiscounts={data.activeDiscounts} />
+          <ProductCard
+            product={relatedProduct}
+            activeDiscounts={data.activeDiscounts}
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 300px"
+          />
         {/each}
       </div>
     </section>
