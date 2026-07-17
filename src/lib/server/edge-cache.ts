@@ -35,6 +35,21 @@ function routePath(pathname: string): string {
 }
 
 /**
+ * Whether a request may be answered from / stored in the shared guest cache.
+ * MUST be decided on the RAW request URL, never `event.url`: SvelteKit
+ * normalizes event.url for data requests (strips `/__data.json`) and for
+ * remote-function requests (reports the *issuing page*, not `/_app/remote/…`).
+ * Gating on event.url once cached per-user getCart responses globally.
+ */
+export function isCacheableRequest(rawUrl: URL, cookieHeader: string | null): boolean {
+	return (
+		CACHEABLE.test(routePath(rawUrl.pathname)) &&
+		!rawUrl.searchParams.has("preview") &&
+		!cookieHeader?.includes(AUTH_COOKIE)
+	);
+}
+
+/**
  * Invalidate all cached storefront pages. Callable from services (uses the
  * request event's KV binding); a no-op outside the cloudflare target.
  */
@@ -70,19 +85,15 @@ export const edgeCache: Handle = async ({ event, resolve }) => {
 		return response;
 	}
 
+	const raw = new URL(request.url);
 	if (
-		!CACHEABLE.test(routePath(url.pathname)) ||
-		url.searchParams.has("preview") ||
-		request.headers.get("cookie")?.includes(AUTH_COOKIE)
+		!isCacheableRequest(raw, request.headers.get("cookie")) ||
+		url.searchParams.has("preview")
 	) {
 		return resolve(event);
 	}
 
 	const version = (await kv.get(VERSION_KEY, { cacheTtl: 60 })) ?? "0";
-	// Key on the RAW request URL: SvelteKit normalizes `event.url` for data
-	// requests (strips `/__data.json` and `x-sveltekit-invalidated`), so keying
-	// on it would collide the page HTML with its data payloads
-	const raw = new URL(request.url);
 	const cacheKey = `${raw.origin}/__edge-cache/${version}${raw.pathname}${raw.search}`;
 
 	const hit = await cache.match(cacheKey);
@@ -95,7 +106,11 @@ export const edgeCache: Handle = async ({ event, resolve }) => {
 	}
 
 	const response = await resolve(event);
-	if (response.status === 200 && !response.headers.has("set-cookie")) {
+	// Never store what the app marked as per-user (remote queries are
+	// `private, no-cache`) — independent backstop for gate mistakes
+	const responseCacheControl = response.headers.get("cache-control") ?? "";
+	const markedPrivate = /private|no-store|no-cache/.test(responseCacheControl);
+	if (response.status === 200 && !response.headers.has("set-cookie") && !markedPrivate) {
 		const storeHeaders = new Headers(response.headers);
 		storeHeaders.set("cache-control", `public, max-age=${BACKSTOP_SECONDS}`);
 		platform.ctx?.waitUntil(

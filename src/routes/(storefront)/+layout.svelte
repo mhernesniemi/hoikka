@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { browser } from "$app/environment";
   import { invalidateAll, onNavigate } from "$app/navigation";
   import { page } from "$app/state";
   import { cn } from "$lib/utils";
@@ -40,10 +41,11 @@
     previousUserId = currentUserId;
   });
 
-  // Pure client state: layout data is edge-cached for guests, so the badge
-  // hydrates from the remote query (refreshed single-flight with mutations)
-  const wishlistCountQuery = getWishlistCount();
-  const wishlistCount = $derived(wishlistCountQuery.current ?? 0);
+  // Pure client state: guest pages are edge-cached, so this query must not
+  // run during SSR — a query created server-side gets its per-visitor result
+  // serialized into the shared cached HTML
+  const wishlistCountQuery = browser ? getWishlistCount() : null;
+  const wishlistCount = $derived(wishlistCountQuery?.current ?? 0);
 </script>
 
 <div class="flex min-h-screen flex-col bg-white">

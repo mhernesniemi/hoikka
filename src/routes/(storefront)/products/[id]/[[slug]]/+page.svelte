@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { browser } from "$app/environment";
   import { enhance } from "$app/forms";
   import { cn } from "$lib/utils";
   import { imageUrl, imageSrcset } from "$lib/image";
@@ -62,10 +63,11 @@
   let message = $state<{ type: "success" | "error"; text: string } | null>(null);
   let selectedImageIndex = $state(0);
 
-  // Use override if set (after toggle), otherwise the remote query — the
-  // page itself is edge-cached for guests, so wishlist state is client-only
-  const wishlistedQuery = $derived(isProductWishlisted(product.id));
-  const isWishlisted = $derived(wishlistOverride ?? wishlistedQuery.current ?? false);
+  // Use override if set (after toggle), otherwise the remote query. Strictly
+  // client-only: the page is edge-cached for guests, and a query created
+  // during SSR would serialize this visitor's wishlist state into shared HTML
+  const wishlistedQuery = $derived(browser ? isProductWishlisted(product.id) : null);
+  const isWishlisted = $derived(wishlistOverride ?? wishlistedQuery?.current ?? false);
 
   // Build a stable image list: product assets + unique variant images
   const allImages = $derived.by(() => {

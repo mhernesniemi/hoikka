@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { browser } from "$app/environment";
   import { invalidateAll, goto } from "$app/navigation";
   import { page } from "$app/state";
   import { getCart, setCartQuantity, removeCartLine } from "$lib/remote/cart.remote";
@@ -22,11 +23,14 @@
   // Fallback badge count for first paint, before the cart query resolves
   let { initialItemCount = 0 }: { initialItemCount?: number } = $props();
 
-  const cartQuery = getCart();
-  const cart = $derived(cartQuery.current);
+  // Client-only: a query created during SSR gets its (per-visitor) result
+  // serialized into the page, and guest pages are edge-cached — one
+  // visitor's cart must never end up in the shared HTML
+  const cartQuery = browser ? getCart() : null;
+  const cart = $derived(cartQuery?.current);
   const lines = $derived(cart?.lines ?? []);
   const itemCount = $derived(cart?.itemCount ?? initialItemCount);
-  const isLoading = $derived(!cart && cartQuery.loading);
+  const isLoading = $derived(!cart && (cartQuery?.loading ?? true));
 
   let pendingMutations = $state(0);
   const isUpdating = $derived(pendingMutations > 0);
@@ -51,7 +55,7 @@
       // checkout query must be refetched to pick up the reconciled draft
       await invalidateAll();
       await getCheckout().refresh();
-      if ((cartQuery.current?.itemCount ?? 0) === 0) {
+      if ((cartQuery?.current?.itemCount ?? 0) === 0) {
         cartStore.close();
         goto("/products");
       }
