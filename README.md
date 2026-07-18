@@ -4,17 +4,24 @@
 
 ![Hoikka](static/hoikka-screenshot.jpg)
 
-[Hoikka](https://hoikka.dev) is an opinionated, full-stack e-commerce platform built with SvelteKit.
+[Hoikka](https://hoikka.dev) is a full-stack SvelteKit ecommerce platform.
 
-It includes the storefront, admin panel, and business logic in a single lightweight codebase running on SQLite. One switch deploys it to a plain Node.js server or to Cloudflare Workers (D1 + R2).
+It includes the storefront, admin panel, and business logic in a single codebase running on SQLite. One switch deploys it to a plain Node.js server or to Cloudflare Workers (D1 + R2).
 
-## Philosophy: Code Over Configuration
+There are no plugin systems, configuration DSLs, or hidden admin logic. Everything is plain TypeScript that you read, change, and extend directly, in the spirit of the [Rails Doctrine](https://rubyonrails.org/doctrine). This also makes the codebase easy for both humans and AI agents to reason about.
 
-Hoikka follows the principles of the [Rails Doctrine](https://rubyonrails.org/doctrine), favoring clarity, strong defaults, and real application code over abstraction layers.
+## Quick Start
 
-There are no plugin systems, configuration DSLs, or hidden admin logic. Everything is plain TypeScript that you can read, change, and extend directly.
+```bash
+pnpx create-hoikka-app my-store
+```
 
-This also makes Hoikka well-suited for AI-assisted development: the codebase is structured so that both humans and AI agents can reason about it easily.
+The CLI clones the latest release and asks where you want to run the store:
+
+- **Local / Node.js** — SQLite file + local uploads. Optionally seeds demo products and starts `pnpm dev`.
+- **Cloudflare** — Workers + D1 + R2. The CLI creates the resources, applies migrations, and deploys.
+
+Switching targets later is one line: flip `HOIKKA_TARGET` in `.env`.
 
 ## Features
 
@@ -28,7 +35,7 @@ This also makes Hoikka well-suited for AI-assisted development: the codebase is 
 - [Orders & Checkout](https://hoikka-docs.vercel.app/features/orders): full checkout flow with guest and registered customer support
 - [Payments](https://hoikka-docs.vercel.app/features/payments): pluggable payment methods (Stripe ready)
 - [Shipping](https://hoikka-docs.vercel.app/features/shipping): configurable shipping methods with tracking
-- [Tax](https://hoikka-docs.vercel.app/features/tax): VAT calculation with multiple rates per product type
+- [Tax](https://hoikka-docs.vercel.app/features/tax): VAT calculation with per-category rates and B2B exemptions
 - [Wishlists](https://hoikka-docs.vercel.app/features/wishlists): for both logged-in and guest users
 - [Reviews](https://hoikka-docs.vercel.app/features/reviews): customer ratings with moderation and verified purchase badges
 - [Content Pages](https://hoikka-docs.vercel.app/features/content-pages): static pages for policies, FAQs, and more
@@ -36,19 +43,6 @@ This also makes Hoikka well-suited for AI-assisted development: the codebase is 
 - [Asset Management](https://hoikka-docs.vercel.app/features/assets): media library with focal point cropping
 
 The shopping cart lives in a cookie — browsing and cart actions never write to the database, which keeps the storefront fast. An order is created only when checkout starts.
-
-## Quick Start
-
-```bash
-pnpx create-hoikka-app my-store
-```
-
-The CLI clones the latest release and asks where you want to run the store:
-
-- **Local / Node.js** — SQLite file + local uploads. Seeds demo products and starts `pnpm dev`.
-- **Cloudflare** — Workers + D1 + R2. The CLI creates the resources, applies migrations, and deploys.
-
-Switching targets later is one line: flip `HOIKKA_TARGET` in `.env`.
 
 ### Manual setup
 
