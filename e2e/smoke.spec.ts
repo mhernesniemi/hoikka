@@ -4,8 +4,8 @@ test.describe("Storefront smoke tests", () => {
 	test("homepage loads", async ({ page }) => {
 		await page.goto("/");
 
-		await expect(page.locator("h1")).toContainText("Opinionated Commerce");
-		await expect(page.locator('a[href="/products"]')).toBeVisible();
+		await expect(page.locator("h1")).toContainText("Featured products");
+		await expect(page.locator('a[href="/products"]').first()).toBeVisible();
 	});
 
 	test("products page lists products", async ({ page }) => {
