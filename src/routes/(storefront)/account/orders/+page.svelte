@@ -65,7 +65,7 @@
 
           <div class="flex items-center justify-between">
             <p class="text-gray-600">
-              Total: <span class="font-medium text-gray-900">${formatPrice(order.total)}</span>
+              Total: <span class="font-medium text-gray-900">{formatPrice(order.total)}</span>
             </p>
             <a href="/account/orders/{order.id}" class="text-sm text-blue-600 hover:underline">
               View details

@@ -6,6 +6,7 @@ import { getRequestEvent } from "$app/server";
 import { env } from "$env/dynamic/private";
 import { db } from "./db/index.js";
 import * as schema from "./db/schema.js";
+import { sendEmail } from "./email.js";
 
 function createAuth() {
 	return betterAuth({
@@ -47,8 +48,33 @@ function createAuth() {
 		plugins: [
 			emailOTP({
 				async sendVerificationOTP({ email, otp, type }) {
-					// TODO: wire Resend/SMTP here. Local dev logs to console.
-					console.log(`[auth] OTP for ${email} (${type}): ${otp}`);
+					const subjects: Record<typeof type, string> = {
+						"sign-in": "Your sign-in code",
+						"email-verification": "Verify your email address",
+						"forget-password": "Your password reset code",
+						"change-email": "Confirm your new email address"
+					};
+					const bodies: Record<typeof type, string> = {
+						"sign-in": `Hi, your sign-in code is: <strong>${otp}</strong>. The code expires shortly — if you didn't try to sign in, you can ignore this message.`,
+						"email-verification": `Hi, verify your email address with this code: <strong>${otp}</strong>. The code expires shortly — if you didn't create an account, you can ignore this message.`,
+						"forget-password": `Hi, your password reset code is: <strong>${otp}</strong>. The code expires shortly — if you didn't request a reset, you can ignore this message.`,
+						"change-email": `Hi, confirm your new email address with this code: <strong>${otp}</strong>. The code expires shortly — if you didn't request this change, you can ignore this message.`
+					};
+					const html = `<p>${bodies[type]}</p>`;
+					let sent = false;
+					try {
+						({ sent } = await sendEmail(email, subjects[type], html));
+					} catch (error) {
+						console.error(
+							`[auth] Failed to send OTP email to ${email} (${type}):`,
+							error
+						);
+					}
+					// Keep local dev usable: surface the OTP in the console only when
+					// no email actually went out (never log OTPs alongside a real send).
+					if (!sent) {
+						console.log(`[auth] OTP for ${email} (${type}): ${otp}`);
+					}
 				}
 			}),
 			// Forwards session cookies from server-side auth.api calls (e.g. the

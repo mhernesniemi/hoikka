@@ -78,3 +78,23 @@ describe("outbox", () => {
 		expect(result.processed).toBe(0);
 	});
 });
+
+describe("claim lease", () => {
+	it("hides a claimed event from overlapping drains while its handler runs", async () => {
+		await db.delete(outbox);
+		let calls = 0;
+		registerHandler("test.slow", async () => {
+			calls++;
+			// Simulates a second drain tick firing while this handler is still
+			// running — the row is leased, so the inner drain must not claim it
+			const inner = await drainOutbox();
+			expect(inner.processed).toBe(0);
+		});
+
+		await emitEvent("test.slow", {});
+		const result = await drainOutbox();
+
+		expect(result).toMatchObject({ processed: 1, succeeded: 1 });
+		expect(calls).toBe(1);
+	});
+});

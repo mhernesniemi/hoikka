@@ -1,5 +1,6 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
+  import { page } from "$app/state";
   import { commandErrorMessage } from "$lib/utils";
   import {
     getCheckout,
@@ -48,6 +49,16 @@
   const cartHasAddress = $derived(!!cart?.shippingPostalCode);
   const hasShippingPromo = $derived(appliedPromotions.some((p) => p.type === "shipping"));
   const appliedCodePromo = $derived(appliedPromotions.find((p) => p.method === "code") ?? null);
+
+  // Notice shown when a redirect payment provider sends the shopper back
+  // without a completed payment (provider return routes redirect to
+  // /checkout?payment=cancelled|error)
+  const paymentReturnNotice = $derived.by(() => {
+    const status = page.url.searchParams.get("payment");
+    if (status === "cancelled") return "The payment was cancelled. You can try again.";
+    if (status === "error") return "Completing the payment failed. Please try again.";
+    return null;
+  });
 
   // Errors from commands (validation, stock, payment failures)
   let errorMessage = $state<string | null>(null);
@@ -206,6 +217,12 @@
         saveToAddressBook: saveAddressForFuture
       });
       if ("paymentInfo" in result) {
+        if (result.paymentInfo.redirectUrl) {
+          // Redirect providers: hand the shopper to the hosted payment page;
+          // the provider's return route completes the order
+          window.location.assign(result.paymentInfo.redirectUrl);
+          return;
+        }
         // Stripe: the refreshed query now carries the client secret
         paymentInfoCleared = false;
       } else {
@@ -297,6 +314,12 @@
     <div class="grid grid-cols-1 gap-8 lg:grid-cols-5">
       <!-- Main Content -->
       <div class="space-y-10 lg:col-span-3">
+        {#if paymentReturnNotice && !errorMessage}
+          <Alert variant="warning">
+            <p>{paymentReturnNotice}</p>
+          </Alert>
+        {/if}
+
         {#if data.stockErrors.length > 0}
           <Alert variant="warning">
             <p class="font-medium">Some items in your cart were adjusted</p>
@@ -731,9 +754,37 @@
                   >
                     {isProcessingPayment ? "Processing..." : "Place order"}
                   </Button>
+                {:else if selectedPaymentMethod && selectedPaymentMethod.code !== "stripe"}
+                  <!-- Redirect providers (PayPal, Klarna, Paytrail, ...): the
+                       provider returns a redirectUrl and startPayment navigates
+                       to the hosted payment page. Instant providers complete
+                       inline through the same call. -->
+                  <Button
+                    type="button"
+                    disabled={isProcessingPayment}
+                    class="w-full"
+                    onclick={() => selectedPaymentMethod && startPayment(selectedPaymentMethod)}
+                  >
+                    {isProcessingPayment ? "Redirecting..." : "Continue to payment"}
+                  </Button>
                 {:else if isProcessingPayment}
                   <p class="text-center text-sm text-gray-500">Loading payment options...</p>
                 {/if}
+              </div>
+            {:else if currentPaymentInfo.redirectUrl}
+              <div class="mt-4">
+                <Button
+                  type="button"
+                  class="w-full"
+                  onclick={() =>
+                    currentPaymentInfo?.redirectUrl &&
+                    window.location.assign(currentPaymentInfo.redirectUrl)}
+                >
+                  Continue to payment
+                </Button>
+                <p class="mt-2 text-center text-xs text-gray-500">
+                  You will be redirected to the payment provider.
+                </p>
               </div>
             {:else if currentPaymentInfo.methodCode === "stripe" && currentPaymentInfo.clientSecret}
               <div class="mt-4">

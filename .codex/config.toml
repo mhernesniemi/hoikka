@@ -1,0 +1,3 @@
+[mcp_servers.hoikka]
+command = "pnpm"
+args = ["mcp"]

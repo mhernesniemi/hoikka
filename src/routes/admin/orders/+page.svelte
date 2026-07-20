@@ -2,6 +2,8 @@
   import type { ColumnDef } from "@tanstack/table-core";
   import { DataTable, renderSnippet } from "$lib/components/admin/data-table";
   import { Badge, type BadgeVariant } from "$lib/components/admin/ui/badge";
+  import { buttonVariants } from "$lib/components/admin/ui/button";
+  import DownloadIcon from "@lucide/svelte/icons/download";
   import { cn, formatDateTime, orderStateLabel } from "$lib/utils";
   import type { OrderListItem } from "$lib/types";
   import type { PageData } from "./$types";
@@ -79,6 +81,9 @@
 <div>
   <div class="mb-6 flex items-center justify-between">
     <h1 class="text-2xl leading-[40px] font-bold">Orders</h1>
+    <a href="/admin/orders/export" class={buttonVariants({ variant: "outline" })}
+      ><DownloadIcon class="h-4 w-4" /> Export CSV</a
+    >
   </div>
 
   <!-- State Filter -->

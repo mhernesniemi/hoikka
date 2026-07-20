@@ -506,20 +506,33 @@ export class OrderService {
 			}
 		}
 
-		const [updated] = await db
-			.update(orders)
-			.set(updateData)
-			.where(eq(orders.id, orderId))
-			.returning();
-
-		// Update promotion usage counts when order is paid
+		// Validate BEFORE any write: a failure here must never leave the order
+		// half-transitioned (previously "paid" was persisted first, so a stock
+		// failure produced a paid order whose stock was never deducted).
 		if (newState === "paid") {
-			// Validate stock one final time before payment completion
 			const stockCheck = await this.validateStock(orderId);
 			if (!stockCheck.valid) {
 				throw new Error(`Stock unavailable: ${stockCheck.errors.join(", ")}`);
 			}
+		}
 
+		// Compare-and-swap on the current state: two concurrent completions
+		// (e.g. a payment webhook racing the browser return) both pass the
+		// isValidTransition check above, but only one may win — otherwise stock
+		// is deducted and fulfillment runs twice.
+		const [updated] = await db
+			.update(orders)
+			.set(updateData)
+			.where(and(eq(orders.id, orderId), eq(orders.state, currentState)))
+			.returning();
+		if (!updated) {
+			throw new Error(
+				`Order ${orderId} was transitioned concurrently — aborting ${currentState} → ${newState}`
+			);
+		}
+
+		// Update promotion usage counts when order is paid
+		if (newState === "paid") {
 			const appliedPromotions = await db
 				.select()
 				.from(orderPromotions)
@@ -527,15 +540,22 @@ export class OrderService {
 
 			// Promotion usage bumps and stock decrements happen atomically so a
 			// mid-sequence failure can't leave an order paid with stock intact.
-			await atomic([
-				...appliedPromotions.map((op) =>
-					db
-						.update(promotions)
-						.set({ usageCount: sql`${promotions.usageCount} + 1` })
-						.where(eq(promotions.id, op.promotionId))
-				),
-				...(await this.stockAdjustments(order.lines, -1))
-			]);
+			// If the batch itself fails, compensate by reverting the CAS above —
+			// an order must never stay "paid" with uncommitted inventory.
+			try {
+				await atomic([
+					...appliedPromotions.map((op) =>
+						db
+							.update(promotions)
+							.set({ usageCount: sql`${promotions.usageCount} + 1` })
+							.where(eq(promotions.id, op.promotionId))
+					),
+					...(await this.stockAdjustments(order.lines, -1))
+				]);
+			} catch (e) {
+				await db.update(orders).set({ state: currentState }).where(eq(orders.id, orderId));
+				throw e;
+			}
 
 			// Release reservations since stock has been permanently deducted
 			await reservationService.releaseForOrder(orderId);

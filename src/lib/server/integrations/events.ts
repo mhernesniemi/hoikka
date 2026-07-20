@@ -15,6 +15,9 @@ import { getHandler } from "./handlers.js";
 import "./handlers.js";
 
 const BASE_BACKOFF_MS = 30_000; // 30s, doubled per attempt
+// How long a claimed event is invisible to other drains while its handler
+// runs. Generous on purpose: a crash mid-handler retries after the lease.
+const CLAIM_LEASE_MS = 5 * 60_000;
 
 export interface EmitOptions {
 	/** Delay before the first attempt (ms). Default: immediate. */
@@ -61,10 +64,17 @@ export async function drainOutbox(limit = 25): Promise<DrainResult> {
 
 	for (const event of due) {
 		// Claim the row: only proceed if it's still pending with the same attempt
-		// count (guards against a concurrent tick grabbing it first).
+		// count (guards against a concurrent tick grabbing it first). The claim
+		// also pushes nextAttemptAt forward as a lease — without it the row stays
+		// "due", and any handler outliving one drain interval gets picked up
+		// again by the next tick and double-processed. Success/failure below
+		// overwrites the lease with the real outcome.
 		const claimed = await db
 			.update(outbox)
-			.set({ attempts: event.attempts + 1 })
+			.set({
+				attempts: event.attempts + 1,
+				nextAttemptAt: new Date(Date.now() + CLAIM_LEASE_MS)
+			})
 			.where(
 				and(
 					eq(outbox.id, event.id),

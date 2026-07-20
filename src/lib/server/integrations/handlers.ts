@@ -21,10 +21,14 @@ export function getHandler(type: string): EventHandler | undefined {
 }
 
 // ── Built-in example: forward paid orders to a configured webhook URL ────────
-// Emitted from the checkout completion path (see checkout.remote.ts). Set
+// Emitted from the checkout completion path (see checkout-completion.ts). Set
 // ORDER_WEBHOOK_URL (+ optional ORDER_WEBHOOK_SECRET) to enable; otherwise the
 // event is a no-op and completes immediately.
+import { eq } from "drizzle-orm";
 import { env } from "$env/dynamic/private";
+import { db } from "../db/index.js";
+import { orders } from "../db/schema.js";
+import { sendEmail } from "../email.js";
 import { signPayload } from "./webhooks.js";
 
 registerHandler("order.paid", async (payload) => {
@@ -42,4 +46,30 @@ registerHandler("order.paid", async (payload) => {
 		// Throwing schedules a retry with backoff
 		throw new Error(`order.paid webhook failed: ${res.status}`);
 	}
+});
+
+// ── order.shipped: shipment-confirmation email ───────────────────────────────
+// Emitted when an admin marks an order shipped (admin order page). Sends via
+// Resend when configured; otherwise the event completes as a logged no-op.
+
+registerHandler("order.shipped", async (payload) => {
+	const { code, trackingNumber } = (payload ?? {}) as {
+		code?: string;
+		trackingNumber?: string | null;
+	};
+	if (!code) return;
+
+	const [order] = await db.select().from(orders).where(eq(orders.code, code));
+	if (!order) throw new Error(`order.shipped: order ${code} not found`);
+	if (!order.customerEmail) return;
+
+	await sendEmail(
+		order.customerEmail,
+		`Your order ${order.code} has shipped`,
+		`
+		<p>Hi ${order.shippingFullName || ""},</p>
+		<p>Your order <strong>${order.code}</strong> is on its way!</p>
+		${trackingNumber ? `<p><strong>Tracking number:</strong> ${trackingNumber}</p>` : ""}
+		`.trim()
+	);
 });

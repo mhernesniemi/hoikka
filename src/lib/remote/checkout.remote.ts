@@ -16,46 +16,27 @@
 import { query, command, getRequestEvent } from "$app/server";
 import { error } from "@sveltejs/kit";
 import * as v from "valibot";
-import { eq } from "drizzle-orm";
-import { db } from "$lib/server/db/index.js";
-import { orderLines, productVariants, products } from "$lib/server/db/schema.js";
 import {
 	orderService,
 	shippingService,
 	paymentService,
-	isPaymentSuccessful,
 	customerService
 } from "$lib/server/services/index.js";
-import { digitalDeliveryService } from "$lib/server/services/digitalDelivery.js";
-import { emitEvent } from "$lib/server/integrations/events.js";
-import { CART_COOKIE, CHECKOUT_COOKIE } from "$lib/server/cart-cookie.js";
+import {
+	completeCheckout as completeCheckoutShared,
+	isOrderDigitalOnly,
+	type CompletionResult
+} from "$lib/server/services/checkout-completion.js";
+import { CHECKOUT_COOKIE } from "$lib/server/cart-cookie.js";
 import type { OrderWithRelations, Payment, Address } from "$lib/types.js";
 
 export type CheckoutPaymentInfo = {
 	providerTransactionId: string;
 	clientSecret?: string;
+	redirectUrl?: string;
 	methodCode: string;
 	metadata: Record<string, unknown>;
 };
-
-type CompletionResult =
-	| { completed: true; orderCode: string }
-	| { completed: false; error: string; stockErrors?: string[] };
-
-/**
- * Check if all items in the order are digital products
- */
-async function isOrderDigitalOnly(orderId: number): Promise<boolean> {
-	const lines = await db
-		.select({ productType: products.type })
-		.from(orderLines)
-		.innerJoin(productVariants, eq(orderLines.variantId, productVariants.id))
-		.innerJoin(products, eq(productVariants.productId, products.id))
-		.where(eq(orderLines.orderId, orderId));
-
-	if (lines.length === 0) return false;
-	return lines.every((line) => line.productType === "digital");
-}
 
 async function requireDraft(): Promise<OrderWithRelations> {
 	const { cookies } = getRequestEvent();
@@ -83,17 +64,24 @@ export const getCheckout = query(async () => {
 
 	const paymentMethods = await paymentService.getActiveMethods();
 
-	// Check if a Stripe payment is already in progress (to resume card entry).
-	// Mock payments complete instantly and never need resuming.
+	// Check if a Stripe or redirect-provider payment is already in progress
+	// (to resume card entry / the redirect). Mock payments complete instantly
+	// and never need resuming.
 	const [existingPayment] = await paymentService.getByOrderId(cart.id);
 	let paymentInfo: CheckoutPaymentInfo | null = null;
 	if (existingPayment && existingPayment.metadata) {
 		const method = await paymentService.getMethodById(existingPayment.paymentMethodId);
-		if (method?.code === "stripe") {
+		const existingMetadata = existingPayment.metadata as { redirectUrl?: string };
+		if (method?.code === "stripe" || existingMetadata.redirectUrl) {
+			const metadata = existingPayment.metadata as {
+				clientSecret?: string;
+				redirectUrl?: string;
+			};
 			paymentInfo = {
 				providerTransactionId: existingPayment.transactionId || "",
-				clientSecret: (existingPayment.metadata as { clientSecret?: string })?.clientSecret,
-				methodCode: method.code,
+				clientSecret: metadata.clientSecret,
+				redirectUrl: metadata.redirectUrl,
+				methodCode: method?.code ?? "",
 				metadata: existingPayment.metadata as Record<string, unknown>
 			};
 		}
@@ -258,10 +246,10 @@ export const removePromotion = command(async () => {
 });
 
 /**
- * Shared completion path for both mock payments (instant) and Stripe
- * (client-confirmed): address-book save, final stock check, state
- * transitions, shipment + digital delivery, cookie cleanup. The client
- * navigates to the thank-you page using the returned order code.
+ * Shared completion path for mock payments (instant), Stripe
+ * (client-confirmed) and redirect providers (return/callback routes) — the
+ * logic lives in services/checkout-completion.ts; this wrapper binds the
+ * current request's cookies.
  */
 async function completeCheckout(opts: {
 	order: OrderWithRelations;
@@ -270,95 +258,7 @@ async function completeCheckout(opts: {
 	saveToAddressBook: boolean;
 }): Promise<CompletionResult> {
 	const { cookies } = getRequestEvent();
-	const { order, payment, customerId, saveToAddressBook } = opts;
-	const isDigitalOnly = await isOrderDigitalOnly(order.id);
-
-	// Save address to the customer's address book if requested
-	if (saveToAddressBook && customerId && !isDigitalOnly && order.shippingStreetLine1) {
-		try {
-			await customerService.addAddress(customerId, {
-				fullName: order.shippingFullName || undefined,
-				streetLine1: order.shippingStreetLine1,
-				city: order.shippingCity || "",
-				postalCode: order.shippingPostalCode || "",
-				country: order.shippingCountry || "FI",
-				isDefault: false
-			});
-		} catch (e) {
-			console.error("Error saving address to address book:", e);
-			// Don't fail the order if address book save fails
-		}
-	}
-
-	// Final stock validation (skip for digital products)
-	if (!isDigitalOnly) {
-		const stockCheck = await orderService.validateStock(order.id);
-		if (!stockCheck.valid) {
-			return {
-				completed: false,
-				error: "Some items are no longer available in the requested quantity",
-				stockErrors: stockCheck.errors
-			};
-		}
-	}
-
-	// The draft becomes a real order
-	await orderService.transitionState(order.id, "payment_pending");
-
-	const paymentStatus = await paymentService.confirmPayment(payment.id);
-
-	if (isPaymentSuccessful(paymentStatus)) {
-		await orderService.transitionState(order.id, "paid");
-
-		console.log("[order] completed", {
-			orderId: order.id,
-			total: order.total,
-			customerId,
-			isDigitalOnly
-		});
-
-		const paidOrder = await orderService.getById(order.id);
-		if (paidOrder) {
-			if (!isDigitalOnly) {
-				try {
-					await shippingService.createShipment(paidOrder);
-				} catch (e) {
-					console.error("Error creating shipment:", e);
-					// Don't fail the order if shipment creation fails
-				}
-			}
-
-			try {
-				const deliveryResult = await digitalDeliveryService.deliverOrder(order.id);
-				if (deliveryResult.errors.length > 0) {
-					console.error("Digital delivery errors:", deliveryResult.errors);
-				}
-			} catch (e) {
-				console.error("Error delivering digital products:", e);
-				// Don't fail the order if digital delivery fails
-			}
-
-			// Record an out-of-band event (webhook / ERP sync / etc.) for the
-			// outbox to process. Durable and non-blocking — see integrations/.
-			await emitEvent("order.paid", {
-				code: paidOrder?.code,
-				total: order.total,
-				customerEmail: order.customerEmail,
-				isDigitalOnly
-			});
-		}
-	}
-
-	const finalOrder = await orderService.getById(order.id);
-	if (!finalOrder) {
-		return { completed: false, error: "Failed to retrieve order" };
-	}
-
-	// The cart and the draft are done — clear both cookies
-	cookies.delete(CART_COOKIE, { path: "/" });
-	cookies.delete(CHECKOUT_COOKIE, { path: "/" });
-
-	return { completed: true, orderCode: finalOrder.code };
+	return completeCheckoutShared({ ...opts, cookies });
 }
 
 /**
@@ -395,11 +295,16 @@ export const createPayment = command(
 				// Payment already exists, return it
 				payment = existingPayments[0];
 				const method = await paymentService.getMethodById(payment.paymentMethodId);
+				const metadata = payment.metadata as {
+					clientSecret?: string;
+					redirectUrl?: string;
+				} | null;
 				paymentInfo = {
 					providerTransactionId: payment.transactionId || "",
-					clientSecret: (payment.metadata as { clientSecret?: string })?.clientSecret,
+					clientSecret: metadata?.clientSecret,
+					redirectUrl: metadata?.redirectUrl,
 					methodCode: method?.code ?? "",
-					metadata: payment.metadata as Record<string, unknown>
+					metadata: (payment.metadata ?? {}) as Record<string, unknown>
 				};
 			} else {
 				// Create payment via provider
@@ -420,9 +325,11 @@ export const createPayment = command(
 				});
 			}
 
-			// Mock payments complete instantly; Stripe returns a client secret
-			// and finishes via the completeOrder command.
-			if (paymentInfo.methodCode !== "stripe") {
+			// Mock payments complete instantly. Stripe returns a client secret
+			// (finishes via completeOrder); redirect providers (PayPal, Klarna,
+			// Paytrail, ...) return a redirectUrl the client navigates to, and
+			// the provider's return route completes the order.
+			if (paymentInfo.methodCode !== "stripe" && !paymentInfo.redirectUrl) {
 				return await completeCheckout({
 					order: cart,
 					payment,

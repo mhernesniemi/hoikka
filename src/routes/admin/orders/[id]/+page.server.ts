@@ -1,5 +1,6 @@
 import { orderService } from "$lib/server/services/orders.js";
 import { shippingService, paymentService } from "$lib/server/services/index.js";
+import { emitEvent } from "$lib/server/integrations/events.js";
 import { error, fail } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
 
@@ -53,6 +54,18 @@ export const actions: Actions = {
 						console.error("Error creating shipment:", e);
 						// Don't fail the transition if shipment creation fails
 					}
+				}
+			}
+
+			// Shipment-confirmation email goes out via the outbox
+			if (newState === "shipped") {
+				const order = await orderService.getById(id);
+				if (order) {
+					const shipping = await shippingService.getOrderShipping(id);
+					await emitEvent("order.shipped", {
+						code: order.code,
+						trackingNumber: shipping?.trackingNumber ?? null
+					});
 				}
 			}
 
