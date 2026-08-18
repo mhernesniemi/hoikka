@@ -2,7 +2,7 @@
  * Customer Groups Service
  * Handles B2B customer group management
  */
-import { eq, desc, sql, and, like, type SQL } from "drizzle-orm";
+import { eq, desc, sql, and, like, count, type SQL } from "drizzle-orm";
 import { db, atomic } from "../db/index.js";
 import { paginationOf, resolveSort } from "../pagination.js";
 import { customerGroups, customerGroupMembers, customers } from "../db/schema.js";
@@ -129,11 +129,16 @@ export class CustomerGroupService {
 			.where(whereClause);
 		const total = Number(countResult?.count ?? 0);
 
+		const customerCountExpr = sql<number>`(${db
+			.select({ value: count() })
+			.from(customerGroupMembers)
+			.where(eq(customerGroupMembers.groupId, customerGroups.id))})`;
+
 		const orderByExpr = resolveSort(
 			{
 				name: sql`${customerGroups.name}`,
 				description: sql`${customerGroups.description}`,
-				customerCount: sql`(SELECT count(*) FROM customer_group_members WHERE group_id = ${customerGroups.id})`,
+				customerCount: customerCountExpr,
 				createdAt: sql`${customerGroups.createdAt}`
 			},
 			sortBy,
@@ -147,7 +152,7 @@ export class CustomerGroupService {
 				name: customerGroups.name,
 				description: customerGroups.description,
 				createdAt: customerGroups.createdAt,
-				customerCount: sql<number>`(SELECT count(*) FROM customer_group_members WHERE group_id = ${customerGroups.id})`
+				customerCount: customerCountExpr
 			})
 			.from(customerGroups)
 			.where(whereClause)

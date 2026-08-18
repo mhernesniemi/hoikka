@@ -2,7 +2,7 @@
  * Facet Service
  * Handles facets and facet values for product filtering
  */
-import { eq, and, sql, type SQL } from "drizzle-orm";
+import { eq, and, sql, count, type SQL } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { paginationOf, resolveSort } from "../pagination.js";
 import { facets, facetValues, productFacetValues } from "../db/schema.js";
@@ -107,7 +107,10 @@ export class FacetService {
 				id: facets.id,
 				name: facets.name,
 				code: facets.code,
-				valueCount: sql<number>`(SELECT count(*) FROM facet_values WHERE facet_id = ${facets.id})`
+				valueCount: sql<number>`(${db
+					.select({ value: count() })
+					.from(facetValues)
+					.where(eq(facetValues.facetId, facets.id))})`
 			})
 			.from(facets)
 			.where(whereClause)

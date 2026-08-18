@@ -8,7 +8,7 @@
  * Orders with `active=true, state=created` are draft checkouts, identified by
  * the `checkout_token` cookie; they become real orders at `payment_pending`.
  */
-import { eq, and, desc, sql, inArray, exists } from "drizzle-orm";
+import { eq, and, desc, sql, inArray, exists, count } from "drizzle-orm";
 import { db, atomic } from "../db/index.js";
 import { paginationOf, resolveSort } from "../pagination.js";
 import {
@@ -361,7 +361,10 @@ export class OrderService {
 				shippingFullName: orders.shippingFullName,
 				orderPlacedAt: orders.orderPlacedAt,
 				createdAt: orders.createdAt,
-				lineCount: sql<number>`(SELECT count(*) FROM order_lines WHERE order_id = ${orders.id})`
+				lineCount: sql<number>`(${db
+					.select({ value: count() })
+					.from(orderLines)
+					.where(eq(orderLines.orderId, orders.id))})`
 			})
 			.from(orders)
 			.where(and(...conditions, hasLines))
