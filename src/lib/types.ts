@@ -172,7 +172,8 @@ export interface OrderListItem {
 	shippingFullName: string | null;
 	orderPlacedAt: Date | null;
 	createdAt: Date;
-	lineCount: number;
+	/** Total units ordered (sum of line quantities), matching the storefront's item count */
+	itemCount: number;
 }
 
 /** Order with all related data */

@@ -35,7 +35,7 @@
       cell: ({ row }) =>
         renderSnippet(orderCell, {
           code: row.original.code,
-          itemCount: row.original.lineCount,
+          itemCount: row.original.itemCount,
           id: row.original.id
         })
     },
@@ -66,7 +66,7 @@
 {#snippet orderCell({ code, itemCount, id }: { code: string; itemCount: number; id: number })}
   <a href="/admin/orders/{id}" class="group inline-block font-medium">
     <p class="group-hover:underline">{code}</p>
-    <p class="text-sm text-muted-foreground">{itemCount} items</p>
+    <p class="text-sm text-muted-foreground">{itemCount} {itemCount === 1 ? "item" : "items"}</p>
   </a>
 {/snippet}
 

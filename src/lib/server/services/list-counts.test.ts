@@ -3,6 +3,9 @@
  * the outer column reference is rendered unqualified, SQLite resolves it against
  * the subquery's own table instead, silently returning 0. These tests pin the
  * counts with ids that deliberately drift apart between parent and child rows.
+ *
+ * The order count is a sum of line quantities, not a row count, to match what
+ * "N items" means everywhere else in the app (see calculateCartItemCount).
  */
 import { describe, it, expect, beforeAll, vi } from "vitest";
 
@@ -14,7 +17,7 @@ import { facetService } from "./facets.js";
 import { customerGroupService } from "./customerGroups.js";
 import { customerService } from "./customers.js";
 
-describe("order list line counts", () => {
+describe("order list item counts", () => {
 	beforeAll(async () => {
 		const [product] = await db
 			.insert(products)
@@ -25,21 +28,22 @@ describe("order list line counts", () => {
 			.values({ productId: product.id, sku: "SKU-COUNT", price: 1000, stock: 10 })
 			.returning();
 
-		for (const [code, lines] of [
-			["ORD-C-1", 2],
-			["ORD-C-2", 1]
+		// Two lines of 2 + 1 units: 2 rows but 3 items, so a row count can't pass.
+		for (const [code, quantities] of [
+			["ORD-C-1", [2, 1]],
+			["ORD-C-2", [1]]
 		] as const) {
 			const [order] = await db
 				.insert(orders)
 				.values({ code, state: "paid", active: false })
 				.returning();
-			for (let i = 0; i < lines; i++) {
+			for (const quantity of quantities) {
 				await db.insert(orderLines).values({
 					orderId: order.id,
 					variantId: variant.id,
-					quantity: 1,
+					quantity,
 					unitPrice: 1000,
-					lineTotal: 1000,
+					lineTotal: 1000 * quantity,
 					productName: "Counted",
 					sku: "SKU-COUNT"
 				});
@@ -47,10 +51,10 @@ describe("order list line counts", () => {
 		}
 	});
 
-	it("counts the lines belonging to each order", async () => {
+	it("sums the units ordered across each order's lines", async () => {
 		const { items } = await orderService.listPaginated({ limit: 10 });
-		const byCode = new Map(items.map((o) => [o.code, o.lineCount]));
-		expect(byCode.get("ORD-C-1")).toBe(2);
+		const byCode = new Map(items.map((o) => [o.code, o.itemCount]));
+		expect(byCode.get("ORD-C-1")).toBe(3);
 		expect(byCode.get("ORD-C-2")).toBe(1);
 	});
 });
