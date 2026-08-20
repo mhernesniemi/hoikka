@@ -10,6 +10,7 @@ function unavailable(): never {
 
 export const fsStorage: StorageBackend = {
 	upload: unavailable,
+	uploadStream: unavailable,
 	list: unavailable,
 	remove: unavailable,
 	get: unavailable

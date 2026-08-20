@@ -1,7 +1,7 @@
 import { productService } from "$lib/server/services/products.js";
 import { reindexProduct, removeFromIndex } from "$lib/server/services/product-search.js";
 import { facetService } from "$lib/server/services/facets.js";
-import { assetService } from "$lib/server/services/assets.js";
+import { assetService, assetDeleteError } from "$lib/server/services/assets.js";
 import { categoryService } from "$lib/server/services/categories.js";
 import { collectionService } from "$lib/server/services/collections.js";
 import { translationService } from "$lib/server/services/translations.js";
@@ -57,8 +57,15 @@ export const load: PageServerLoad = async ({ params }) => {
 		productService.getSearchCatalog()
 	]);
 
+	// The deliverable file of a digital product (name only — the file itself is
+	// never linked from the admin, it is served through /downloads/<token>).
+	const digitalAsset = product.digitalAssetId
+		? await assetService.getById(product.digitalAssetId)
+		: null;
+
 	return {
 		product,
+		digitalAsset,
 		facets,
 		categoryTree,
 		productCategories,
@@ -98,6 +105,17 @@ export const actions: Actions = {
 
 		if (!name || !slug) {
 			return fail(400, { error: "Name and slug are required" });
+		}
+
+		// A public digital product with no file would take money and deliver
+		// nothing — refuse the combination at the point it is created.
+		if (type === "digital" && visibility === "public") {
+			const current = await productService.getById(id);
+			if (!current?.digitalAssetId) {
+				return fail(400, {
+					error: "Add a digital file before publishing this product"
+				});
+			}
 		}
 
 		try {
@@ -257,7 +275,7 @@ export const actions: Actions = {
 			await reindexProduct(productId);
 			return { imageRemoved: true };
 		} catch (e) {
-			return fail(500, { imageError: dbError(e, "Failed to remove image") });
+			return fail(400, { imageError: assetDeleteError(e, "Failed to remove image") });
 		}
 	},
 
@@ -276,6 +294,51 @@ export const actions: Actions = {
 			return { featuredSet: true };
 		} catch (e) {
 			return fail(500, { imageError: dbError(e, "Failed to set featured image") });
+		}
+	},
+
+	/**
+	 * Attach the file a digital product delivers. Without one, checkout
+	 * completion records a fulfilment error instead of delivering nothing.
+	 */
+	setDigitalFile: async ({ params, request }) => {
+		const productId = Number(params.id);
+		const formData = await request.formData();
+
+		const url = formData.get("url")?.toString();
+		const name = formData.get("name")?.toString();
+		const mimeType = formData.get("mimeType")?.toString() || undefined;
+		const fileSize = Number(formData.get("size")) || 0;
+
+		if (!url || !name) {
+			return fail(400, { digitalError: "File data is required" });
+		}
+
+		try {
+			const existing = await assetService.getBySource(url);
+			const asset =
+				existing ?? (await assetService.create({ name, url, fileSize, mimeType }));
+
+			await productService.setDigitalAsset(productId, asset.id);
+			return { digitalSuccess: true };
+		} catch (e) {
+			return fail(500, { digitalError: dbError(e, "Failed to save digital file") });
+		}
+	},
+
+	removeDigitalFile: async ({ params }) => {
+		const productId = Number(params.id);
+		try {
+			// Unpublish alongside: a public digital product without a file is
+			// exactly the state that charges customers for nothing.
+			const product = await productService.getById(productId);
+			if (product?.type === "digital" && product.visibility === "public") {
+				await productService.update(productId, { visibility: "draft" });
+			}
+			await productService.setDigitalAsset(productId, null);
+			return { digitalRemoved: true };
+		} catch (e) {
+			return fail(500, { digitalError: dbError(e, "Failed to remove digital file") });
 		}
 	},
 

@@ -107,6 +107,7 @@
       visibility: "public",
       taxCode: "standard",
       featuredAssetId: featuredAsset ? 0 : null,
+      digitalAssetId: null,
       deletedAt: null,
       createdAt: new Date(),
       updatedAt: new Date(),

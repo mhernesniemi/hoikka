@@ -12,7 +12,7 @@
  */
 import { error } from "@sveltejs/kit";
 import { get } from "$lib/server/storage/index.js";
-import { VARIANT_PREFIX } from "$lib/server/storage/types.js";
+import { VARIANT_PREFIX, isPrivatePath } from "$lib/server/storage/types.js";
 // $lib specifier so the cloudflare build can alias sharp away (vite.config.ts)
 import { resizeImage } from "$lib/server/images/node.js";
 import type { RequestHandler } from "./$types.js";
@@ -28,6 +28,10 @@ function clamp(value: string | null, min: number, max: number, fallback: number)
 }
 
 export const GET: RequestHandler = async ({ params, url, request, platform }) => {
+	// Digital deliverables live in the bucket too, but this route must never
+	// hand one out — `/downloads/<token>` is their only door.
+	if (isPrivatePath(params.path)) error(404, "Not found");
+
 	// Stored variants are already transformed — never transform them again
 	const transformable = !params.path.startsWith(`${VARIANT_PREFIX}/`);
 	const width = transformable ? clamp(url.searchParams.get("w"), 16, 2400, 0) : 0;

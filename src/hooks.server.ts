@@ -3,6 +3,7 @@
  * Uses Better Auth for authentication.
  */
 import { sequence } from "@sveltejs/kit/hooks";
+import { redirect } from "@sveltejs/kit";
 import type { Handle, HandleServerError } from "@sveltejs/kit";
 import { auth } from "$lib/server/auth.js";
 import { db } from "$lib/server/db/index.js";
@@ -82,6 +83,45 @@ const sessionHandler: Handle = async ({ event, resolve }) => {
 	return resolve(event);
 };
 
+// Admin authorization. The admin layout's `load` only guards rendering —
+// form actions and endpoint handlers run *before* layout loads, so a POST to
+// e.g. /admin/products?/create never reached it. Enforcing the role here
+// covers every admin request whatever its method.
+const ADMIN_PUBLIC_PATHS = new Set(["/admin/login", "/admin/setup"]);
+
+function isAdminRole(role: string | undefined): boolean {
+	return role === "admin" || role === "staff";
+}
+
+export const adminGuard: Handle = async ({ event, resolve }) => {
+	const { pathname } = event.url;
+	const isAdminPath = pathname === "/admin" || pathname.startsWith("/admin/");
+	if (!isAdminPath || ADMIN_PUBLIC_PATHS.has(pathname)) return resolve(event);
+
+	if (isAdminRole(event.locals.user?.role)) return resolve(event);
+
+	console.warn("[admin] unauthorized_request", {
+		path: pathname,
+		method: event.request.method,
+		userId: event.locals.user?.id ?? null
+	});
+
+	// Page loads redirect to the login screen; anything else (form actions,
+	// admin API endpoints) gets a failure the client can render, in the same
+	// shape SvelteKit uses for action results.
+	if (event.request.method === "GET") {
+		redirect(303, "/admin/login");
+	}
+	return new Response(
+		JSON.stringify({
+			type: "failure",
+			status: 401,
+			data: stringify({ error: "Not authorized" })
+		}),
+		{ status: 401, headers: { "content-type": "application/json" } }
+	);
+};
+
 // On the node target, start the background outbox drain once (no-op on CF).
 const tasksInit: Handle = async ({ event, resolve }) => {
 	ensureNodeScheduler();
@@ -109,7 +149,7 @@ const demoGuard: Handle = async ({ event, resolve }) => {
 
 // edgeCache sits before sessionHandler so cached guest responses return
 // without touching auth or the database at all
-export const handle = sequence(tasksInit, demoGuard, edgeCache, sessionHandler);
+export const handle = sequence(tasksInit, demoGuard, edgeCache, sessionHandler, adminGuard);
 
 export const handleError: HandleServerError = async ({ error, event, status, message }) => {
 	const errorId = crypto.randomUUID();

@@ -70,10 +70,11 @@ describe("transitionState to paid", () => {
 			orderService.transitionState(order.id, "paid")
 		]);
 
-		const fulfilled = results.filter((r) => r.status === "fulfilled");
-		const rejected = results.filter((r) => r.status === "rejected");
-		expect(fulfilled).toHaveLength(1);
-		expect(rejected).toHaveLength(1);
+		// Both callers see the order reach "paid" — losing a race to the same
+		// destination is not an error anyone has to handle. What must not
+		// happen is the ledger being applied twice, and the guarded batch is
+		// what prevents that: the loser writes nothing at all.
+		expect(results.filter((r) => r.status === "rejected")).toHaveLength(0);
 
 		const [after] = await db.select().from(orders).where(eq(orders.id, order.id));
 		expect(after.state).toBe("paid");

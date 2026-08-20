@@ -1,0 +1,1 @@
+ALTER TABLE `order_lines` ADD `digital_asset_id` integer;

@@ -42,6 +42,49 @@ export const CHECKOUT_COOKIE_OPTIONS = {
 	maxAge: 60 * 30 // 30 minutes
 } as const;
 
+/**
+ * Receipt capability. The thank-you page shows a full order, so knowing an
+ * order code must not be enough to read one — the browser that actually
+ * completed the purchase gets the order's checkout token back in this cookie
+ * and presents it to read that receipt. Logged-in customers are authorised by
+ * ownership instead and never need it.
+ *
+ * A short ring of the most recent tokens, so buying twice does not lock the
+ * shopper out of the earlier receipt.
+ */
+export const RECEIPT_COOKIE = "receipts";
+
+const MAX_RECEIPTS = 5;
+
+export const RECEIPT_COOKIE_OPTIONS = {
+	path: "/",
+	httpOnly: true,
+	sameSite: "lax",
+	maxAge: 60 * 60 * 24 * 30 // 30 days
+} as const;
+
+export function parseReceiptCookie(raw: string | undefined | null): string[] {
+	if (!raw) return [];
+	return raw.split(".").filter((token) => /^[A-Za-z0-9_-]{16,64}$/.test(token));
+}
+
+export function addReceipt(existing: string[], token: string): string[] {
+	return [token, ...existing.filter((t) => t !== token)].slice(0, MAX_RECEIPTS);
+}
+
+/** Hand the completing browser the capability to read this one receipt. */
+export function grantReceipt(cookies: CookieJar | undefined, token: string | null): void {
+	if (!cookies || !token) return;
+	const next = addReceipt(parseReceiptCookie(cookies.get(RECEIPT_COOKIE)), token);
+	cookies.set(RECEIPT_COOKIE, next.join("."), RECEIPT_COOKIE_OPTIONS);
+}
+
+/** The slice of SvelteKit's Cookies this module needs (keeps it testable). */
+interface CookieJar {
+	get(name: string): string | undefined;
+	set(name: string, value: string, opts: { path: string }): void;
+}
+
 export function parseCartCookie(raw: string | undefined | null): CartLine[] {
 	if (!raw) return [];
 

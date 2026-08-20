@@ -1,4 +1,4 @@
-import { assetService } from "$lib/server/services/assets.js";
+import { assetService, assetDeleteError } from "$lib/server/services/assets.js";
 import { dbError } from "$lib/server/db-error.js";
 import type { SelectedImage } from "$lib/admin-upload.js";
 import { fail } from "@sveltejs/kit";
@@ -56,7 +56,7 @@ export const actions: Actions = {
 			await Promise.all(ids.map((id) => assetService.delete(id)));
 			return { success: true };
 		} catch (e) {
-			return fail(500, { error: dbError(e, "Failed to delete assets") });
+			return fail(400, { error: assetDeleteError(e, "Failed to delete assets") });
 		}
 	}
 };

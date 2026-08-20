@@ -188,8 +188,7 @@
       if (!selectedShippingRate?.methodId) return;
       await setShippingMethod({
         methodId: selectedShippingRate.methodId,
-        rateId: selectedShippingRate.id,
-        price: selectedShippingRate.price
+        rateId: selectedShippingRate.id
       });
       shippingRateOverride = null; // the saved selection now comes from the query
       isEditingShipping = false;

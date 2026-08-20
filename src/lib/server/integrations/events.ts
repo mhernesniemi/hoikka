@@ -7,9 +7,9 @@
  * (Cloudflare cron / Node interval / manual endpoint). Nothing here assumes a
  * long-lived process, so it works the same on Node and Workers.
  */
-import { and, eq, lte } from "drizzle-orm";
+import { and, eq, lte, sql, type SQL } from "drizzle-orm";
 import { db } from "../db/index.js";
-import { outbox } from "../db/schema.js";
+import { orders, outbox } from "../db/schema.js";
 import { getHandler } from "./handlers.js";
 // Importing the handlers module registers the built-in handlers as a side effect.
 import "./handlers.js";
@@ -32,11 +32,62 @@ export async function emitEvent(
 	payload: unknown,
 	options: EmitOptions = {}
 ): Promise<void> {
-	await db.insert(outbox).values({
+	await db.insert(outbox).values(eventRow(type, payload, options));
+}
+
+function eventRow(type: string, payload: unknown, options: EmitOptions = {}) {
+	return {
 		type,
 		payload,
 		nextAttemptAt: new Date(Date.now() + (options.delayMs ?? 0)),
 		maxAttempts: options.maxAttempts ?? 5
+	};
+}
+
+export interface PendingEvent {
+	type: string;
+	payload: unknown;
+	delayMs?: number;
+	maxAttempts?: number;
+}
+
+/**
+ * Build the inserts for several events without running them, so a caller can
+ * put them in the same `atomic()` batch as the business write they belong to.
+ * That is what makes "the work happened" and "the event exists" inseparable.
+ *
+ * `condition` is a predicate over `orders` that must still hold for the rows
+ * to be written — typically "I still own the lease on this work". Expressed as
+ * INSERT ... SELECT ... WHERE, so the check happens inside the same statement
+ * rather than in the caller, where it would be a read that another worker can
+ * invalidate before the write lands.
+ */
+export function pendingEvents(events: PendingEvent[], condition?: SQL) {
+	return events.map((event) => {
+		const row = eventRow(event.type, event.payload, event);
+		if (!condition) return db.insert(outbox).values(row);
+
+		const stamp = Date.now();
+		// insert().select() requires every column, in table order.
+		return db.insert(outbox).select(
+			db
+				.select({
+					id: sql<number>`null`.as("id"),
+					type: sql<string>`${row.type}`.as("type"),
+					payload: sql<string>`${JSON.stringify(row.payload)}`.as("payload"),
+					status: sql<string>`'pending'`.as("status"),
+					attempts: sql<number>`0`.as("attempts"),
+					maxAttempts: sql<number>`${row.maxAttempts}`.as("max_attempts"),
+					nextAttemptAt: sql<number>`${row.nextAttemptAt.getTime()}`.as(
+						"next_attempt_at"
+					),
+					lastError: sql<string>`null`.as("last_error"),
+					createdAt: sql<number>`${stamp}`.as("createdAt"),
+					updatedAt: sql<number>`${stamp}`.as("updatedAt")
+				})
+				.from(orders)
+				.where(condition)
+		);
 	});
 }
 
@@ -89,14 +140,32 @@ export async function drainOutbox(limit = 25): Promise<DrainResult> {
 		const attempt = event.attempts + 1;
 		const handler = getHandler(event.type);
 
+		// Fence every write this worker makes on the claim it actually holds. A
+		// handler that outlives the lease loses the row to a replacement, and
+		// must not then be able to overwrite the replacement's result — writing
+		// "done" back to "pending" would hand the same email or webhook to a
+		// third worker.
+		const stillOurs = and(
+			eq(outbox.id, event.id),
+			eq(outbox.status, "pending"),
+			eq(outbox.attempts, attempt)
+		);
+
 		try {
 			if (!handler) throw new Error(`No handler registered for "${event.type}"`);
-			await handler(event.payload);
-			await db
+			await handler(event.payload, {
+				eventId: event.id,
+				attempt,
+				idempotencyKey: `hoikka-outbox-${event.id}`
+			});
+			const [done] = await db
 				.update(outbox)
 				.set({ status: "done", lastError: null })
-				.where(eq(outbox.id, event.id));
-			result.succeeded++;
+				.where(stillOurs)
+				.returning({ id: outbox.id });
+			if (done) result.succeeded++;
+			else
+				console.warn(`[outbox] ${event.type} #${event.id} finished after losing its lease`);
 		} catch (err) {
 			const message = err instanceof Error ? err.message : String(err);
 			const exhausted = attempt >= event.maxAttempts;
@@ -108,7 +177,7 @@ export async function drainOutbox(limit = 25): Promise<DrainResult> {
 					// Exponential backoff: 30s, 60s, 120s, ...
 					nextAttemptAt: new Date(Date.now() + BASE_BACKOFF_MS * 2 ** (attempt - 1))
 				})
-				.where(eq(outbox.id, event.id));
+				.where(stillOurs);
 			if (exhausted) result.failed++;
 			console.error(`[outbox] ${event.type} attempt ${attempt} failed: ${message}`);
 		}

@@ -6,14 +6,10 @@ import { error } from "@sveltejs/kit";
 import { and, desc, eq, gte, inArray } from "drizzle-orm";
 import { db } from "$lib/server/db/index.js";
 import { orders, orderLines } from "$lib/server/db/schema.js";
+import { csvCell } from "$lib/server/csv.js";
 import type { RequestHandler } from "./$types";
 
 const EXPORT_MONTHS = 6;
-
-function csvCell(value: unknown): string {
-	const text = value == null ? "" : String(value);
-	return /[",\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
-}
 
 export const GET: RequestHandler = async ({ locals }) => {
 	if (!locals.user || !["admin", "staff"].includes(locals.user.role ?? "")) {

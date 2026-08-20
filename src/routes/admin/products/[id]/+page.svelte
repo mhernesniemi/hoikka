@@ -1,6 +1,6 @@
 <script lang="ts">
   import { enhance } from "$app/forms";
-  import { goto } from "$app/navigation";
+  import { goto, invalidateAll } from "$app/navigation";
   import { page } from "$app/state";
   import { onMount } from "svelte";
   import { toast } from "svelte-sonner";
@@ -46,6 +46,69 @@
   let { data, form }: { data: PageData; form: ActionData } = $props();
 
   let visibility = $state(data.product.visibility);
+  let productType = $state(data.product.type);
+
+  // Digital deliverable upload (sidebar card, digital products only)
+  let isUploadingDigital = $state(false);
+  let digitalError = $state<string | null>(null);
+
+  function formatFileSize(bytes: number): string {
+    if (!bytes) return "Unknown size";
+    const mb = bytes / (1024 * 1024);
+    return mb >= 1 ? `${mb.toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  }
+
+  /**
+   * Upload the deliverable and attach it to the product. Two steps on purpose:
+   * the file streams straight to storage as the raw request body — a
+   * multipart form would have to be buffered whole on the server, which a
+   * 200 MB deliverable cannot survive — and then only its metadata travels
+   * through the form action.
+   */
+  async function uploadDigitalFile(event: Event) {
+    const input = event.currentTarget as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    isUploadingDigital = true;
+    digitalError = null;
+    try {
+      const response = await fetch(
+        `/api/assets/upload?purpose=digital&filename=${encodeURIComponent(file.name)}`,
+        {
+          method: "POST",
+          headers: { "content-type": file.type || "application/octet-stream" },
+          body: file
+        }
+      );
+      if (!response.ok) {
+        const message = await response.text();
+        throw new Error(message || "Upload failed");
+      }
+      const uploaded = await response.json();
+
+      const attach = new FormData();
+      attach.append("url", uploaded.url);
+      attach.append("name", uploaded.name);
+      attach.append("size", String(uploaded.size ?? 0));
+      if (uploaded.mimeType) attach.append("mimeType", uploaded.mimeType);
+
+      const result = await fetch("?/setDigitalFile", {
+        method: "POST",
+        body: attach,
+        headers: { "x-sveltekit-action": "true" }
+      });
+      if (!result.ok) throw new Error("Failed to attach the file to this product");
+
+      await invalidateAll();
+      toast.success("Digital file saved");
+    } catch (e) {
+      digitalError = e instanceof Error ? e.message : "Upload failed";
+    } finally {
+      isUploadingDigital = false;
+      input.value = "";
+    }
+  }
 
   let cameFromCreate = $state(false);
   let showCancelDelete = $state(false);
@@ -572,13 +635,53 @@
       <!-- Product Type Section (only shown when multiple types exist) -->
       {#if data.productTypes.length > 1}
         <AdminCard title="Product Type" variant="sidebar">
-          <SelectNative form="product-form" name="type">
+          <SelectNative form="product-form" name="type" bind:value={productType}>
             {#each data.productTypes as type}
-              <option value={type} selected={data.product.type === type}>
+              <option value={type}>
                 {type.charAt(0).toUpperCase() + type.slice(1)}
               </option>
             {/each}
           </SelectNative>
+        </AdminCard>
+      {/if}
+
+      <!-- Digital File Section (deliverable for digital products) -->
+      {#if productType === "digital"}
+        <AdminCard title="Digital File" variant="sidebar">
+          {#if data.digitalAsset}
+            <div class="flex items-start justify-between gap-2">
+              <div class="min-w-0">
+                <p class="truncate text-sm font-medium">{data.digitalAsset.name}</p>
+                <p class="text-xs text-muted-foreground">
+                  {formatFileSize(data.digitalAsset.fileSize ?? 0)}
+                </p>
+              </div>
+              <form method="POST" action="?/removeDigitalFile" use:enhance>
+                <Button type="submit" variant="destructive" size="sm">Remove</Button>
+              </form>
+            </div>
+          {:else}
+            <p class="text-sm text-muted-foreground">
+              No file yet — buyers of this product cannot be delivered anything.
+            </p>
+          {/if}
+
+          <div class="mt-3">
+            <Input
+              type="file"
+              accept=".pdf,.epub,.zip,.mp3,.wav,.mp4,.txt,.csv"
+              disabled={isUploadingDigital}
+              onchange={uploadDigitalFile}
+            />
+            <p class="mt-2 text-xs text-muted-foreground">
+              {isUploadingDigital
+                ? "Uploading…"
+                : "PDF, EPUB, ZIP, MP3, WAV, MP4, TXT or CSV. Up to 200 MB."}
+            </p>
+            {#if digitalError}
+              <p class="text-destructive mt-2 text-xs">{digitalError}</p>
+            {/if}
+          </div>
         </AdminCard>
       {/if}
 

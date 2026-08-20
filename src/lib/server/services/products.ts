@@ -282,6 +282,13 @@ export class ProductService {
 	}
 
 	/**
+	 * Set (or clear) the file a digital product delivers after payment.
+	 */
+	async setDigitalAsset(id: number, assetId: number | null): Promise<void> {
+		await db.update(products).set({ digitalAssetId: assetId }).where(eq(products.id, id));
+	}
+
+	/**
 	 * Soft delete a product
 	 */
 	async delete(id: number): Promise<boolean> {

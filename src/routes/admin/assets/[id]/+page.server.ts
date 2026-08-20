@@ -1,5 +1,5 @@
 import type { PageServerLoad, Actions } from "./$types";
-import { assetService } from "$lib/server/services/assets.js";
+import { assetService, assetDeleteError } from "$lib/server/services/assets.js";
 import { translationService } from "$lib/server/services/translations.js";
 import { TRANSLATION_LANGUAGES } from "$lib/config/languages.js";
 import { dbError } from "$lib/server/db-error.js";
@@ -67,7 +67,7 @@ export const actions: Actions = {
 			throw redirect(303, "/admin/assets");
 		} catch (e) {
 			if (isRedirect(e)) throw e;
-			return fail(500, { error: dbError(e, "Failed to delete asset") });
+			return fail(400, { error: assetDeleteError(e, "Failed to delete asset") });
 		}
 	}
 };

@@ -4,13 +4,16 @@
  * skipped and logged instead of failing the calling flow.
  */
 import { Resend } from "resend";
+import { dev } from "$app/environment";
 import { env } from "$env/dynamic/private";
 
 /**
- * Send one email. Returns { sent: false } when RESEND_API_KEY is missing
- * (the full content is logged so local dev can read OTPs etc. from the
- * console). Throws when Resend accepts the request but reports an error, so
- * outbox handlers get their retry.
+ * Send one email. Returns { sent: false } when RESEND_API_KEY is missing. In
+ * development the full content is logged so OTPs etc. can be read from the
+ * console; in production only the failure is logged — message bodies carry
+ * one-time codes and personal data and must never reach the logs. Throws when
+ * Resend accepts the request but reports an error, so outbox handlers get
+ * their retry.
  */
 export async function sendEmail(
 	to: string,
@@ -20,7 +23,11 @@ export async function sendEmail(
 	sent: boolean;
 }> {
 	if (!env.RESEND_API_KEY) {
-		console.log(`[email] RESEND_API_KEY not set — skipping "${subject}" to ${to}\n${html}`);
+		if (dev) {
+			console.log(`[email] RESEND_API_KEY not set — skipping "${subject}" to ${to}\n${html}`);
+		} else {
+			console.error(`[email] RESEND_API_KEY is not set — "${subject}" was not sent`);
+		}
 		return { sent: false };
 	}
 	const resend = new Resend(env.RESEND_API_KEY);

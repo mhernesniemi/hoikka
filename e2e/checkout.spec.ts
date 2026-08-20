@@ -1,11 +1,10 @@
 import { test, expect } from "@playwright/test";
+import { gotoBuyableProduct } from "./helpers.js";
 
 test.describe("Full checkout flow", () => {
 	test("guest completes a purchase with mock payment", async ({ page, context }) => {
 		// Add a product to the cart
-		await page.goto("/products");
-		await page.locator('a[href^="/products/"]').first().click();
-		await page.waitForSelector('button:has-text("Add to Cart")', { timeout: 10000 });
+		await gotoBuyableProduct(page);
 		await page.click('button:has-text("Add to Cart")');
 		await expect(page.locator('a[href="/checkout"]')).toBeVisible({ timeout: 5000 });
 

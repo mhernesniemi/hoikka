@@ -1,0 +1,1 @@
+ALTER TABLE `order_lines` ADD `fulfillment_type` text;

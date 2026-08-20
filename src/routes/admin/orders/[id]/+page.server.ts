@@ -1,5 +1,6 @@
 import { orderService } from "$lib/server/services/orders.js";
 import { shippingService, paymentService } from "$lib/server/services/index.js";
+import { digitalDeliveryService } from "$lib/server/services/digitalDelivery.js";
 import { emitEvent } from "$lib/server/integrations/events.js";
 import { error, fail } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
@@ -24,9 +25,8 @@ export const load: PageServerLoad = async ({ params }) => {
 		shippingMethod = await shippingService.getMethodById(orderShipping.shippingMethodId);
 	}
 
-	// Load payment info
-	const orderPayments = await paymentService.getByOrderId(id);
-	const payment = orderPayments[0] || null;
+	// Load payment info — the one that carries the money, not a superseded row
+	const payment = await paymentService.getPrimaryForOrder(id);
 	let paymentMethod = null;
 	if (payment) {
 		paymentMethod = await paymentService.getMethodById(payment.paymentMethodId);
@@ -103,13 +103,43 @@ export const actions: Actions = {
 		const id = Number(params.id);
 
 		try {
-			const orderPayments = await paymentService.getByOrderId(id);
-			if (orderPayments.length === 0) {
+			const payment = await paymentService.getPrimaryForOrder(id);
+			if (!payment) {
 				return fail(404, { error: "No payment found for this order" });
 			}
 
-			const status = await paymentService.confirmPayment(orderPayments[0].id);
-			return { success: true, paymentStatus: status };
+			const verification = await paymentService.confirmPayment(payment.id);
+			return { success: true, paymentStatus: verification.status };
+		} catch (e) {
+			return fail(400, { error: (e as Error).message });
+		}
+	},
+
+	/**
+	 * Re-run digital fulfilment for an order the delivery failed on. The grants
+	 * are recreated if needed and the delivery email is queued again.
+	 */
+	retryFulfillment: async ({ params }) => {
+		const id = Number(params.id);
+
+		try {
+			const grants = await digitalDeliveryService.createGrants(id);
+
+			// Set or clear on the same path: a retry that finally succeeds has to
+			// take the alert down, whether or not it had to create anything.
+			await orderService.setFulfillmentIssue(
+				id,
+				"downloads",
+				grants.errors.length > 0 ? grants.errors.join("; ") : null
+			);
+			if (grants.errors.length > 0) {
+				return fail(400, { error: grants.errors.join("; ") });
+			}
+
+			if (grants.granted > 0) {
+				await emitEvent("order.digital_delivery", { orderId: id }, { maxAttempts: 8 });
+			}
+			return { success: true };
 		} catch (e) {
 			return fail(400, { error: (e as Error).message });
 		}
@@ -121,16 +151,13 @@ export const actions: Actions = {
 		const amount = formData.get("amount")?.toString();
 
 		try {
-			const orderPayments = await paymentService.getByOrderId(id);
-			if (orderPayments.length === 0) {
+			const payment = await paymentService.getPrimaryForOrder(id);
+			if (!payment) {
 				return fail(404, { error: "No payment found for this order" });
 			}
 
 			const refundAmount = amount ? parseInt(amount) : undefined;
-			const refundInfo = await paymentService.refundPayment(
-				orderPayments[0].id,
-				refundAmount
-			);
+			const refundInfo = await paymentService.refundPayment(payment.id, refundAmount);
 			return { success: true, refundInfo };
 		} catch (e) {
 			return fail(400, { error: (e as Error).message });

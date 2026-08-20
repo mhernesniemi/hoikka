@@ -13,6 +13,7 @@
  * - Full-text search (previously tsvector + `product_search` table) is now an FTS5
  *   virtual table created via a raw SQL migration — not part of this file.
  */
+import { sql } from "drizzle-orm";
 import {
 	sqliteTable,
 	text,
@@ -125,6 +126,10 @@ export const products = sqliteTable(
 			.notNull(),
 		taxCode: text("tax_code").default("standard").notNull(),
 		featuredAssetId: integer("featured_asset_id"),
+		// The file a "digital" product delivers after payment. Without it a
+		// digital product cannot be fulfilled — checkout completion records a
+		// fulfilment error on the order instead of silently sending nothing.
+		digitalAssetId: integer("digital_asset_id"),
 		deletedAt: ts("deleted_at"),
 		createdAt: now(),
 		updatedAt: updatedNow()
@@ -511,6 +516,23 @@ export const orders = sqliteTable(
 		shippingPostalCode: text("shipping_postal_code"),
 		shippingCountry: text("shipping_country"),
 		customerEmail: text("customer_email"),
+		// Set when post-payment fulfilment could not be carried out (e.g. a
+		// digital product with no file, or delivery email retries exhausted).
+		// Surfaced on the admin order page so someone can act on it.
+		fulfillmentError: text("fulfillment_error"),
+		// Fulfilment is its own idempotent step, separate from "paid": it is
+		// stamped only once shipment, download grants and the outbox events are
+		// all durably recorded, so a crash between payment and fulfilment is
+		// retried instead of being reported as done.
+		fulfilledAt: ts("fulfilled_at"),
+		// Lease held while fulfilment is running, so a webhook and a browser
+		// arriving together cannot both create shipments and enqueue the same
+		// events. A crash mid-fulfilment simply lets the lease expire.
+		fulfillmentClaimedAt: ts("fulfillment_claimed_at"),
+		// Bumped whenever the order's money changes. Gateways get an
+		// idempotency key derived from it, so two concurrent "start payment"
+		// requests for the same order and total collapse into one intent.
+		paymentRevision: integer("payment_revision").default(0).notNull(),
 		orderPlacedAt: ts("order_placed_at"),
 		createdAt: now(),
 		updatedAt: updatedNow()
@@ -520,6 +542,8 @@ export const orders = sqliteTable(
 		index("orders_state_idx").on(table.state),
 		index("orders_placed_at_idx").on(table.orderPlacedAt),
 		index("orders_active_idx").on(table.active),
+		// Drives the abandoned-draft sweep
+		index("orders_draft_sweep_idx").on(table.state, table.active, table.updatedAt),
 		index("orders_checkout_token_idx").on(table.checkoutToken)
 	]
 );
@@ -546,6 +570,25 @@ export const orderLines = sqliteTable(
 		productName: text("product_name").notNull(),
 		variantName: text("variant_name"),
 		sku: text("sku").notNull(),
+		// The deliverable this line was sold with, pinned when the payment is
+		// created. Prices and names are snapshotted onto the line for the same
+		// reason: what the customer bought must not change under them because
+		// somebody edited the product afterwards. Reading the product's *current*
+		// file at fulfilment time made that a race — detach it after the
+		// pre-payment check and the buyer is charged for nothing.
+		//
+		// Deliberately not a foreign key. Adding one to an existing SQLite
+		// column forces a table rebuild, and dropping order_lines cascades into
+		// stock_reservations and digital_downloads — on D1 that silently
+		// destroys them, because foreign keys cannot be turned off inside a
+		// migration there. The same guarantee is enforced by the
+		// assets_not_deletable_while_sold trigger, which needs no rebuild.
+		digitalAssetId: integer("digital_asset_id"),
+		// How this line was sold, pinned alongside the deliverable. Fulfilment
+		// must not consult products.type: flip a product from physical to
+		// digital after the sale and the shipment is silently skipped, with no
+		// download to replace it because nothing was ever pinned.
+		fulfillmentType: text("fulfillment_type", { enum: ["physical", "digital"] }),
 		createdAt: now()
 	},
 	(table) => [
@@ -616,8 +659,13 @@ export const payments = sqliteTable(
 			.notNull(),
 		method: text("method").notNull(),
 		amount: integer("amount").notNull(),
+		// "declined" is the gateway's verdict on an attempt (the shopper can try
+		// another card on the same intent); "cancelled" is ours — the payment
+		// was superseded and must never be honoured. Keeping them apart is what
+		// lets a retried card succeed while a voided intent that somehow
+		// captures is flagged as a charge needing a refund.
 		state: text("state", {
-			enum: ["pending", "authorized", "settled", "declined", "refunded"]
+			enum: ["pending", "authorized", "settled", "declined", "cancelled", "refunded"]
 		})
 			.notNull()
 			.default("pending"),
@@ -631,7 +679,71 @@ export const payments = sqliteTable(
 		index("payments_order_idx").on(table.orderId),
 		index("payments_method_idx").on(table.paymentMethodId),
 		index("payments_state_idx").on(table.state),
-		index("payments_transaction_idx").on(table.transactionId)
+		index("payments_transaction_idx").on(table.transactionId),
+		// At most one chargeable payment per order at a time. Two concurrent
+		// checkout requests would otherwise each create their own intent and
+		// both could settle; the loser of this index reuses the winner's.
+		uniqueIndex("payments_one_active_per_order_idx")
+			.on(table.orderId)
+			.where(sql`${table.state} in ('pending', 'authorized')`)
+	]
+);
+
+// ============================================================================
+// RATE LIMITING
+// ============================================================================
+
+/**
+ * Fixed-window counters for the few endpoints that write to the database
+ * before anyone is authenticated. Kept in the database rather than in memory
+ * so the limit holds across Worker isolates and Node processes alike.
+ */
+export const rateLimits = sqliteTable(
+	"rate_limits",
+	{
+		key: text("key").primaryKey(),
+		windowStart: ts("window_start").notNull(),
+		count: integer("count").default(0).notNull()
+	},
+	(table) => [index("rate_limits_window_idx").on(table.windowStart)]
+);
+
+// ============================================================================
+// DIGITAL FULFILMENT
+// ============================================================================
+
+/**
+ * One download grant per digital order line. The token is the capability:
+ * knowing it (and nothing else) authorises the download, so it is random,
+ * unguessable, expiring and use-limited. Nothing about the file itself is ever
+ * exposed to the buyer — the download route resolves the asset server-side.
+ */
+export const digitalDownloads = sqliteTable(
+	"digital_downloads",
+	{
+		id: pk(),
+		orderId: integer("order_id")
+			.references(() => orders.id, { onDelete: "cascade" })
+			.notNull(),
+		orderLineId: integer("order_line_id")
+			.references(() => orderLines.id, { onDelete: "cascade" })
+			.notNull(),
+		// restrict, not cascade: deleting an asset must never silently revoke a
+		// download somebody paid for. assetService.delete refuses first, this
+		// is the backstop.
+		assetId: integer("asset_id")
+			.references(() => assets.id, { onDelete: "restrict" })
+			.notNull(),
+		token: text("token").notNull().unique(),
+		expiresAt: ts("expires_at").notNull(),
+		downloadCount: integer("download_count").default(0).notNull(),
+		maxDownloads: integer("max_downloads").default(10).notNull(),
+		createdAt: now()
+	},
+	(table) => [
+		uniqueIndex("digital_downloads_token_idx").on(table.token),
+		uniqueIndex("digital_downloads_line_idx").on(table.orderLineId),
+		index("digital_downloads_order_idx").on(table.orderId)
 	]
 );
 
@@ -725,6 +837,40 @@ export const promotions = sqliteTable(
 	(table) => [
 		index("promotions_code_idx").on(table.code),
 		index("promotions_enabled_idx").on(table.enabled)
+	]
+);
+
+/**
+ * One row per (promotion, customer, order) that actually settled.
+ *
+ * Counting past orders to enforce `usageLimitPerCustomer` is a read, and two
+ * concurrent checkouts for the same account both pass it. Writing the usage as
+ * a row inside the paid transaction turns the limit into something the
+ * database enforces (see the trigger in migration 0009) rather than something
+ * a query hopes is still true.
+ */
+export const promotionUsages = sqliteTable(
+	"promotion_usages",
+	{
+		id: pk(),
+		promotionId: integer("promotion_id")
+			.references(() => promotions.id, { onDelete: "cascade" })
+			.notNull(),
+		customerId: integer("customer_id")
+			.references(() => customers.id, { onDelete: "cascade" })
+			.notNull(),
+		orderId: integer("order_id")
+			.references(() => orders.id, { onDelete: "cascade" })
+			.notNull(),
+		createdAt: now()
+	},
+	(table) => [
+		uniqueIndex("promotion_usages_unique_idx").on(
+			table.promotionId,
+			table.customerId,
+			table.orderId
+		),
+		index("promotion_usages_customer_idx").on(table.promotionId, table.customerId)
 	]
 );
 

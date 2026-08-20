@@ -18,6 +18,8 @@ function backend(): StorageBackend {
 }
 
 export const upload: StorageBackend["upload"] = (...args) => backend().upload(...args);
+export const uploadStream: StorageBackend["uploadStream"] = (...args) =>
+	backend().uploadStream(...args);
 export const list: StorageBackend["list"] = (...args) => backend().list(...args);
 export const remove: StorageBackend["remove"] = (...args) => backend().remove(...args);
 export const get: StorageBackend["get"] = (...args) => backend().get(...args);

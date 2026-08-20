@@ -8,13 +8,14 @@
  * Orders with `active=true, state=created` are draft checkouts, identified by
  * the `checkout_token` cookie; they become real orders at `payment_pending`.
  */
-import { eq, and, desc, sql, inArray, exists } from "drizzle-orm";
+import { eq, and, desc, lt, sql, inArray, exists } from "drizzle-orm";
 import { db, atomic } from "../db/index.js";
 import { paginationOf, resolveSort } from "../pagination.js";
 import {
 	orders,
 	orderLines,
 	orderPromotions,
+	promotionUsages,
 	productVariants,
 	promotions,
 	orderShipping,
@@ -29,6 +30,7 @@ import type {
 	OrderState,
 	PaginatedResult
 } from "$lib/types.js";
+import type { BatchItem } from "drizzle-orm/batch";
 import { nanoid } from "nanoid";
 import { reservationService } from "./reservations.js";
 import { taxService, taxRateFromDb, taxRateToDb } from "./tax.js";
@@ -36,6 +38,49 @@ import { STATE_TRANSITIONS, isValidTransition, calculateOrderTotals } from "./or
 import { promotionService } from "./promotions.js";
 import { calculateDiscount } from "./promotion-utils.js";
 import { getCartView } from "./cart.js";
+
+// Abandoned checkout drafts are swept after this long. Long enough that a
+// shopper who wanders off mid-checkout still finds their cart, short enough
+// that unauthenticated draft creation can't grow the table without bound.
+const STALE_DRAFT_TTL_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * "Only while the order is still in this state." Used to hang every ledger
+ * write of a state transition off the transition itself, so they commit
+ * together or not at all.
+ */
+/** Which part of fulfilment a recorded problem belongs to. */
+export type FulfillmentIssueSource = "settlement" | "shipment" | "downloads" | "delivery-email";
+
+const ISSUE_LABELS: Record<FulfillmentIssueSource, string> = {
+	settlement: "Settlement",
+	shipment: "Shipment",
+	downloads: "Downloads",
+	"delivery-email": "Delivery email"
+};
+
+/**
+ * Merge one source's problem into the stored set, as `Label: message` lines.
+ * Returns null when nothing is left to report.
+ */
+export function mergeFulfillmentIssue(
+	current: string | null,
+	source: FulfillmentIssueSource,
+	message: string | null
+): string | null {
+	const prefix = `${ISSUE_LABELS[source]}: `;
+	const kept = (current ?? "")
+		.split("\n")
+		.map((line) => line.trim())
+		.filter((line) => line.length > 0 && !line.startsWith(prefix));
+
+	if (message) kept.push(`${prefix}${message}`);
+	return kept.length > 0 ? kept.join("\n") : null;
+}
+
+function stateGuard(guard: { orderId: number; state: OrderState }) {
+	return sql`exists (select 1 from ${orders} where ${orders.id} = ${guard.orderId} and ${orders.state} = ${guard.state})`;
+}
 import { bumpCatalogVersion } from "$lib/server/edge-cache.js";
 
 export class OrderService {
@@ -82,6 +127,39 @@ export class OrderService {
 	}
 
 	/**
+	 * The order a checkout token points at, whatever state it reached. Unlike
+	 * getDraftByToken this still finds an order that has already been paid —
+	 * which is exactly the case when a payment webhook completed the purchase
+	 * while the shopper's browser was still finishing its own request.
+	 */
+	async getByCheckoutToken(
+		checkoutToken: string | null | undefined
+	): Promise<OrderWithRelations | null> {
+		if (!checkoutToken) return null;
+
+		const [order] = await db
+			.select()
+			.from(orders)
+			.where(eq(orders.checkoutToken, checkoutToken));
+
+		if (!order) return null;
+		return this.loadOrderRelations(order);
+	}
+
+	/** Cheap existence check for a draft token — no relations loaded. */
+	async draftExists(checkoutToken: string | null | undefined): Promise<boolean> {
+		if (!checkoutToken) return false;
+
+		const [order] = await db
+			.select({ id: orders.id })
+			.from(orders)
+			.where(and(eq(orders.checkoutToken, checkoutToken), eq(orders.active, true)))
+			.limit(1);
+
+		return !!order;
+	}
+
+	/**
 	 * Start (or resume) a checkout from cookie cart lines.
 	 *
 	 * This is where the cart first touches the database: it creates or reuses a
@@ -102,8 +180,10 @@ export class OrderService {
 		isNew: boolean;
 		stockErrors: string[];
 	}> {
-		// Opportunistic cleanup of expired reservations — this replaces the old
-		// scheduled background job.
+		// Expired reservations must go before stock is read, so this one stays
+		// on the request path. The abandoned-draft sweep does not — it runs on
+		// the scheduled drain (see integrations/scheduler.ts), so a checkout
+		// never pays for someone else's housekeeping.
 		await reservationService.deleteExpired();
 
 		let [draft] = opts.checkoutToken
@@ -519,58 +599,77 @@ export class OrderService {
 			}
 		}
 
-		// Compare-and-swap on the current state: two concurrent completions
-		// (e.g. a payment webhook racing the browser return) both pass the
-		// isValidTransition check above, but only one may win — otherwise stock
-		// is deducted and fulfillment runs twice.
-		const [updated] = await db
-			.update(orders)
-			.set(updateData)
-			.where(and(eq(orders.id, orderId), eq(orders.state, currentState)))
-			.returning();
-		if (!updated) {
-			throw new Error(
-				`Order ${orderId} was transitioned concurrently — aborting ${currentState} → ${newState}`
-			);
-		}
+		// The state change and the ledger it implies — inventory, promotion usage
+		// — go in as ONE transaction. Every ledger statement is guarded on the
+		// order still being in `currentState`, and the state change itself comes
+		// last, so within the transaction all the guards still see the old
+		// state. Two concurrent completions (a payment webhook racing the
+		// browser return) therefore resolve cleanly: the loser's guards all fail
+		// and it writes nothing at all, rather than deducting stock twice or —
+		// as before — committing "paid" and then crashing before the stock ever
+		// moved.
+		const guard = { orderId, state: currentState };
+		const ledger: BatchItem<"sqlite">[] = [];
 
-		// Update promotion usage counts when order is paid
 		if (newState === "paid") {
 			const appliedPromotions = await db
 				.select()
 				.from(orderPromotions)
 				.where(eq(orderPromotions.orderId, orderId));
 
-			// Promotion usage bumps and stock decrements happen atomically so a
-			// mid-sequence failure can't leave an order paid with stock intact.
-			// If the batch itself fails, compensate by reverting the CAS above —
-			// an order must never stay "paid" with uncommitted inventory.
-			try {
-				await atomic([
-					...appliedPromotions.map((op) =>
-						db
-							.update(promotions)
-							.set({ usageCount: sql`${promotions.usageCount} + 1` })
-							.where(eq(promotions.id, op.promotionId))
-					),
-					...(await this.stockAdjustments(order.lines, -1))
-				]);
-			} catch (e) {
-				await db.update(orders).set({ state: currentState }).where(eq(orders.id, orderId));
-				throw e;
-			}
-
-			// Release reservations since stock has been permanently deducted
-			await reservationService.releaseForOrder(orderId);
+			ledger.push(
+				...appliedPromotions.map((op) =>
+					db
+						.update(promotions)
+						.set({ usageCount: sql`${promotions.usageCount} + 1` })
+						.where(and(eq(promotions.id, op.promotionId), stateGuard(guard)))
+				),
+				// The per-customer ledger row, written in the same transaction so
+				// the limit is enforced by the database rather than by a count
+				// two concurrent checkouts can both read as "one left".
+				...(order.customerId
+					? appliedPromotions.map((op) =>
+							db
+								.insert(promotionUsages)
+								.values({
+									promotionId: op.promotionId,
+									customerId: order.customerId!,
+									orderId
+								})
+								.onConflictDoNothing()
+						)
+					: []),
+				...(await this.stockAdjustments(order.lines, -1, guard))
+			);
 		}
 
-		// Handle cancellation
-		if (newState === "cancelled") {
-			// If order was paid, restore stock for tracked variants
-			if (currentState === "paid" || currentState === "shipped") {
-				await atomic(await this.stockAdjustments(order.lines, 1));
-			}
-			// Release any remaining reservations
+		// Restore stock when a paid/shipped order is cancelled
+		if (newState === "cancelled" && (currentState === "paid" || currentState === "shipped")) {
+			ledger.push(...(await this.stockAdjustments(order.lines, 1, guard)));
+		}
+
+		await atomic([
+			...ledger,
+			db
+				.update(orders)
+				.set(updateData)
+				.where(and(eq(orders.id, orderId), eq(orders.state, currentState)))
+		]);
+
+		// atomic() cannot report which statements matched, so confirm the
+		// outcome afterwards. Losing the race is not an error the caller has to
+		// undo — the winner did the same work — but failing to arrive at the
+		// target state is.
+		const updated = await this.getById(orderId);
+		if (updated?.state !== newState) {
+			throw new Error(
+				`Order ${orderId} was transitioned concurrently — aborting ${currentState} → ${newState}`
+			);
+		}
+
+		if (newState === "paid" || newState === "cancelled") {
+			// Reservations have served their purpose: stock is either
+			// permanently deducted or given back.
 			await reservationService.releaseForOrder(orderId);
 		}
 
@@ -626,6 +725,143 @@ export class OrderService {
 	}
 
 	/**
+	 * Delete checkout drafts nobody came back to. Only untouched "created"
+	 * carts are removed; anything that reached payment_pending or beyond is a
+	 * real order and is never swept. Child rows (lines, reservations, payments,
+	 * shipping, promotions) cascade.
+	 *
+	 * Runs from the scheduled drain, not from checkout. Backed by
+	 * `orders_draft_sweep_idx` on (state, active, updatedAt).
+	 */
+	async deleteStaleDrafts(olderThanMs = STALE_DRAFT_TTL_MS, limit = 500): Promise<number> {
+		const cutoff = new Date(Date.now() - olderThanMs);
+
+		// Bounded per run: a backlog is worked off over successive ticks rather
+		// than in one statement that could hold the database for seconds.
+		const stale = await db
+			.select({ id: orders.id })
+			.from(orders)
+			.where(
+				and(
+					eq(orders.state, "created"),
+					eq(orders.active, true),
+					lt(orders.updatedAt, cutoff)
+				)
+			)
+			.limit(limit);
+
+		if (stale.length === 0) return 0;
+
+		const deleted = await db
+			.delete(orders)
+			.where(
+				inArray(
+					orders.id,
+					stale.map((o) => o.id)
+				)
+			)
+			.returning({ id: orders.id });
+
+		if (deleted.length > 0) {
+			console.log("[order] stale_drafts_deleted", { count: deleted.length });
+		}
+		return deleted.length;
+	}
+
+	/**
+	 * Re-check every promotion applied to an order and drop the ones that no
+	 * longer qualify — disabled since, expired, or their usage limit reached
+	 * while the shopper was still in checkout. A code applied ten minutes ago is
+	 * not a right to that discount now, and the total has to reflect what the
+	 * store will actually honour *before* a payment is created for it.
+	 *
+	 * Returns the titles of anything removed, so checkout can say why the total
+	 * moved.
+	 */
+	async revalidatePromotions(orderId: number, customerId?: number | null): Promise<string[]> {
+		const order = await this.getById(orderId);
+		if (!order) return [];
+
+		const applied = await db
+			.select()
+			.from(orderPromotions)
+			.where(eq(orderPromotions.orderId, orderId));
+		if (applied.length === 0) return [];
+
+		const removed: string[] = [];
+
+		for (const op of applied) {
+			const [promotion] = await db
+				.select()
+				.from(promotions)
+				.where(eq(promotions.id, op.promotionId));
+
+			const stillValid =
+				promotion &&
+				promotion.enabled &&
+				!(promotion.startsAt && promotion.startsAt > new Date()) &&
+				!(promotion.endsAt && promotion.endsAt < new Date()) &&
+				!(promotion.usageLimit !== null && promotion.usageCount >= promotion.usageLimit) &&
+				!(await this.exceedsPerCustomerLimit(promotion, customerId));
+
+			if (stillValid) continue;
+
+			await db
+				.delete(orderPromotions)
+				.where(
+					and(
+						eq(orderPromotions.orderId, orderId),
+						eq(orderPromotions.promotionId, op.promotionId)
+					)
+				);
+			removed.push(promotion?.title || promotion?.code || "A promotion");
+		}
+
+		if (removed.length > 0) {
+			console.log("[order] promotions_revalidated", { orderId, removed });
+			await this.updateTotals(orderId);
+		}
+
+		return removed;
+	}
+
+	private async exceedsPerCustomerLimit(
+		promotion: { id: number; usageLimitPerCustomer: number | null },
+		customerId?: number | null
+	): Promise<boolean> {
+		if (!promotion.usageLimitPerCustomer || !customerId) return false;
+		const used = await promotionService.getCustomerUsageCount(promotion.id, customerId);
+		return used >= promotion.usageLimitPerCustomer;
+	}
+
+	/**
+	 * Record (or clear) one post-payment fulfilment problem.
+	 *
+	 * Several independent things can go wrong after the money is taken — the
+	 * shipment, a missing digital file, the delivery email — and each is fixed
+	 * (or not) on its own. They are therefore stored as one owned line per
+	 * source rather than as a single string, so a delivery email that finally
+	 * goes through cannot erase the alert about a file that is still missing.
+	 * Passing `null` clears only that source's line.
+	 */
+	async setFulfillmentIssue(
+		orderId: number,
+		source: FulfillmentIssueSource,
+		message: string | null
+	): Promise<void> {
+		const [order] = await db
+			.select({ fulfillmentError: orders.fulfillmentError })
+			.from(orders)
+			.where(eq(orders.id, orderId));
+		if (!order) return;
+
+		const next = mergeFulfillmentIssue(order.fulfillmentError, source, message);
+		if (next === order.fulfillmentError) return;
+
+		await db.update(orders).set({ fulfillmentError: next }).where(eq(orders.id, orderId));
+	}
+
+	/**
 	 * Validate stock availability for all items in the order
 	 * Uses reservation system to check available stock
 	 */
@@ -664,7 +900,9 @@ export class OrderService {
 	 */
 	private async stockAdjustments(
 		lines: { variantId: number; quantity: number }[],
-		direction: 1 | -1
+		direction: 1 | -1,
+		/** Only apply while the order is still in this state (see transitionState). */
+		guard?: { orderId: number; state: OrderState }
 	) {
 		if (lines.length === 0) return [];
 		const tracked = await db
@@ -686,7 +924,11 @@ export class OrderService {
 				db
 					.update(productVariants)
 					.set({ stock: sql`${productVariants.stock} + ${direction * line.quantity}` })
-					.where(eq(productVariants.id, line.variantId))
+					.where(
+						guard
+							? and(eq(productVariants.id, line.variantId), stateGuard(guard))
+							: eq(productVariants.id, line.variantId)
+					)
 			);
 	}
 
@@ -979,6 +1221,16 @@ export class OrderService {
 			isTaxExempt
 		});
 
+		// The revision only moves when the money actually moves. Payment
+		// providers key their idempotency on it, so bumping it needlessly would
+		// hand out a new intent on every recalculation.
+		const moneyChanged =
+			!order ||
+			order.subtotal !== totals.subtotal ||
+			order.discount !== totals.discount ||
+			order.shipping !== totals.shipping ||
+			order.total !== totals.total;
+
 		await db
 			.update(orders)
 			.set({
@@ -988,7 +1240,8 @@ export class OrderService {
 				total: totals.total,
 				taxTotal: totals.taxTotal,
 				totalNet: totals.totalNet,
-				isTaxExempt
+				isTaxExempt,
+				...(moneyChanged ? { paymentRevision: sql`${orders.paymentRevision} + 1` } : {})
 			})
 			.where(eq(orders.id, orderId));
 	}

@@ -1,0 +1,1 @@
+ALTER TABLE `orders` ADD `fulfillment_claimed_at` integer;

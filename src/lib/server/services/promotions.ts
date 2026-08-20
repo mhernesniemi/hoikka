@@ -9,8 +9,7 @@ import {
 	promotions,
 	promotionProducts,
 	promotionCollections,
-	orderPromotions,
-	orders,
+	promotionUsages,
 	productTranslations,
 	collectionTranslations,
 	customerGroupMembers
@@ -441,15 +440,16 @@ export class PromotionService {
 	 * Get how many completed orders a customer has used a promotion on
 	 */
 	async getCustomerUsageCount(promotionId: number, customerId: number): Promise<number> {
+		// Read the same ledger the database enforces the limit against, so the
+		// number shown in checkout and the number the trigger counts can never
+		// drift apart.
 		const result = await db
 			.select({ count: sql<number>`count(*)` })
-			.from(orderPromotions)
-			.innerJoin(orders, eq(orderPromotions.orderId, orders.id))
+			.from(promotionUsages)
 			.where(
 				and(
-					eq(orderPromotions.promotionId, promotionId),
-					eq(orders.customerId, customerId),
-					eq(orders.active, false)
+					eq(promotionUsages.promotionId, promotionId),
+					eq(promotionUsages.customerId, customerId)
 				)
 			);
 

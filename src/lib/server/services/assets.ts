@@ -5,13 +5,17 @@
 import { db } from "$lib/server/db/index.js";
 import {
 	assets,
+	digitalDownloads,
+	orderLines,
 	productAssets,
 	products,
 	productVariants,
 	collections
 } from "$lib/server/db/schema.js";
-import { and, eq, asc, desc, isNotNull, isNull, notInArray } from "drizzle-orm";
+import { and, eq, asc, desc, isNotNull, isNull, notInArray, notLike } from "drizzle-orm";
 import { remove as removeFile } from "$lib/server/storage/index.js";
+import { dbError } from "$lib/server/db-error.js";
+import { PRIVATE_PREFIX, PUBLIC_PREFIX } from "$lib/server/storage/types.js";
 
 const MIME_TYPES: Record<string, string> = {
 	".jpg": "image/jpeg",
@@ -20,12 +24,36 @@ const MIME_TYPES: Record<string, string> = {
 	".gif": "image/gif",
 	".webp": "image/webp",
 	".svg": "image/svg+xml",
-	".avif": "image/avif"
+	".avif": "image/avif",
+	// Deliverable files for digital products
+	".pdf": "application/pdf",
+	".epub": "application/epub+zip",
+	".zip": "application/zip",
+	".mp3": "audio/mpeg",
+	".wav": "audio/wav",
+	".mp4": "video/mp4",
+	".txt": "text/plain",
+	".csv": "text/csv"
 };
 
-function mimeFromFilename(filename: string): string {
+const ASSET_TYPES: Record<string, "image" | "video" | "document" | "other"> = {
+	"application/pdf": "document",
+	"application/epub+zip": "document",
+	"text/plain": "document",
+	"text/csv": "document",
+	"video/mp4": "video"
+};
+
+function mimeFromFilename(filename: string, fallback = "image/jpeg"): string {
 	const ext = filename.slice(filename.lastIndexOf(".")).toLowerCase();
-	return MIME_TYPES[ext] ?? "image/jpeg";
+	return MIME_TYPES[ext] ?? fallback;
+}
+
+function assetTypeFor(mimeType: string): "image" | "video" | "document" | "other" {
+	if (mimeType.startsWith("image/")) return "image";
+	if (mimeType.startsWith("video/")) return "video";
+	if (mimeType.startsWith("audio/")) return "other";
+	return ASSET_TYPES[mimeType] ?? "other";
 }
 
 export interface CreateAssetInput {
@@ -34,6 +62,8 @@ export interface CreateAssetInput {
 	width?: number;
 	height?: number;
 	fileSize?: number;
+	/** Explicit MIME type for non-image files (digital product deliverables). */
+	mimeType?: string;
 }
 
 /** Extract the original filename from a storage URL.
@@ -49,7 +79,7 @@ class AssetService {
 	 * List all assets ordered by creation date (newest first)
 	 */
 	async list() {
-		return db.select().from(assets).orderBy(desc(assets.createdAt));
+		return db.select().from(assets).where(this.notPrivate()).orderBy(desc(assets.createdAt));
 	}
 
 	/**
@@ -59,6 +89,14 @@ class AssetService {
 		return db.query.assets.findFirst({
 			where: eq(assets.id, id)
 		});
+	}
+
+	/**
+	 * Digital deliverables are not part of the image library — they are picked
+	 * on the product page, never browsed as media.
+	 */
+	private notPrivate() {
+		return notLike(assets.source, `${PUBLIC_PREFIX}/${PRIVATE_PREFIX}/%`);
 	}
 
 	/**
@@ -96,12 +134,13 @@ class AssetService {
 	 * Create asset record after successful upload
 	 */
 	async create(input: CreateAssetInput) {
+		const mimeType = input.mimeType ?? mimeFromFilename(input.name);
 		const [asset] = await db
 			.insert(assets)
 			.values({
 				name: input.name,
-				type: "image",
-				mimeType: mimeFromFilename(input.name),
+				type: assetTypeFor(mimeType),
+				mimeType,
 				source: input.url,
 				width: input.width ?? 0,
 				height: input.height ?? 0,
@@ -248,7 +287,7 @@ class AssetService {
 		const backfilled = await db
 			.select({ id: assets.id, name: assets.name, source: assets.source })
 			.from(assets)
-			.where(eq(assets.width, 0));
+			.where(and(eq(assets.width, 0), this.notPrivate()));
 		for (const asset of backfilled) {
 			if (!asset.source) continue;
 			const correctName = storedFilename(asset.source);
@@ -259,23 +298,88 @@ class AssetService {
 	}
 
 	/**
-	 * Delete asset (removes from Vercel Blob and database)
+	 * Why an asset cannot be deleted, or null when it can be. Deliverables that
+	 * customers have already paid for are not disposable: removing one would
+	 * silently revoke downloads that were sold.
+	 */
+	async deletionBlocker(assetId: number): Promise<string | null> {
+		const [usedByProduct] = await db
+			.select({ id: products.id, name: products.name })
+			.from(products)
+			.where(and(eq(products.digitalAssetId, assetId), isNull(products.deletedAt)))
+			.limit(1);
+		if (usedByProduct) {
+			return `This file is the deliverable for "${usedByProduct.name}". Remove it from the product first.`;
+		}
+
+		// A line that was sold with this file pins it, and that pin is a promise
+		// to a customer whose grant may not exist yet — between pinning and
+		// grant creation, nothing else would stop the file being deleted.
+		const [soldWith] = await db
+			.select({ orderId: orderLines.orderId })
+			.from(orderLines)
+			.where(eq(orderLines.digitalAssetId, assetId))
+			.limit(1);
+		if (soldWith) {
+			return "This file was sold on an existing order and cannot be deleted.";
+		}
+
+		// Every grant blocks, not just the unexpired ones: the foreign key does,
+		// and a blocker that disagreed with it would delete the file from
+		// storage and only then fail on the database, leaving an asset row
+		// pointing at nothing. Spent grants are cleared by housekeeping, after
+		// which the asset becomes deletable on its own.
+		const [grant] = await db
+			.select({ expiresAt: digitalDownloads.expiresAt })
+			.from(digitalDownloads)
+			.where(eq(digitalDownloads.assetId, assetId))
+			.orderBy(desc(digitalDownloads.expiresAt))
+			.limit(1);
+		if (grant) {
+			return grant.expiresAt.getTime() > Date.now()
+				? "Customers still have valid download links to this file."
+				: "This file was sold and its download links have not been cleared yet. It can be deleted once they are.";
+		}
+
+		return null;
+	}
+
+	/**
+	 * Delete asset (removes from storage and database)
 	 */
 	async delete(assetId: number) {
+		const blocker = await this.deletionBlocker(assetId);
+		if (blocker) throw new ProtectedAssetError(blocker);
+
 		const asset = await db.query.assets.findFirst({
 			where: eq(assets.id, assetId)
 		});
+
+		// Database first. If a foreign key still holds the row, the delete
+		// throws and the file is left where it is — the alternative order would
+		// destroy the file and then fail, leaving a record pointing at nothing.
+		await db.delete(assets).where(eq(assets.id, assetId));
 
 		if (asset?.source) {
 			try {
 				await removeFile(asset.source);
 			} catch {
-				// File may already be deleted — continue with DB cleanup
+				// File may already be gone — the record is what mattered
 			}
 		}
-
-		await db.delete(assets).where(eq(assets.id, assetId));
 	}
 }
 
 export const assetService = new AssetService();
+
+/**
+ * Thrown when an asset is still doing a job — a product's deliverable, or a
+ * download somebody paid for. The message is written for the admin, so unlike
+ * a raw database error it is shown as-is.
+ */
+export class ProtectedAssetError extends Error {}
+
+/** Message for an asset-deletion failure: explicit reason, or a DB fallback. */
+export function assetDeleteError(error: unknown, fallback: string): string {
+	return error instanceof ProtectedAssetError ? error.message : dbError(error, fallback);
+}

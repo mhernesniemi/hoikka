@@ -8,7 +8,18 @@
  *
  * Add your ERP sync, PIM push, notification, etc. as handlers here.
  */
-export type EventHandler = (payload: unknown) => Promise<void>;
+/**
+ * Context for one delivery attempt. `idempotencyKey` is stable across retries
+ * of the same event, so a handler can hand it to an external system and have
+ * duplicate deliveries collapse on the far side.
+ */
+export interface EventContext {
+	eventId: number;
+	attempt: number;
+	idempotencyKey: string;
+}
+
+export type EventHandler = (payload: unknown, context: EventContext) => Promise<void>;
 
 const handlers = new Map<string, EventHandler>();
 
@@ -29,14 +40,20 @@ import { env } from "$env/dynamic/private";
 import { db } from "../db/index.js";
 import { orders } from "../db/schema.js";
 import { sendEmail } from "../email.js";
+import { digitalDeliveryService } from "../services/digitalDelivery.js";
+import { orderService } from "../services/orders.js";
 import { signPayload } from "./webhooks.js";
 
-registerHandler("order.paid", async (payload) => {
+registerHandler("order.paid", async (payload, context) => {
 	const url = env.ORDER_WEBHOOK_URL;
 	if (!url) return; // not configured — nothing to do
 
 	const body = JSON.stringify({ event: "order.paid", data: payload });
-	const headers: Record<string, string> = { "content-type": "application/json" };
+	const headers: Record<string, string> = {
+		"content-type": "application/json",
+		// Stable across retries: the receiver can dedupe on it
+		"idempotency-key": context.idempotencyKey
+	};
 	if (env.ORDER_WEBHOOK_SECRET) {
 		headers["x-hoikka-signature"] = await signPayload(body, env.ORDER_WEBHOOK_SECRET);
 	}
@@ -72,4 +89,25 @@ registerHandler("order.shipped", async (payload) => {
 		${trackingNumber ? `<p><strong>Tracking number:</strong> ${trackingNumber}</p>` : ""}
 		`.trim()
 	);
+});
+
+// ── order.digital_delivery: download links for digital products ──────────────
+// Emitted from checkout completion once the download grants exist. Throwing
+// retries with backoff; when the attempts run out the failure is recorded on
+// the order so the admin order page can show it.
+
+registerHandler("order.digital_delivery", async (payload) => {
+	const { orderId } = (payload ?? {}) as { orderId?: number };
+	if (!orderId) return;
+
+	const result = await digitalDeliveryService.deliverOrder(orderId);
+	if (result.errors.length > 0) {
+		await orderService.setFulfillmentIssue(orderId, "delivery-email", result.errors.join("; "));
+		throw new Error(`digital delivery failed: ${result.errors.join("; ")}`);
+	}
+
+	// Delivered — clear this handler's own line only. An order can be waiting on
+	// a missing file for one of its lines while the email for the others goes
+	// out perfectly well, and that alert has to survive.
+	await orderService.setFulfillmentIssue(orderId, "delivery-email", null);
 });

@@ -36,6 +36,69 @@
       "when": 1784213418963,
       "tag": "0004_marvelous_shiva",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1787169567248,
+      "tag": "0005_lying_mentor",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1787172726678,
+      "tag": "0006_sweet_riptide",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1787177721966,
+      "tag": "0007_quick_echo",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1787177722966,
+      "tag": "0008_stock_non_negative",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1787216310035,
+      "tag": "0009_hesitant_thunderbolt",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1787216311035,
+      "tag": "0010_promotion_usage_idempotent",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1787226326723,
+      "tag": "0011_goofy_excalibur",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1787243082796,
+      "tag": "0012_lonely_blockbuster",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1787243083796,
+      "tag": "0013_protect_sold_deliverables",
+      "breakpoints": true
     }
   ]
 }

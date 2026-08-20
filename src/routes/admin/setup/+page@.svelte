@@ -1,7 +1,7 @@
 <script lang="ts">
   import { enhance } from "$app/forms";
 
-  let { form } = $props();
+  let { data, form } = $props();
 
   let isLoading = $state(false);
 </script>
@@ -56,6 +56,23 @@
             class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-gray-500 focus:ring-1 focus:ring-gray-500 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400"
           />
         </div>
+
+        {#if data.requiresSecret}
+          <div class="mt-4">
+            <label for="setupSecret" class="block text-sm font-medium text-gray-700"
+              >Setup secret</label
+            >
+            <input
+              type="password"
+              id="setupSecret"
+              name="setupSecret"
+              required
+              autocomplete="off"
+              class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-gray-500 focus:ring-1 focus:ring-gray-500 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400"
+            />
+            <p class="mt-1 text-xs text-gray-500">The ADMIN_SETUP_SECRET set on the server</p>
+          </div>
+        {/if}
 
         <div class="mt-4">
           <label for="password" class="block text-sm font-medium text-gray-700">Password</label>

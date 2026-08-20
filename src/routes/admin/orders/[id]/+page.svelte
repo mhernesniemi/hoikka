@@ -5,6 +5,7 @@
   import AdminCard from "$lib/components/admin/AdminCard.svelte";
   import ChevronLeft from "@lucide/svelte/icons/chevron-left";
   import ImageIcon from "@lucide/svelte/icons/image";
+  import TriangleAlert from "@lucide/svelte/icons/triangle-alert";
   import type { ActionData, PageData } from "./$types";
   import { formatDateTime, orderStateLabel } from "$lib/utils";
   import { imageUrl } from "$lib/image";
@@ -59,6 +60,23 @@
       {/if}
     </dl>
   </div>
+
+  {#if data.order.fulfillmentError}
+    <div
+      class="border-destructive/40 bg-destructive/10 flex items-start gap-3 rounded-lg border p-4"
+    >
+      <TriangleAlert class="text-destructive mt-0.5 h-5 w-5 shrink-0" />
+      <div class="space-y-2">
+        <p class="text-sm font-medium">This order was paid but not fully fulfilled</p>
+        <p class="text-sm whitespace-pre-line text-foreground-secondary">
+          {data.order.fulfillmentError}
+        </p>
+        <form method="POST" action="?/retryFulfillment">
+          <Button type="submit" variant="outline" size="sm">Retry fulfilment</Button>
+        </form>
+      </div>
+    </div>
+  {/if}
 
   <div class="flex flex-col gap-6 lg:flex-row">
     <!-- Main Content (Left) -->
@@ -242,7 +260,7 @@
                 <Badge
                   variant={data.payment.state === "settled"
                     ? "success"
-                    : data.payment.state === "declined"
+                    : data.payment.state === "declined" || data.payment.state === "cancelled"
                       ? "destructive"
                       : data.payment.state === "refunded"
                         ? "warning"

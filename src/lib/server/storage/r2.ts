@@ -6,9 +6,9 @@ import { getRequestEvent } from "$app/server";
 import {
 	PUBLIC_PREFIX,
 	contentTypeFor,
-	randomId,
 	VARIANT_PREFIX,
 	sanitizeFolder,
+	storageKey,
 	type StorageBackend
 } from "./types.js";
 
@@ -20,16 +20,23 @@ function bucket() {
 
 export const r2Storage: StorageBackend = {
 	async upload(folder, filename, body) {
-		const safeFolder = sanitizeFolder(folder);
-		const dot = filename.lastIndexOf(".");
-		const ext = dot === -1 ? "" : filename.slice(dot);
-		const stem = dot === -1 ? filename : filename.slice(0, dot);
-		const safeName = `${stem.split("/").pop()}-${randomId()}${ext}`;
-		const key = `${safeFolder}/${safeName}`;
+		const { key, name } = storageKey(folder, filename);
 
 		await bucket().put(key, body, {
-			httpMetadata: { contentType: contentTypeFor(safeName) }
+			httpMetadata: { contentType: contentTypeFor(name) }
 		});
+
+		return { url: `${PUBLIC_PREFIX}/${key}`, pathname: key };
+	},
+
+	async uploadStream(folder, filename, body, { contentType }) {
+		const { key } = storageKey(folder, filename);
+
+		// The stream goes straight to R2 — the bytes never land in the isolate.
+		// workers-types' ReadableStream is structurally a superset of the DOM
+		// one, so the cast bridges the two type worlds (same as /uploads does).
+		const stream = body as unknown as Parameters<ReturnType<typeof bucket>["put"]>[1];
+		await bucket().put(key, stream, { httpMetadata: { contentType } });
 
 		return { url: `${PUBLIC_PREFIX}/${key}`, pathname: key };
 	},

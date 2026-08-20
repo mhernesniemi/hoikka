@@ -3,6 +3,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { emailOTP } from "better-auth/plugins";
 import { sveltekitCookies } from "better-auth/svelte-kit";
 import { getRequestEvent } from "$app/server";
+import { dev } from "$app/environment";
 import { env } from "$env/dynamic/private";
 import { db } from "./db/index.js";
 import * as schema from "./db/schema.js";
@@ -65,15 +66,18 @@ function createAuth() {
 					try {
 						({ sent } = await sendEmail(email, subjects[type], html));
 					} catch (error) {
-						console.error(
-							`[auth] Failed to send OTP email to ${email} (${type}):`,
-							error
-						);
+						console.error(`[auth] Failed to send OTP email (${type}):`, error);
 					}
 					// Keep local dev usable: surface the OTP in the console only when
-					// no email actually went out (never log OTPs alongside a real send).
+					// no email actually went out (never log OTPs alongside a real
+					// send). Codes are secrets — outside dev the failure is reported
+					// without the code or the recipient.
 					if (!sent) {
-						console.log(`[auth] OTP for ${email} (${type}): ${otp}`);
+						if (dev) {
+							console.log(`[auth] OTP for ${email} (${type}): ${otp}`);
+						} else {
+							console.error(`[auth] OTP delivery failed (${type}) — code not issued`);
+						}
 					}
 				}
 			}),

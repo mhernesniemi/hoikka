@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { gotoBuyableProduct } from "./helpers.js";
 
 test.describe("Storefront smoke tests", () => {
 	test("homepage loads", async ({ page }) => {
@@ -21,10 +22,7 @@ test.describe("Storefront smoke tests", () => {
 	});
 
 	test("product detail page loads", async ({ page }) => {
-		await page.goto("/products");
-
-		const firstProduct = page.locator('a[href^="/products/"]').first();
-		await firstProduct.click();
+		await gotoBuyableProduct(page);
 
 		// Product detail page has h1 with the product name
 		await expect(page.locator("h1")).toBeVisible({ timeout: 10000 });
@@ -40,8 +38,7 @@ test.describe("Storefront smoke tests", () => {
 		// The detail page component is reused across product→product client
 		// navigations — per-product state (selected variant) must reset, or
 		// price/add-to-cart silently disappear (regression test)
-		await page.goto("/products");
-		await page.locator('a[href^="/products/"]').first().click();
+		await gotoBuyableProduct(page);
 		await expect(page.locator('button:has-text("Add to Cart")')).toBeVisible();
 
 		const related = page.locator(
