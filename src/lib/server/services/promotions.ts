@@ -21,7 +21,7 @@ import type {
 	PromotionWithRelations,
 	PaginatedResult
 } from "$lib/types.js";
-import { calculateDiscount, canCombinePromotions } from "./promotion-utils.js";
+import { canCombinePromotions } from "./promotion-utils.js";
 import { collectionService } from "./collections.js";
 
 export class PromotionService {

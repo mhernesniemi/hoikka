@@ -7,7 +7,7 @@
  * (Cloudflare cron / Node interval / manual endpoint). Nothing here assumes a
  * long-lived process, so it works the same on Node and Workers.
  */
-import { and, eq, lte, sql, type SQL } from "drizzle-orm";
+import { and, eq, isNull, lte, sql } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { orders, outbox } from "../db/schema.js";
 import { getHandler } from "./handlers.js";
@@ -56,13 +56,25 @@ export interface PendingEvent {
  * put them in the same `atomic()` batch as the business write they belong to.
  * That is what makes "the work happened" and "the event exists" inseparable.
  *
- * `condition` is a predicate over `orders` that must still hold for the rows
- * to be written — typically "I still own the lease on this work". Expressed as
- * INSERT ... SELECT ... WHERE, so the check happens inside the same statement
- * rather than in the caller, where it would be a read that another worker can
- * invalidate before the write lands.
+ * `guard` scopes the writes to a fulfilment claim the caller still holds. The
+ * check runs inside the INSERT itself (INSERT ... SELECT ... WHERE), not as a
+ * separate read another worker could invalidate first. The predicate is built
+ * here, from the order id and claim stamp, because it must match exactly one
+ * `orders` row — an earlier version accepted a raw SQL condition and a
+ * too-broad predicate silently inserted one event per matching row.
  */
-export function pendingEvents(events: PendingEvent[], condition?: SQL) {
+export function pendingEvents(
+	events: PendingEvent[],
+	guard?: { orderId: number; claimedAt: Date }
+) {
+	const condition = guard
+		? and(
+				eq(orders.id, guard.orderId),
+				eq(orders.fulfillmentClaimedAt, guard.claimedAt),
+				isNull(orders.fulfilledAt)
+			)
+		: undefined;
+
 	return events.map((event) => {
 		const row = eventRow(event.type, event.payload, event);
 		if (!condition) return db.insert(outbox).values(row);

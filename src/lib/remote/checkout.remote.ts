@@ -25,10 +25,10 @@ import {
 import {
 	completeCheckout as completeCheckoutShared,
 	finishCompletedOrder,
-	isOrderDigitalOnly,
-	isSettledState,
 	type CompletionResult
 } from "$lib/server/services/checkout-completion.js";
+import { isOrderDigitalOnly } from "$lib/server/services/fulfillment.js";
+import { isSettledState } from "$lib/server/services/order-utils.js";
 import { digitalDeliveryService } from "$lib/server/services/digitalDelivery.js";
 import { CHECKOUT_COOKIE } from "$lib/server/cart-cookie.js";
 import type { RequestEvent } from "@sveltejs/kit";

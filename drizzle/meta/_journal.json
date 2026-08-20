@@ -99,6 +99,13 @@
       "when": 1787243083796,
       "tag": "0013_protect_sold_deliverables",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "6",
+      "when": 1787243084796,
+      "tag": "0014_backfill_digital_pins",
+      "breakpoints": true
     }
   ]
 }

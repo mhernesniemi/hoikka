@@ -1,79 +1,41 @@
 /**
- * Shared checkout completion path, used by the checkout remote commands (mock
- * payments, Stripe confirmation) and the Stripe webhook: address-book save,
- * final stock check, payment verification, state transitions, shipment +
- * digital delivery, cookie cleanup. The caller navigates to the thank-you page
- * using the returned order code.
+ * Settlement: the path an order takes from draft to paid, shared by the
+ * checkout remote commands, the Stripe webhook, and every recovery route.
  *
- * Completion is fail-closed, resumable and idempotent:
+ *   created ──verify payment──▶ payment_pending ──commit*──▶ paid
+ *      │                             │                         │
+ *      │  verify fails: draft        │  capacity abort:        │  capture fails:
+ *      │  and cookies untouched      │  cancel + refund        │  order stands,
+ *      ▼                             ▼                         │  fulfilment
+ *   (retryable)                  cancelled                     │  withheld
+ *                                                              ▼
+ *                                              ensureFulfilled (fulfillment.ts)
  *
- * - The order only leaves "created" once the gateway has confirmed a settled
- *   payment for exactly the current total, so a pending or declined payment
- *   leaves the draft (and the cart cookies) intact and recoverable.
- * - An order stuck in "payment_pending" (a crash between the two transitions)
- *   is resumed rather than rejected — its payment is re-verified and, if the
- *   money is really there, it is carried through to "paid".
- * - Fulfilment (shipment, download grants, outbox events) is a separate
- *   idempotent step stamped by `orders.fulfilledAt`, which is written in the
- *   same batch as the outbox rows. A crash anywhere before that stamp is
- *   retried; a retry after it does nothing. So an already-paid order still
- *   gets its fulfilment finished when completion is called again.
+ * *commit is one transaction: order state + inventory + promotion usage,
+ *  capacity enforced by database triggers.
+ *
+ * Fail-closed, resumable, idempotent:
+ * - The order only leaves "created" once the gateway has confirmed a payment
+ *   for exactly the current total.
+ * - A crash mid-settlement (payment_pending) or between capture and its local
+ *   write is resumed by re-asking the gateway, never by trusting local state.
+ * - Money captured for a sale that cannot go ahead is refunded automatically
+ *   (refundDeadSale); with STRIPE_MANUAL_CAPTURE the same race loss only
+ *   voids a hold.
+ * - Fulfilment is a separate capture-gated step in fulfillment.ts.
  */
-import { and, eq, isNull, lt, or } from "drizzle-orm";
 import type { Cookies } from "@sveltejs/kit";
-import { db, atomic } from "../db/index.js";
-import { orderLines, orders, productVariants, products } from "../db/schema.js";
-import {
-	orderService,
-	shippingService,
-	paymentService,
-	isPaymentSuccessful,
-	customerService
-} from "./index.js";
-import { mergeFulfillmentIssue } from "./orders.js";
+import { orderService, paymentService, isPaymentSuccessful, customerService } from "./index.js";
+import { isFulfillableState, isSettledState } from "./order-utils.js";
+import { ensureFulfilled, isOrderDigitalOnly } from "./fulfillment.js";
 import { digitalDeliveryService } from "./digitalDelivery.js";
-import { pendingEvents } from "../integrations/events.js";
 import { CART_COOKIE, CHECKOUT_COOKIE, grantReceipt } from "../cart-cookie.js";
 import type { PaymentStatus } from "./payments/types.js";
 import type { OrderWithRelations, Payment } from "$lib/types.js";
 
-/** How long one fulfilment attempt may hold its claim before another may retry. */
-const FULFILMENT_LEASE_MS = 2 * 60_000;
-
-const SETTLED_STATES = ["paid", "shipped", "delivered"] as const;
-
-/** States in which an order may still be shipped or have downloads granted. */
-const FULFILLABLE_STATES: readonly string[] = SETTLED_STATES;
-
-export function isSettledState(state: OrderWithRelations["state"]): boolean {
-	return (SETTLED_STATES as readonly string[]).includes(state);
-}
-
 export type CompletionResult =
 	| { completed: true; orderCode: string }
 	| { completed: false; error: string; stockErrors?: string[] };
-
-/**
- * Whether every item in the order is delivered as a download.
- *
- * Prefers what the line was *sold* as over what the product is now. Reading
- * products.type at fulfilment time meant a product flipped from physical to
- * digital after the sale skipped its shipment — with no download to replace it,
- * because nothing had been pinned — and still stamped the order fulfilled.
- * Before a payment exists nothing is pinned yet, so the product's current type
- * is the only answer available and is the right one to use for the checkout UI.
- */
-export async function isOrderDigitalOnly(orderId: number): Promise<boolean> {
-	const lines = await db
-		.select({ soldAs: orderLines.fulfillmentType, productType: products.type })
-		.from(orderLines)
-		.innerJoin(productVariants, eq(orderLines.variantId, productVariants.id))
-		.innerJoin(products, eq(productVariants.productId, products.id))
-		.where(eq(orderLines.orderId, orderId));
-
-	if (lines.length === 0) return false;
-	return lines.every((line) => (line.soldAs ?? line.productType) === "digital");
-}
 
 function clearCheckoutCookies(cookies?: Cookies): void {
 	cookies?.delete(CART_COOKIE, { path: "/" });
@@ -88,12 +50,15 @@ export async function completeCheckout(opts: {
 	/** Absent for server-initiated completion (webhooks), which has no browser. */
 	cookies?: Cookies;
 }): Promise<CompletionResult> {
-	const { payment, customerId, saveToAddressBook, cookies } = opts;
+	const { customerId, saveToAddressBook, cookies } = opts;
 
-	// Re-read the order: the caller's copy may predate a cart, promotion or
-	// shipping change, and every check below is about the *current* total.
+	// Re-read both: the caller's copies may predate a cart change or a payment
+	// state transition, and every "was this captured?" decision below has to be
+	// made against what is true now, not what the caller last saw.
 	const order = await orderService.getById(opts.order.id);
 	if (!order) return { completed: false, error: "Order not found" };
+	const payment = await paymentService.getById(opts.payment.id);
+	if (!payment) return { completed: false, error: "Payment not found" };
 
 	if (payment.orderId !== order.id) {
 		return { completed: false, error: "Payment does not belong to this order" };
@@ -113,17 +78,19 @@ export async function completeCheckout(opts: {
 		const wasCaptured = payment.state === "settled";
 		await paymentService.cancelPayment(payment.id);
 		if (wasCaptured) {
-			await orderService.setFulfillmentIssue(
+			const refunded = await refundDeadSale(
 				order.id,
-				"settlement",
-				"Order was cancelled after the payment was captured. Refund required."
+				payment.id,
+				"Order was cancelled after the payment was captured."
 			);
+			return {
+				completed: false,
+				error: deadSaleMessage("This order was cancelled.", refunded)
+			};
 		}
 		return {
 			completed: false,
-			error: wasCaptured
-				? "This order was cancelled. Our team has been notified about your payment."
-				: "This order was cancelled. You have not been charged."
+			error: "This order was cancelled. You have not been charged."
 		};
 	}
 
@@ -164,17 +131,22 @@ export async function completeCheckout(opts: {
 		});
 		await paymentService.cancelPayment(payment.id);
 		if (wasCaptured) {
-			await orderService.setFulfillmentIssue(
+			const refunded = await refundDeadSale(
 				order.id,
-				"settlement",
-				`Captured payment for ${undeliverable.join(", ")}, which has no downloadable file. Refund required.`
+				payment.id,
+				`Captured payment for ${undeliverable.join(", ")}, which has no downloadable file.`
 			);
+			return {
+				completed: false,
+				error: deadSaleMessage(
+					`${undeliverable.join(", ")} is no longer available.`,
+					refunded
+				)
+			};
 		}
 		return {
 			completed: false,
-			error: wasCaptured
-				? `${undeliverable.join(", ")} is no longer available. Our team has been notified about your payment.`
-				: `${undeliverable.join(", ")} is no longer available. You have not been charged.`
+			error: `${undeliverable.join(", ")} is no longer available. You have not been charged.`
 		};
 	}
 
@@ -186,11 +158,24 @@ export async function completeCheckout(opts: {
 		if (!stockCheck.valid) {
 			const wasCaptured = payment.state === "settled";
 			await paymentService.cancelPayment(payment.id);
+			if (wasCaptured) {
+				const refunded = await refundDeadSale(
+					order.id,
+					payment.id,
+					"Items sold out before the order could be completed."
+				);
+				return {
+					completed: false,
+					error: deadSaleMessage(
+						"Some items are no longer available in the requested quantity.",
+						refunded
+					),
+					stockErrors: stockCheck.errors
+				};
+			}
 			return {
 				completed: false,
-				error: wasCaptured
-					? "Some items are no longer available in the requested quantity. Our team has been notified about your payment."
-					: "Some items are no longer available in the requested quantity. You have not been charged.",
+				error: "Some items are no longer available in the requested quantity. You have not been charged.",
 				stockErrors: stockCheck.errors
 			};
 		}
@@ -280,6 +265,44 @@ export async function completeCheckout(opts: {
 			return finishCompletedOrder(current, cookies);
 		}
 		if (current?.state === "payment_pending") {
+			// Two very different reasons to land here. A capacity abort (the
+			// stock or promotion trigger) means *this* order lost the race after
+			// its own first transition — waiting will never fix it, so resolve
+			// it: cancel the order and give any captured money back. Anything
+			// else means another request for the same order is mid-settlement,
+			// and waiting is exactly right.
+			if (isCapacityAbort(detail)) {
+				try {
+					await orderService.transitionState(order.id, "cancelled");
+				} catch (cancelError) {
+					console.error("[order] dead_sale_cancel_failed", {
+						orderId: order.id,
+						error: (cancelError as Error).message
+					});
+				}
+				// confirmPayment above may have just persisted "settled"
+				const paymentNow = (await paymentService.getById(payment.id)) ?? payment;
+				if (paymentNow.state === "settled") {
+					const refunded = await refundDeadSale(
+						order.id,
+						payment.id,
+						`Order lost a capacity race mid-settlement: ${detail}.`
+					);
+					return {
+						completed: false,
+						error: deadSaleMessage(
+							"An item sold out while you were paying, so your order could not be completed.",
+							refunded
+						)
+					};
+				}
+				await paymentService.cancelPayment(payment.id);
+				return {
+					completed: false,
+					error: "An item sold out while you were paying, so your order could not be completed. You have not been charged."
+				};
+			}
+
 			console.warn("[order] settlement_in_progress_elsewhere", { orderId: order.id });
 			return {
 				completed: false,
@@ -313,16 +336,19 @@ export async function completeCheckout(opts: {
 			};
 		}
 
-		// Already captured (a provider without a separate capture step). The
-		// money is real and the order is not; that needs a person.
-		await orderService.setFulfillmentIssue(
+		// Already captured (automatic capture, or a provider without a separate
+		// capture step). The money is real and the order is not — give it back.
+		const refunded = await refundDeadSale(
 			order.id,
-			"settlement",
-			`Payment settled but the order could not be completed: ${detail}`
+			payment.id,
+			`Payment settled but the order could not be committed: ${detail}.`
 		);
 		return {
 			completed: false,
-			error: "Your payment went through but the order could not be completed — an item sold out while you were paying. Our team has been notified and will be in touch."
+			error: deadSaleMessage(
+				"An item sold out while you were paying, so your order could not be completed.",
+				refunded
+			)
 		};
 	}
 
@@ -426,7 +452,7 @@ export async function ensureCaptured(
 	// restores the stock, so capturing afterwards would charge for goods the
 	// store has already given back.
 	const order = await orderService.getById(orderId);
-	if (!order || !FULFILLABLE_STATES.includes(order.state)) {
+	if (!order || !isFulfillableState(order.state)) {
 		// Release whatever is still holding the shopper's money — cancelPayment
 		// leaves an already-captured payment alone, and that case is a refund
 		// for a human rather than something to void here.
@@ -485,7 +511,7 @@ export async function ensureCaptured(
 		// meant to pay for. Checking before was not enough; the money is now
 		// real, so it has to go back rather than sit as a note for a human.
 		const settledOrder = await orderService.getById(orderId);
-		if (!settledOrder || !FULFILLABLE_STATES.includes(settledOrder.state)) {
+		if (!settledOrder || !isFulfillableState(settledOrder.state)) {
 			return await refundCaptureOnDeadOrder(orderId, payment.id, settledOrder?.state);
 		}
 
@@ -501,7 +527,7 @@ export async function ensureCaptured(
 		if (reconciled && isPaymentSuccessful(reconciled.status)) {
 			console.warn("[order] capture_reconciled", { orderId, detail });
 			const settledOrder = await orderService.getById(orderId);
-			if (!settledOrder || !FULFILLABLE_STATES.includes(settledOrder.state)) {
+			if (!settledOrder || !isFulfillableState(settledOrder.state)) {
 				return await refundCaptureOnDeadOrder(orderId, payment.id, settledOrder?.state);
 			}
 			await orderService.setFulfillmentIssue(orderId, "settlement", null);
@@ -515,32 +541,65 @@ export async function ensureCaptured(
 }
 
 /**
- * Give back money captured for an order that stopped being a sale while the
- * gateway call was in flight. Automatic, because the alternative is a customer
- * charged for a cancelled order waiting on someone to notice a note.
+ * Whether a settlement failure was one of our own capacity triggers — the
+ * fixed abort strings from migrations 0008-0010. Those failures are final for
+ * this order; retrying or waiting cannot conjure the capacity back.
  */
-async function refundCaptureOnDeadOrder(
-	orderId: number,
-	paymentId: number,
-	state: string | undefined
-): Promise<CaptureOutcome> {
-	console.error("[order] captured_after_cancellation", { orderId, state });
+function isCapacityAbort(detail: string): boolean {
+	return (
+		detail.includes("stock cannot go negative") ||
+		detail.includes("promotion usage limit reached") ||
+		detail.includes("promotion already used by this customer")
+	);
+}
+
+/**
+ * Money was captured for a sale that cannot go ahead. Send it back rather than
+ * leaving a note: a customer charged for nothing must not wait on somebody
+ * reading the admin panel. With automatic capture (the Stripe default here)
+ * this is the standard way a lost stock or promotion race resolves. Returns
+ * whether the refund actually went through; a failure is flagged for a human.
+ */
+async function refundDeadSale(orderId: number, paymentId: number, why: string): Promise<boolean> {
+	console.error("[order] refunding_dead_sale", { orderId, paymentId, why });
 
 	try {
 		await paymentService.refundPayment(paymentId);
 		await orderService.setFulfillmentIssue(
 			orderId,
 			"settlement",
-			`Payment was captured just as the order became ${state ?? "unavailable"}, and has been refunded automatically.`
+			`${why} The captured payment has been refunded automatically.`
 		);
+		return true;
 	} catch (e) {
 		await orderService.setFulfillmentIssue(
 			orderId,
 			"settlement",
-			`Payment was captured but the order is ${state ?? "unavailable"} and the automatic refund failed (${(e as Error).message}). Refund it manually.`
+			`${why} The automatic refund failed (${(e as Error).message}) — refund it manually.`
 		);
+		return false;
 	}
+}
 
+/**
+ * The customer-facing sentence for a dead sale, honest about the money.
+ */
+function deadSaleMessage(context: string, refunded: boolean): string {
+	return refunded
+		? `${context} Your payment has been refunded.`
+		: `${context} Our team has been notified about your payment.`;
+}
+
+async function refundCaptureOnDeadOrder(
+	orderId: number,
+	paymentId: number,
+	state: string | undefined
+): Promise<CaptureOutcome> {
+	await refundDeadSale(
+		orderId,
+		paymentId,
+		`Payment was captured just as the order became ${state ?? "unavailable"}.`
+	);
 	return { ok: false, reason: "not-fulfillable" };
 }
 
@@ -577,7 +636,7 @@ export async function finishCompletedOrder(
 		// here would hand out a receipt for a sale that no longer exists.
 		return {
 			completed: false,
-			error: "This order is no longer active. If you were charged, the payment has been refunded."
+			error: "This order is no longer active and cannot be completed. If a charge was made, it is being returned — contact us if it has not appeared within a few days."
 		};
 	}
 
@@ -586,199 +645,4 @@ export async function finishCompletedOrder(
 	grantReceipt(cookies, order.checkoutToken);
 	clearCheckoutCookies(cookies);
 	return { completed: true, orderCode: order.code };
-}
-
-/**
- * Everything that happens *after* the money is captured: shipment, download
- * grants, and the outbox events other systems react to.
- *
- * Runs at most once per order and is safe to call again after any crash. The
- * `fulfilledAt` stamp is written in the same batch as the outbox rows, so the
- * events can neither be lost (stamp without rows) nor duplicated (rows without
- * stamp). Everything before that batch is individually idempotent.
- */
-export async function ensureFulfilled(
-	orderId: number
-): Promise<{ fulfilled: boolean; errors: string[] }> {
-	const order = await orderService.getById(orderId);
-	if (!order) return { fulfilled: false, errors: ["Order not found"] };
-	if (order.fulfilledAt) return { fulfilled: true, errors: [] };
-
-	// A cancelled order has had its stock put back; shipping it or granting its
-	// downloads now would hand over goods the store no longer accounts for.
-	// Checked here rather than only in the caller so no route — an admin retry,
-	// a webhook redelivery — can get around it.
-	if (!FULFILLABLE_STATES.includes(order.state)) {
-		const payment = await paymentService.getPrimaryForOrder(orderId);
-		if (payment?.state === "settled") {
-			await orderService.setFulfillmentIssue(
-				orderId,
-				"settlement",
-				`Order is ${order.state} but its payment was captured. Refund required.`
-			);
-		}
-		return { fulfilled: false, errors: [`Order is ${order.state} — fulfilment withheld`] };
-	}
-
-	// Never hand over goods against money that is only reserved, or that has
-	// already gone back to the customer. Callers should have captured first;
-	// this is the backstop for every other route.
-	const payment = await paymentService.getPrimaryForOrder(orderId);
-	if (payment && payment.state !== "settled") {
-		return {
-			fulfilled: false,
-			errors: [`Payment is ${payment.state}, not captured — fulfilment withheld`]
-		};
-	}
-
-	// Claim the work before doing any of it: a webhook and a browser callback
-	// routinely arrive at the same moment, and both running would create two
-	// shipments and enqueue the delivery email twice. The claim is a lease
-	// rather than a flag, so a crash mid-fulfilment is picked up again once it
-	// expires instead of leaving the order stuck forever.
-	const leaseFrom = new Date(Date.now() - FULFILMENT_LEASE_MS);
-	const claim = new Date();
-	const [claimed] = await db
-		.update(orders)
-		.set({ fulfillmentClaimedAt: claim })
-		.where(
-			and(
-				eq(orders.id, orderId),
-				isNull(orders.fulfilledAt),
-				or(isNull(orders.fulfillmentClaimedAt), lt(orders.fulfillmentClaimedAt, leaseFrom))
-			)
-		)
-		.returning({ id: orders.id });
-
-	if (!claimed) {
-		// Someone else has it. Report what is true right now; if they finish,
-		// the next caller (or a webhook redelivery) sees fulfilledAt set.
-		const current = await orderService.getById(orderId);
-		return current?.fulfilledAt
-			? { fulfilled: true, errors: [] }
-			: { fulfilled: false, errors: ["Fulfilment is already in progress"] };
-	}
-
-	const isDigitalOnly = await isOrderDigitalOnly(orderId);
-
-	// Two very different kinds of failure. A transient one (the shipping
-	// provider is down, the database blipped) deserves another attempt, so the
-	// order is left unstamped and the caller retries. A permanent one — a
-	// digital product with no file — cannot be fixed by trying again; it is
-	// recorded on the order for a human and fulfilment moves on, so the rest of
-	// the order still ships and the buyer still gets told.
-	// Kept per source rather than in one bag: each is cleared independently, so
-	// they must not be lumped together and filed under whichever label happens
-	// to sort first.
-	const transient: string[] = [];
-	const shipmentProblems: string[] = [];
-	const downloadProblems: string[] = [];
-
-	if (!isDigitalOnly) {
-		// No method chosen at all is a permanent problem (checkout requires one,
-		// so this means the order was built another way) — retrying cannot
-		// invent a rate. A provider that errors, on the other hand, is worth
-		// another go.
-		if (!(await shippingService.getOrderShipping(order.id))) {
-			shipmentProblems.push("No shipping method was set on this order");
-		} else {
-			try {
-				// Writes tracking onto the existing order_shipping row —
-				// re-running overwrites rather than duplicating.
-				await shippingService.createShipment(order);
-			} catch (e) {
-				console.error("Error creating shipment:", e);
-				transient.push(`Shipment could not be created: ${(e as Error).message}`);
-			}
-		}
-	}
-
-	// Download grants are keyed by order line, so this converges on retry.
-	let digitalGrants = 0;
-	try {
-		const grants = await digitalDeliveryService.createGrants(orderId);
-		digitalGrants = grants.granted;
-		downloadProblems.push(...grants.errors);
-	} catch (e) {
-		console.error("Error creating download grants:", e);
-		transient.push(`Downloads could not be prepared: ${(e as Error).message}`);
-	}
-
-	const shipmentIssue = shipmentProblems.join("; ") || null;
-	const downloadIssue = downloadProblems.join("; ") || null;
-	const permanent = [...shipmentProblems, ...downloadProblems];
-
-	if (transient.length > 0) {
-		// Release the claim so the retry does not have to wait out the lease —
-		// but only if it is still ours, or we would be releasing a replacement's.
-		await db
-			.update(orders)
-			.set({
-				fulfillmentClaimedAt: null,
-				fulfillmentError: mergeFulfillmentIssue(
-					mergeFulfillmentIssue(order.fulfillmentError, "shipment", shipmentIssue),
-					"downloads",
-					downloadIssue
-				)
-			})
-			.where(and(eq(orders.id, orderId), eq(orders.fulfillmentClaimedAt, claim)));
-		return { fulfilled: false, errors: [...transient, ...permanent] };
-	}
-
-	// Stamp and enqueue together: one batch, so a crash cannot separate them —
-	// and every statement is conditional on this worker still holding the claim
-	// it took. A worker whose lease expired, whose replacement finished the job,
-	// and which then wakes up must write nothing at all; otherwise it would
-	// enqueue a second order.paid and a second delivery email.
-	// A predicate that selects *this* order row and no other — pendingEvents
-	// turns it into INSERT ... SELECT ... FROM orders WHERE <this>, so it must
-	// match at most one row.
-	const stillOurs = and(
-		eq(orders.id, orderId),
-		eq(orders.fulfillmentClaimedAt, claim),
-		isNull(orders.fulfilledAt)
-	)!;
-
-	await atomic([
-		...pendingEvents(
-			[
-				...(digitalGrants > 0
-					? [{ type: "order.digital_delivery", payload: { orderId }, maxAttempts: 8 }]
-					: []),
-				{
-					type: "order.paid",
-					payload: {
-						code: order.code,
-						total: order.total,
-						customerEmail: order.customerEmail,
-						isDigitalOnly
-					},
-					maxAttempts: 5
-				}
-			],
-			stillOurs
-		),
-		db
-			.update(orders)
-			.set({
-				fulfilledAt: new Date(),
-				fulfillmentError: mergeFulfillmentIssue(
-					mergeFulfillmentIssue(order.fulfillmentError, "shipment", null),
-					"downloads",
-					downloadIssue
-				)
-			})
-			.where(
-				and(
-					eq(orders.id, orderId),
-					eq(orders.fulfillmentClaimedAt, claim),
-					isNull(orders.fulfilledAt)
-				)
-			)
-	]);
-
-	// If the claim was stolen and the replacement finished first, none of the
-	// batch applied — report the truth rather than a fulfilment we did not do.
-	const after = await orderService.getById(orderId);
-	return { fulfilled: !!after?.fulfilledAt, errors: permanent };
 }

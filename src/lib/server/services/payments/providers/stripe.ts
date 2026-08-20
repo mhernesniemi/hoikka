@@ -71,12 +71,16 @@ export class StripeProvider implements PaymentProvider {
 			{
 				amount: order.total,
 				currency: order.currencyCode.toLowerCase(),
-				// Authorise now, capture once the order is committed. Confirming
-				// on the client would otherwise take the money before the server
-				// knows whether the last unit — or the last permitted use of a
-				// promotion — is still there, leaving a charged customer with an
-				// order that cannot be completed.
-				capture_method: "manual",
+				// STRIPE_MANUAL_CAPTURE=true authorises on confirmation and
+				// captures only once the order is committed, so losing a stock
+				// race voids a hold instead of refunding a charge. The default
+				// is automatic capture: manual capture makes Stripe exclude
+				// payment methods that don't support it (iDEAL, Bancontact,
+				// SEPA debit, ...) from the Payment Element, and holds expire
+				// after ~7 days. With automatic capture the same race loss is
+				// handled by an automatic refund instead (see refundDeadSale in
+				// checkout-completion.ts).
+				capture_method: env.STRIPE_MANUAL_CAPTURE === "true" ? "manual" : "automatic",
 				metadata: {
 					orderId: order.id.toString(),
 					orderCode: order.code,

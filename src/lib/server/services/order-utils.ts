@@ -15,6 +15,22 @@ export const STATE_TRANSITIONS: Record<OrderState, OrderState[]> = {
 	cancelled: []
 };
 
+const SETTLED_STATES: readonly OrderState[] = ["paid", "shipped", "delivered"];
+
+/** The money for this order has been taken and kept. */
+export function isSettledState(state: OrderState): boolean {
+	return SETTLED_STATES.includes(state);
+}
+
+/**
+ * Whether an order may still be shipped or have downloads granted. Currently
+ * the settled states; kept as its own name because the two questions are
+ * different even while the answers coincide.
+ */
+export function isFulfillableState(state: OrderState): boolean {
+	return SETTLED_STATES.includes(state);
+}
+
 /**
  * Check if a state transition is valid
  */

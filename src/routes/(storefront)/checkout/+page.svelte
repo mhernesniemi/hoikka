@@ -27,6 +27,20 @@
 
   let { data }: { data: PageData } = $props();
 
+  // A previous attempt captured (or may have captured) money but never
+  // finished the order. The loader only detects that — actually completing is
+  // money movement, so it runs here as a command the moment the page mounts.
+  let resumeError = $state<string | null>(null);
+  $effect(() => {
+    if (!data.resuming) return;
+    completeOrder({})
+      .then((result) => {
+        if (result.completed) return goto(`/checkout/thank-you?order=${result.orderCode}`);
+        resumeError = result.error;
+      })
+      .catch((e) => (resumeError = commandErrorMessage(e)));
+  });
+
   // The single source of truth: refreshed server-side by every mutation
   // command (single-flight), so there is no form/data reconciliation here.
   const checkoutQuery = getCheckout();
@@ -298,7 +312,19 @@
 <div class="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
   <h1 class="mb-8 text-3xl font-bold">Checkout</h1>
 
-  {#if data.empty}
+  {#if data.resuming}
+    {#if resumeError}
+      <Alert variant="warning">
+        <p class="font-medium">We couldn't finish your previous order</p>
+        <p class="mt-1 text-sm">{resumeError}</p>
+      </Alert>
+    {:else}
+      <div class="flex items-center justify-center py-16">
+        <LoaderCircle class="h-6 w-6 animate-spin text-gray-400" />
+        <span class="ml-2 text-sm text-gray-500">Finishing your previous order...</span>
+      </div>
+    {/if}
+  {:else if data.empty}
     <p class="mb-4 text-gray-500">Your cart is empty</p>
     <a href="/products" class="text-blue-600 underline hover:text-blue-700">Browse products</a>
   {:else if isLoading}

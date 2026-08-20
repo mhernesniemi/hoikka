@@ -83,6 +83,35 @@ const sessionHandler: Handle = async ({ event, resolve }) => {
 	return resolve(event);
 };
 
+// Request-body ceiling. adapter-node's BODY_SIZE_LIMIT had to be raised to
+// 200 MB for digital-deliverable uploads, but that knob is global — without
+// this guard every endpoint (login, checkout commands, review forms) would
+// accept and buffer bodies that size. Only the upload route may exceed the
+// ceiling; it enforces its own per-purpose caps on the stream.
+const MAX_BODY_BYTES = 1024 * 1024;
+const BODY_EXEMPT_PATHS = new Set(["/api/assets/upload"]);
+
+export const bodyLimitGuard: Handle = async ({ event, resolve }) => {
+	const method = event.request.method;
+	if (method === "GET" || method === "HEAD" || method === "OPTIONS") return resolve(event);
+	if (BODY_EXEMPT_PATHS.has(event.url.pathname)) return resolve(event);
+
+	const contentLength = event.request.headers.get("content-length");
+	if (contentLength !== null && Number(contentLength) > MAX_BODY_BYTES) {
+		return new Response("Payload too large", { status: 413 });
+	}
+
+	// Content-Length is a claim, and HTTP/1.1 chunked encoding is the way to
+	// avoid making one — refuse that combination rather than letting the
+	// adapter buffer up to its global limit while the handler reads.
+	const transferEncoding = event.request.headers.get("transfer-encoding");
+	if (contentLength === null && transferEncoding?.toLowerCase().includes("chunked")) {
+		return new Response("Length required", { status: 411 });
+	}
+
+	return resolve(event);
+};
+
 // Admin authorization. The admin layout's `load` only guards rendering —
 // form actions and endpoint handlers run *before* layout loads, so a POST to
 // e.g. /admin/products?/create never reached it. Enforcing the role here
@@ -149,7 +178,14 @@ const demoGuard: Handle = async ({ event, resolve }) => {
 
 // edgeCache sits before sessionHandler so cached guest responses return
 // without touching auth or the database at all
-export const handle = sequence(tasksInit, demoGuard, edgeCache, sessionHandler, adminGuard);
+export const handle = sequence(
+	bodyLimitGuard,
+	tasksInit,
+	demoGuard,
+	edgeCache,
+	sessionHandler,
+	adminGuard
+);
 
 export const handleError: HandleServerError = async ({ error, event, status, message }) => {
 	const errorId = crypto.randomUUID();

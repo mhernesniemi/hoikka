@@ -12,7 +12,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 vi.mock("$env/dynamic/private", () => ({ env: { DATABASE_URL: ":memory:" } }));
 vi.mock("$app/environment", () => ({ dev: true, browser: false, building: false }));
 
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db, atomic } from "../db/index.js";
 import {
 	orderPromotions,
@@ -32,10 +32,10 @@ import {
 	advanceToPaid,
 	completeCheckout,
 	ensureCaptured,
-	ensureFulfilled,
-	finishCompletedOrder,
-	isSettledState
+	finishCompletedOrder
 } from "./checkout-completion.js";
+import { ensureFulfilled } from "./fulfillment.js";
+import { isSettledState } from "./order-utils.js";
 import { pendingEvents } from "../integrations/events.js";
 import type { Cookies } from "@sveltejs/kit";
 
@@ -79,6 +79,16 @@ async function makeDraft(price = 5000) {
 	await orderService.updateTotals(order.id);
 
 	return (await orderService.getById(order.id))!;
+}
+
+async function authMethodId(): Promise<number> {
+	const existing = await paymentService.getMethodByCode("auth-test");
+	if (existing) return existing.id;
+	const [method] = await db
+		.insert(paymentMethods)
+		.values({ code: "auth-test", name: "Auth test", active: true })
+		.returning();
+	return method.id;
 }
 
 async function mockMethodId(): Promise<number> {
@@ -375,14 +385,10 @@ describe("completeCheckout", () => {
 		// "is it already fulfilled?" check it made when it started.
 		const stolenClaim = new Date(Date.now() - 30 * 60_000);
 		await atomic(
-			pendingEvents(
-				[{ type: "order.paid", payload: { code: order.code }, maxAttempts: 5 }],
-				and(
-					eq(orders.id, order.id),
-					eq(orders.fulfillmentClaimedAt, stolenClaim),
-					isNull(orders.fulfilledAt)
-				)!
-			)
+			pendingEvents([{ type: "order.paid", payload: { code: order.code }, maxAttempts: 5 }], {
+				orderId: order.id,
+				claimedAt: stolenClaim
+			})
 		);
 
 		expect(await countEvents(order.code)).toBe(eventsAfterFirstRun);
@@ -394,14 +400,10 @@ describe("completeCheckout", () => {
 			.set({ fulfillmentClaimedAt: liveClaim, fulfilledAt: null })
 			.where(eq(orders.id, order.id));
 		await atomic(
-			pendingEvents(
-				[{ type: "order.paid", payload: { code: order.code }, maxAttempts: 5 }],
-				and(
-					eq(orders.id, order.id),
-					eq(orders.fulfillmentClaimedAt, liveClaim),
-					isNull(orders.fulfilledAt)
-				)!
-			)
+			pendingEvents([{ type: "order.paid", payload: { code: order.code }, maxAttempts: 5 }], {
+				orderId: order.id,
+				claimedAt: liveClaim
+			})
 		);
 		expect(await countEvents(order.code)).toBe(eventsAfterFirstRun + 1);
 	});
@@ -484,16 +486,6 @@ describe("authorise, commit, then capture", () => {
 			}
 		});
 		return { captured, cancelled };
-	}
-
-	async function authMethodId(): Promise<number> {
-		const existing = await paymentService.getMethodByCode("auth-test");
-		if (existing) return existing.id;
-		const [method] = await db
-			.insert(paymentMethods)
-			.values({ code: "auth-test", name: "Auth test", active: true })
-			.returning();
-		return method.id;
 	}
 
 	it("captures only after the order is committed", async () => {
@@ -702,7 +694,7 @@ describe("authorise, commit, then capture", () => {
 		// order, which puts the stock back, while the capture is still to come.
 		const { captured, cancelled } = authorisingProvider();
 		const order = await makeDraft(5000);
-		const { payment } = await paymentService.createPayment(order, await authMethodId());
+		await paymentService.createPayment(order, await authMethodId());
 
 		await orderService.transitionState(order.id, "payment_pending");
 		await orderService.transitionState(order.id, "paid");
@@ -1057,8 +1049,19 @@ describe("competing orders for the last unit", () => {
 			)
 		);
 
-		// One sale, one refusal — never two
+		// One sale, one refusal — never two. The loser's captured payment goes
+		// back automatically (automatic capture is the Stripe default here, so
+		// losing this race must cost the shopper nothing).
 		expect(results.filter((r) => r.completed)).toHaveLength(1);
+		const loser = results.find((r) => !r.completed)!;
+		expect(loser.completed === false && loser.error).toContain("refunded");
+
+		const loserDraft = drafts[results.findIndex((r) => !r.completed)];
+		const [loserPayment] = await db
+			.select()
+			.from(payments)
+			.where(eq(payments.id, loserDraft.payment.id));
+		expect(loserPayment.state).toBe("refunded");
 
 		const [after] = await db
 			.select()
@@ -1089,6 +1092,59 @@ describe("competing orders for the last unit", () => {
 			.from(productVariants)
 			.where(eq(productVariants.id, variant.id));
 		expect(after.stock).toBe(1);
+	});
+});
+
+describe("dead-sale refunds", () => {
+	it("flags the order for a human when the automatic refund itself fails", async () => {
+		paymentService.registerProvider({
+			code: "auth-test",
+			async createPayment() {
+				return { providerTransactionId: `auth_${Math.random().toString(36).slice(2)}` };
+			},
+			async confirmPayment() {
+				return { status: "settled" };
+			},
+			async cancelPayment() {},
+			async refundPayment() {
+				throw new Error("gateway rejected the refund");
+			}
+		});
+
+		// Captured money, and the last unit gone before the commit
+		const { variant } = await makeProduct(5000, 1);
+		const { order: draft } = await orderService.startCheckout(
+			[{ variantId: variant.id, quantity: 1 }],
+			{}
+		);
+		const method = await shippingService.getMethodByCode("flat_rate");
+		const [rate] = await shippingService.getAvailableRates(
+			(await orderService.getById(draft.id))!
+		);
+		await shippingService.setShippingMethod(draft.id, method!.id, rate.id, rate.price);
+		await orderService.updateTotals(draft.id);
+		const order = (await orderService.getById(draft.id))!;
+		const { payment } = await paymentService.createPayment(order, await authMethodId());
+		await db.update(payments).set({ state: "settled" }).where(eq(payments.id, payment.id));
+		await db
+			.update(productVariants)
+			.set({ stock: 0 })
+			.where(eq(productVariants.id, variant.id));
+		await db.delete(stockReservations).where(eq(stockReservations.orderId, order.id));
+
+		const result = await completeCheckout({
+			order,
+			payment,
+			customerId: null,
+			saveToAddressBook: false,
+			cookies: fakeCookies()
+		});
+
+		expect(result.completed).toBe(false);
+		expect(result.completed === false && result.error).toContain("notified");
+		const after = await orderService.getById(order.id);
+		expect(after!.fulfillmentError).toContain("refund failed");
+		expect(after!.fulfillmentError).toContain("manually");
 	});
 });
 

@@ -8,7 +8,7 @@ import { describe, it, expect, vi } from "vitest";
 
 vi.mock("$env/dynamic/private", () => ({ env: { DATABASE_URL: ":memory:" } }));
 
-import { adminGuard } from "./hooks.server.js";
+import { adminGuard, bodyLimitGuard } from "./hooks.server.js";
 import type { RequestEvent } from "@sveltejs/kit";
 
 const OK = new Response("resolved");
@@ -79,5 +79,43 @@ describe("adminGuard", () => {
 		expect(await run("/admin/products?/create", "POST", "admin")).toBe(OK);
 		expect(await run("/admin/products?/create", "POST", "staff")).toBe(OK);
 		expect(await run("/admin", "GET", "admin")).toBe(OK);
+	});
+});
+
+describe("bodyLimitGuard", () => {
+	const OK = new Response("resolved");
+
+	async function run(
+		pathname: string,
+		method: string,
+		headers: Record<string, string> = {}
+	): Promise<Response> {
+		const event = {
+			url: new URL(`http://localhost${pathname}`),
+			request: new Request(`http://localhost${pathname}`, { method, headers })
+		} as unknown as Parameters<typeof bodyLimitGuard>[0]["event"];
+		return (await bodyLimitGuard({ event, resolve: async () => OK })) as Response;
+	}
+
+	it("ignores bodyless methods", async () => {
+		expect(await run("/products", "GET")).toBe(OK);
+	});
+
+	it("lets ordinary form posts through", async () => {
+		expect(await run("/admin/login", "POST", { "content-length": "2048" })).toBe(OK);
+	});
+
+	it("rejects oversized bodies everywhere except the upload route", async () => {
+		const big = String(50 * 1024 * 1024);
+		expect((await run("/admin/login", "POST", { "content-length": big })).status).toBe(413);
+		expect((await run("/api/webhooks/stripe", "POST", { "content-length": big })).status).toBe(
+			413
+		);
+		expect(await run("/api/assets/upload", "POST", { "content-length": big })).toBe(OK);
+	});
+
+	it("refuses chunked bodies that declare no length", async () => {
+		const response = await run("/admin/login", "POST", { "transfer-encoding": "chunked" });
+		expect(response.status).toBe(411);
 	});
 });

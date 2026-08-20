@@ -33,11 +33,12 @@ import type {
 import type { BatchItem } from "drizzle-orm/batch";
 import { nanoid } from "nanoid";
 import { reservationService } from "./reservations.js";
-import { taxService, taxRateFromDb, taxRateToDb } from "./tax.js";
-import { STATE_TRANSITIONS, isValidTransition, calculateOrderTotals } from "./order-utils.js";
+import { taxService, taxRateToDb } from "./tax.js";
+import { isValidTransition, calculateOrderTotals } from "./order-utils.js";
 import { promotionService } from "./promotions.js";
 import { calculateDiscount } from "./promotion-utils.js";
 import { getCartView } from "./cart.js";
+import { bumpCatalogVersion } from "$lib/server/edge-cache.js";
 
 // Abandoned checkout drafts are swept after this long. Long enough that a
 // shopper who wanders off mid-checkout still finds their cart, short enough
@@ -74,14 +75,16 @@ export function mergeFulfillmentIssue(
 		.map((line) => line.trim())
 		.filter((line) => line.length > 0 && !line.startsWith(prefix));
 
-	if (message) kept.push(`${prefix}${message}`);
+	// One line per source is the whole contract, so a message containing a
+	// newline (error strings sometimes do) must not be able to smuggle in a
+	// second line — or worse, one that starts with another source's label.
+	if (message) kept.push(`${prefix}${message.replace(/\s*\n\s*/g, " — ")}`);
 	return kept.length > 0 ? kept.join("\n") : null;
 }
 
 function stateGuard(guard: { orderId: number; state: OrderState }) {
 	return sql`exists (select 1 from ${orders} where ${orders.id} = ${guard.orderId} and ${orders.state} = ${guard.state})`;
 }
-import { bumpCatalogVersion } from "$lib/server/edge-cache.js";
 
 export class OrderService {
 	/**

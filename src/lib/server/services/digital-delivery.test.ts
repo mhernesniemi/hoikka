@@ -15,7 +15,7 @@ import { orderService } from "./orders.js";
 import { paymentService } from "./payments/index.js";
 import { completeCheckout } from "./checkout-completion.js";
 import { digitalDeliveryService } from "./digitalDelivery.js";
-import { isOrderDigitalOnly } from "./checkout-completion.js";
+import { isOrderDigitalOnly } from "./fulfillment.js";
 import { assetService } from "./assets.js";
 import { productService } from "./products.js";
 import type { Cookies } from "@sveltejs/kit";
