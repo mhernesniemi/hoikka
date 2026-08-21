@@ -49,3 +49,6 @@ docs/
 
 # Local data (SQLite database, uploads)
 /data/
+
+# Staged by `hoikka migrations:stage` and the vite plugin — never edit
+.hoikka/

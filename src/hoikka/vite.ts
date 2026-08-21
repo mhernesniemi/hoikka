@@ -11,13 +11,16 @@
  *    against a real better-sqlite3 database.
  * 3. Marks @hoikka/core noExternal so its raw TypeScript/Svelte source is
  *    compiled by the app's pipeline in SSR (this is also what makes $env and
- *    $app imports work inside package code).
- * 4. Generates a Tailwind source wrapper (node_modules/.hoikka/sources.css)
- *    with absolute @source paths into the package, so classes used by admin
- *    components are seen by Tailwind v4's scanner even when the package
- *    resolves into the pnpm store. Aliased as $hoikka/sources.css.
+ *    $app imports work inside package code) — and dedupes the libraries whose
+ *    class identity crosses the package/app boundary. Two @sveltejs/kit
+ *    instances mean a redirect() thrown in package code is not `instanceof`
+ *    the runtime's Redirect and becomes a 500; the same goes for svelte
+ *    component identity and drizzle's entity checks.
+ * (Tailwind scanning of the package is handled by two @source lines in the
+ * app's layout.css pointing through node_modules/@hoikka/core — a stable path
+ * in both distribution modes.)
  */
-import { realpathSync, mkdirSync, writeFileSync } from "node:fs";
+import { realpathSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Plugin } from "vite";
@@ -55,21 +58,7 @@ export function hoikka(options: HoikkaPluginOptions = {}): Plugin {
 			config.resolve ??= {};
 			const existing = Array.isArray(config.resolve.alias) ? config.resolve.alias : [];
 
-			// Tailwind wrapper — generated into node_modules so it is neither in
-			// the user's tree nor committed; identical in both distribution modes.
-			const generatedDir = join(process.cwd(), "node_modules", ".hoikka");
-			mkdirSync(generatedDir, { recursive: true });
-			const sourcesCss = join(generatedDir, "sources.css");
-			writeFileSync(
-				sourcesCss,
-				[
-					`@source "${join(packageDir, "admin")}";`,
-					`@source "${join(packageDir, "routes")}";`,
-					""
-				].join("\n")
-			);
-
-			const aliases = [{ find: "$hoikka/sources.css", replacement: sourcesCss }];
+			const aliases: { find: string; replacement: string }[] = [];
 
 			// The unit tests need the real node modules whatever the target is.
 			if (target === "cloudflare" && env.mode !== "test") {
@@ -77,6 +66,15 @@ export function hoikka(options: HoikkaPluginOptions = {}): Plugin {
 			}
 
 			config.resolve.alias = [...aliases, ...existing];
+			const dedupe = config.resolve.dedupe ?? [];
+			config.resolve.dedupe = [
+				...dedupe,
+				"@sveltejs/kit",
+				"svelte",
+				"drizzle-orm",
+				"better-auth",
+				"valibot"
+			];
 
 			config.ssr ??= {};
 			const noExternal = config.ssr.noExternal;

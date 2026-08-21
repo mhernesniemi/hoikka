@@ -37,12 +37,13 @@
 	},
 	"peerDependencies": {
 		"@sveltejs/kit": "^2.0.0",
-		"drizzle-orm": "^0.45.0",
+		"drizzle-orm": "^0.45.2",
 		"svelte": "^5.0.0",
 		"tailwindcss": "^4.0.0",
-		"valibot": "^1.0.0",
-		"better-sqlite3": "^12.0.0",
-		"sharp": "^0.35.0"
+		"valibot": "^1.4.2",
+		"vite": "^6.0.0 || ^7.0.0 || ^8.0.0",
+		"better-sqlite3": "^12.11.1",
+		"sharp": "^0.35.3"
 	},
 	"peerDependenciesMeta": {
 		"better-sqlite3": {
@@ -52,5 +53,25 @@
 			"optional": true
 		}
 	},
-	"dependencies": {}
+	"dependencies": {
+		"@lucide/svelte": "^1.24.0",
+		"@tanstack/table-core": "^8.21.3",
+		"@tiptap/core": "^3.28.0",
+		"@tiptap/extension-link": "^3.28.0",
+		"@tiptap/extension-placeholder": "^3.28.0",
+		"@tiptap/pm": "^3.28.0",
+		"@tiptap/starter-kit": "^3.28.0",
+		"better-auth": "^1.6.23",
+		"bits-ui": "^2.18.1",
+		"clsx": "^2.1.1",
+		"devalue": "^5.8.1",
+		"nanoid": "^6.0.0",
+		"resend": "^6.17.2",
+		"stripe": "^22.3.2",
+		"svelte-sonner": "^1.1.1",
+		"tailwind-merge": "^3.6.0",
+		"tailwind-variants": "^3.2.2",
+		"tsx": "^4.23.1",
+		"xss": "^1.0.15"
+	}
 }

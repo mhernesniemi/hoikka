@@ -1,4 +1,10 @@
 @import "tailwindcss";
+/* Tailwind class sources inside @hoikka/core (admin UI, package routes).
+   Needed in package mode, where the package lives under node_modules and
+   Tailwind v4's auto-scanner ignores it; in embedded mode the same link
+   points into src/hoikka, which is scanned anyway. */
+@source "../../node_modules/@hoikka/core/admin";
+@source "../../node_modules/@hoikka/core/routes";
 @import "tw-animate-css";
 @import "@fontsource/ibm-plex-mono/400.css";
 @import "@fontsource/ibm-plex-mono/400-italic.css";
