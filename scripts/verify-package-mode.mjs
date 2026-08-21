@@ -65,6 +65,56 @@ run("pnpm", ["exec", "hoikka", "sync-routes"], { cwd: work });
 log("unit tests (project-owned only — package tests ship no further than the repo)");
 run("pnpm", ["exec", "vitest", "run", "--passWithNoTests"], { cwd: work });
 
+// ---- 3b. Dev-server smoke ---------------------------------------------------
+// A tarball install (like this one) is a real node_modules package, not a
+// symlinked workspace member — Vite's dependency optimizer only skips
+// pre-bundling for the latter. Without optimizeDeps.exclude on @hoikka/core,
+// esbuild tries to pre-bundle its raw .svelte.ts source directly and fails.
+// `pnpm build` alone never catches this: production builds use Rollup, not
+// the dev-server's esbuild optimizer.
+log("package-mode: dev server");
+{
+	const dbPath = path.join(work, "data", "verify-dev.db");
+	const dev = spawn("pnpm", ["dev", "--port", String(PORT), "--strictPort"], {
+		cwd: work,
+		env: {
+			...process.env,
+			DATABASE_URL: dbPath,
+			BETTER_AUTH_SECRET: "verify-package-mode-secret"
+		},
+		stdio: ["ignore", "pipe", "pipe"]
+	});
+	let devOutput = "";
+	dev.stdout.on("data", (d) => (devOutput += d));
+	dev.stderr.on("data", (d) => (devOutput += d));
+	try {
+		let up = false;
+		for (let i = 0; i < 60; i++) {
+			await new Promise((resolve) => setTimeout(resolve, 500));
+			try {
+				const res = await fetch(`http://localhost:${PORT}/`);
+				if (res.status < 500) {
+					up = true;
+					break;
+				}
+			} catch {
+				/* not up yet */
+			}
+		}
+		if (!up)
+			throw new Error(`dev server never came up
+${devOutput.slice(-2000)}`);
+		const res = await fetch(`http://localhost:${PORT}/`);
+		if (res.status !== 200) {
+			throw new Error(`dev server: GET / → ${res.status}
+${devOutput.slice(-2000)}`);
+		}
+		console.log("  GET / → 200 ✓ (dev)");
+	} finally {
+		dev.kill("SIGTERM");
+	}
+}
+
 // ---- 4. Node build + boot + HTTP smoke --------------------------------------
 const smoke = async (phase) => {
 	log(`${phase}: node build`);

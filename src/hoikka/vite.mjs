@@ -3,7 +3,7 @@
  * runs in Node's own module loader (vitest/vite externalize bare imports when
  * bundling the config), and Node refuses to type-strip .ts inside
  * node_modules — so everything a config file imports from this package must
- * be plain JavaScript. It does four things:
+ * be plain JavaScript. It does five things:
  *
  * 1. On the cloudflare target, swaps the node-only modules (better-sqlite3,
  *    node:fs storage, sharp) for stubs so they never enter the Workers bundle.
@@ -20,6 +20,12 @@
  *    instances mean a redirect() thrown in package code is not `instanceof`
  *    the runtime's Redirect and becomes a 500; the same goes for svelte
  *    component identity and drizzle's entity checks.
+ * 4. Excludes @hoikka/core from the dev-server's dependency optimizer. In an
+ *    embedded/workspace install Vite auto-detects the symlink and treats it
+ *    as source, skipping the optimizer — but a real npm install (package
+ *    mode, standalone) is a plain node_modules package, so without this
+ *    esbuild tries to pre-bundle raw .svelte.ts files itself and chokes on
+ *    the TypeScript syntax vite-plugin-svelte would otherwise have stripped.
  * (Tailwind scanning of the package is handled by two @source lines in the
  * app's layout.css pointing through node_modules/@hoikka/core — a stable path
  * in both distribution modes.)
@@ -91,6 +97,10 @@ export function hoikka(options = {}) {
 				: noExternal === undefined
 					? ["@hoikka/core"]
 					: noExternal; // true already covers everything
+
+			config.optimizeDeps ??= {};
+			const exclude = config.optimizeDeps.exclude ?? [];
+			config.optimizeDeps.exclude = [...exclude, "@hoikka/core"];
 		}
 	};
 }
