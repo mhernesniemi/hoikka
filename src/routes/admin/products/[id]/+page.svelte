@@ -1,4 +1,6 @@
 <script lang="ts">
+  import hoikkaConfig from "$hoikka/config";
+  import FieldRenderer from "$lib/components/admin/FieldRenderer.svelte";
   import { enhance } from "$app/forms";
   import { goto, invalidateAll } from "$app/navigation";
   import { page } from "$app/state";
@@ -47,6 +49,7 @@
 
   let visibility = $state(data.product.visibility);
   let productType = $state(data.product.type);
+  const customFieldDefs = $derived(hoikkaConfig.productTypes[productType]?.fields ?? []);
 
   // Digital deliverable upload (sidebar card, digital products only)
   let isUploadingDigital = $state(false);
@@ -644,6 +647,19 @@
               </option>
             {/each}
           </SelectNative>
+        </AdminCard>
+      {/if}
+
+      <!-- Custom fields declared for this product type in hoikka.config.ts -->
+      {#if customFieldDefs.length > 0}
+        <AdminCard title="Details" variant="sidebar">
+          <div class="space-y-4">
+            <FieldRenderer
+              defs={customFieldDefs}
+              values={data.product.customFields ?? {}}
+              formId="product-form"
+            />
+          </div>
         </AdminCard>
       {/if}
 

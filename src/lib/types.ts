@@ -347,6 +347,7 @@ export interface UpdateProductInput {
 	name?: string;
 	slug?: string;
 	description?: string;
+	customFields?: Record<string, unknown>;
 }
 
 export interface CreateVariantInput {
@@ -439,6 +440,7 @@ export interface UpdateCollectionInput {
 	name?: string;
 	slug?: string;
 	description?: string;
+	customFields?: Record<string, unknown>;
 }
 
 export interface CreateReviewInput {

@@ -1,3 +1,5 @@
+import config from "$hoikka/config";
+import { parseFields, coerceFormFields, sanitizeRichtextFields } from "$lib/fields/index.js";
 import type { PageServerLoad, Actions } from "./$types";
 import { contentPageService } from "$lib/server/services/content-pages.js";
 import { translationService } from "$lib/server/services/translations.js";
@@ -34,9 +36,19 @@ export const actions: Actions = {
 		const body = data.get("body") as string;
 		const imageUrl = data.get("imageUrl") as string | null;
 		const published = data.get("published") === "on";
+		const template = (data.get("template") as string) || "default";
 
 		if (!title || !slug) {
 			return fail(400, { error: "Title and slug are required" });
+		}
+
+		if (!config.contentPages.templates[template]) {
+			return fail(400, { error: `Unknown page template "${template}"` });
+		}
+		const fieldDefs = config.contentPages.templates[template].fields;
+		const parsedFields = parseFields(fieldDefs, coerceFormFields(fieldDefs, data));
+		if (!parsedFields.ok) {
+			return fail(400, { error: `Custom field ${parsedFields.error}` });
 		}
 
 		try {
@@ -45,7 +57,15 @@ export const actions: Actions = {
 				title,
 				slug: slugify(slug),
 				body: body ? sanitizeHtml(body) : undefined,
-				imageUrl: imageUrl || null
+				imageUrl: imageUrl || null,
+				template,
+				...(fieldDefs.length > 0 && {
+					customFields: sanitizeRichtextFields(
+						fieldDefs,
+						parsedFields.values,
+						sanitizeHtml
+					)
+				})
 			});
 
 			// Save translations

@@ -273,6 +273,11 @@ export class ProductService {
 		if (input.name !== undefined) updates.name = input.name;
 		if (input.slug !== undefined) updates.slug = input.slug;
 		if (input.description !== undefined) updates.description = input.description;
+		if (input.customFields !== undefined) {
+			// Merge over what is stored: an admin form only submits the fields
+			// its product type declares, and untouched keys must survive.
+			updates.customFields = { ...existing.customFields, ...input.customFields };
+		}
 
 		if (Object.keys(updates).length > 0) {
 			await db.update(products).set(updates).where(eq(products.id, id));

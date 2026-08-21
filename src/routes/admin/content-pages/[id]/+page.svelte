@@ -1,4 +1,7 @@
 <script lang="ts">
+  import hoikkaConfig from "$hoikka/config";
+  import FieldRenderer from "$lib/components/admin/FieldRenderer.svelte";
+  import { SelectNative } from "$lib/components/admin/ui/select-native";
   import { enhance } from "$app/forms";
   import { page } from "$app/state";
   import { toast } from "svelte-sonner";
@@ -45,6 +48,8 @@
   let title = $state("");
   let slug = $state("");
   let published = $state(false);
+  let template = $state(data.page.template ?? "default");
+  const templateFieldDefs = $derived(hoikkaConfig.contentPages.templates[template]?.fields ?? []);
   let body = $state("");
   let imageUrl = $state<string | null>(null);
   let showImagePicker = $state(false);
@@ -240,6 +245,25 @@
 
     <!-- Sidebar (Right) -->
     <div class="w-full space-y-6 lg:w-80 lg:shrink-0">
+      {#if Object.keys(hoikkaConfig.contentPages.templates).length > 1 || templateFieldDefs.length > 0}
+        <AdminCard title="Template" variant="sidebar">
+          <SelectNative name="template" form="content-page-form" bind:value={template}>
+            {#each Object.entries(hoikkaConfig.contentPages.templates) as [key, def] (key)}
+              <option value={key}>{def.label}</option>
+            {/each}
+          </SelectNative>
+          {#if templateFieldDefs.length > 0}
+            <div class="mt-4 space-y-4">
+              <FieldRenderer
+                defs={templateFieldDefs}
+                values={data.page.customFields ?? {}}
+                formId="content-page-form"
+              />
+            </div>
+          {/if}
+        </AdminCard>
+      {/if}
+
       <AdminCard title="Visibility" variant="sidebar">
         <div class="flex items-center gap-2">
           <Checkbox id="published" bind:checked={published} />

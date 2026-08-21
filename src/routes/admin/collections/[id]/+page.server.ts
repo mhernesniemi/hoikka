@@ -1,3 +1,5 @@
+import config from "$hoikka/config";
+import { parseFields, coerceFormFields, sanitizeRichtextFields } from "$lib/fields/index.js";
 import type { PageServerLoad, Actions } from "./$types";
 import { collectionService } from "$lib/server/services/collections.js";
 import { facetService } from "$lib/server/services/facets.js";
@@ -58,12 +60,25 @@ export const actions: Actions = {
 			return fail(400, { error: "Name and slug are required" });
 		}
 
+		const fieldDefs = config.collections.fields;
+		const parsedFields = parseFields(fieldDefs, coerceFormFields(fieldDefs, data));
+		if (!parsedFields.ok) {
+			return fail(400, { error: `Custom field ${parsedFields.error}` });
+		}
+
 		try {
 			await collectionService.update(id, {
 				isPrivate,
 				name,
 				slug: slugify(slug),
-				description: description ? sanitizeHtml(description) : undefined
+				description: description ? sanitizeHtml(description) : undefined,
+				...(config.collections.fields.length > 0 && {
+					customFields: sanitizeRichtextFields(
+						fieldDefs,
+						parsedFields.values,
+						sanitizeHtml
+					)
+				})
 			});
 
 			// Replace filters if provided

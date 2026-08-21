@@ -108,6 +108,7 @@
       taxCode: "standard",
       featuredAssetId: featuredAsset ? 0 : null,
       digitalAssetId: null,
+      customFields: {},
       deletedAt: null,
       createdAt: new Date(),
       updatedAt: new Date(),

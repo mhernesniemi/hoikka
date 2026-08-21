@@ -130,6 +130,13 @@ export const products = sqliteTable(
 		// digital product cannot be fulfilled — checkout completion records a
 		// fulfilment error on the order instead of silently sending nothing.
 		digitalAssetId: integer("digital_asset_id"),
+		// Values for the custom fields declared on this product's type in
+		// hoikka.config.ts. One JSON object keyed by field key — the config is
+		// the schema, valibot validates on write (see $lib/fields).
+		customFields: text("custom_fields", { mode: "json" })
+			.$type<Record<string, unknown>>()
+			.default({})
+			.notNull(),
 		deletedAt: ts("deleted_at"),
 		createdAt: now(),
 		updatedAt: updatedNow()
@@ -932,6 +939,11 @@ export const collections = sqliteTable("collections", {
 	isPrivate: bool("is_private").default(false).notNull(),
 	featuredAssetId: integer("featured_asset_id").references(() => assets.id),
 	position: integer("position").default(0).notNull(),
+	// Values for the collection custom fields declared in hoikka.config.ts.
+	customFields: text("custom_fields", { mode: "json" })
+		.$type<Record<string, unknown>>()
+		.default({})
+		.notNull(),
 	createdAt: now(),
 	updatedAt: updatedNow()
 });
@@ -1100,6 +1112,14 @@ export const contentPages = sqliteTable("content_pages", {
 	body: text("body"),
 	imageUrl: text("image_url"),
 	published: bool("published").default(false).notNull(),
+	// Which template from hoikka.config.ts this page uses. Templates declare
+	// the page's custom fields; "default" is always available.
+	template: text("template").default("default").notNull(),
+	// Values for the template's custom fields — see $lib/fields.
+	customFields: text("custom_fields", { mode: "json" })
+		.$type<Record<string, unknown>>()
+		.default({})
+		.notNull(),
 	createdAt: now(),
 	updatedAt: updatedNow()
 });

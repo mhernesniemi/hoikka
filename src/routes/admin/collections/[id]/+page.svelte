@@ -1,4 +1,6 @@
 <script lang="ts">
+  import hoikkaConfig from "$hoikka/config";
+  import FieldRenderer from "$lib/components/admin/FieldRenderer.svelte";
   import { deserialize, enhance } from "$app/forms";
   import { page } from "$app/state";
   import { onMount } from "svelte";
@@ -567,6 +569,18 @@
     <!-- Sidebar (Right) -->
     <div class="w-full space-y-6 lg:w-80 lg:shrink-0">
       <!-- Private Section -->
+      {#if hoikkaConfig.collections.fields.length > 0}
+        <AdminCard title="Details" variant="sidebar">
+          <div class="space-y-4">
+            <FieldRenderer
+              defs={hoikkaConfig.collections.fields}
+              values={data.collection.customFields ?? {}}
+              formId="collection-form"
+            />
+          </div>
+        </AdminCard>
+      {/if}
+
       <AdminCard title="Visibility" variant="sidebar">
         <div class="flex items-center gap-2">
           <Checkbox id="is_private" bind:checked={isPrivate} />

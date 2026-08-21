@@ -114,6 +114,8 @@ export class ContentPageService {
 			body?: string;
 			imageUrl?: string | null;
 			published?: boolean;
+			template?: string;
+			customFields?: Record<string, unknown>;
 		}
 	): Promise<ContentPage | null> {
 		const existing = await this.getById(id);
@@ -125,6 +127,10 @@ export class ContentPageService {
 		if (input.slug !== undefined) updateData.slug = input.slug;
 		if (input.body !== undefined) updateData.body = input.body;
 		if (input.imageUrl !== undefined) updateData.imageUrl = input.imageUrl;
+		if (input.template !== undefined) updateData.template = input.template;
+		if (input.customFields !== undefined) {
+			updateData.customFields = { ...existing.customFields, ...input.customFields };
+		}
 
 		if (Object.keys(updateData).length > 0) {
 			await db.update(contentPages).set(updateData).where(eq(contentPages.id, id));

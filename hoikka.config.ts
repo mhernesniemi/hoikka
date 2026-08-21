@@ -37,8 +37,35 @@ export default defineHoikkaConfig({
 	payments: [stripe(), mockPayment()],
 	shipping: [flatRate({ amount: 590, estimatedDeliveryDays: 5 })],
 	productTypes: {
-		physical: { label: "Physical", fields: [] }
+		physical: {
+			label: "Physical",
+			fields: [
+				{ key: "material", label: "Material", type: "text" },
+				{
+					key: "careInstructions",
+					label: "Care instructions",
+					type: "richtext",
+					help: "Shown on the product page under the description"
+				},
+				{ key: "weightGrams", label: "Weight (g)", type: "number" }
+			]
+		}
 		// Enable digital products (delivered as downloads after payment):
 		// digital: { label: "Digital", fields: [] }
+	},
+	contentPages: {
+		templates: {
+			default: { label: "Default", fields: [] },
+			campaign: {
+				label: "Campaign",
+				fields: [
+					{ key: "heroImage", label: "Hero image", type: "image" },
+					{ key: "endsAt", label: "Campaign ends", type: "date" }
+				]
+			}
+		}
+	},
+	collections: {
+		fields: [{ key: "subtitle", label: "Subtitle", type: "text" }]
 	}
 });

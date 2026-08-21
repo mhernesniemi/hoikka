@@ -1,3 +1,5 @@
+import config from "$hoikka/config";
+import { parseFields, coerceFormFields, sanitizeRichtextFields } from "$lib/fields/index.js";
 import { productService } from "$lib/server/services/products.js";
 import { reindexProduct, removeFromIndex } from "$lib/server/services/product-search.js";
 import { facetService } from "$lib/server/services/facets.js";
@@ -118,6 +120,18 @@ export const actions: Actions = {
 			}
 		}
 
+		// Custom fields for the (possibly just-changed) product type, validated
+		// against the definitions in hoikka.config.ts. Single-type stores hide
+		// the type selector, so `type` may be absent — fall back to what the
+		// product already is.
+		const currentProduct = await productService.getById(id);
+		const effectiveType = type ?? currentProduct?.type ?? config.defaultProductType;
+		const fieldDefs = config.productTypes[effectiveType]?.fields ?? [];
+		const parsedFields = parseFields(fieldDefs, coerceFormFields(fieldDefs, formData));
+		if (!parsedFields.ok) {
+			return fail(400, { error: `Custom field ${parsedFields.error}` });
+		}
+
 		try {
 			// Update product
 			await productService.update(id, {
@@ -125,7 +139,14 @@ export const actions: Actions = {
 				visibility,
 				name,
 				slug,
-				description: description ? sanitizeHtml(description) : undefined
+				description: description ? sanitizeHtml(description) : undefined,
+				...(fieldDefs.length > 0 && {
+					customFields: sanitizeRichtextFields(
+						fieldDefs,
+						parsedFields.values,
+						sanitizeHtml
+					)
+				})
 			});
 
 			// Update facet values

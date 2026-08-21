@@ -256,6 +256,9 @@ export class CollectionService {
 		if (input.name !== undefined) updateData.name = input.name;
 		if (input.slug !== undefined) updateData.slug = input.slug;
 		if (input.description !== undefined) updateData.description = input.description;
+		if (input.customFields !== undefined) {
+			updateData.customFields = { ...existing.customFields, ...input.customFields };
+		}
 
 		if (Object.keys(updateData).length > 0) {
 			await db.update(collections).set(updateData).where(eq(collections.id, id));

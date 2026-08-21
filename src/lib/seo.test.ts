@@ -13,6 +13,7 @@ function makeProduct(overrides: Partial<ProductWithRelations> = {}): ProductWith
 		taxCode: "standard",
 		featuredAssetId: null,
 		digitalAssetId: null,
+		customFields: {},
 		deletedAt: null,
 		createdAt: new Date(),
 		updatedAt: new Date(),

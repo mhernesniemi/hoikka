@@ -1,4 +1,6 @@
 <script lang="ts">
+  import hoikkaConfig from "$hoikka/config";
+  import { customFields } from "$lib/fields/index.js";
   import { STORE_NAME } from "$lib/config/store.js";
   import { browser } from "$app/environment";
   import { cn, formatPrice, stripHtml, commandErrorMessage } from "$lib/utils";
@@ -49,6 +51,15 @@
   });
 
   const selectedVariant = $derived(product.variants.find((v) => v.id === selectedVariantId));
+
+  // Custom-field values declared for this product's type in hoikka.config.ts.
+  // Image fields are omitted here — they are assets, not spec-sheet lines.
+  const detailEntries = $derived(
+    (hoikkaConfig.productTypes[product.type]?.fields ?? [])
+      .filter((def) => def.type !== "image")
+      .map((def) => [def, customFields([def], product)[def.key]] as const)
+      .filter(([, value]) => value !== undefined && value !== "")
+  );
 
   // When variant changes, jump to its image
   $effect(() => {
@@ -246,6 +257,25 @@
           <!-- eslint-disable-next-line svelte/no-at-html-tags -- sanitized on save in admin -->
           {@html product.description}
         </div>
+      {/if}
+
+      <!-- Custom fields from hoikka.config.ts (this product type's "Details") -->
+      {#if detailEntries.length > 0}
+        <dl class="mb-8 grid grid-cols-[auto_1fr] gap-x-6 gap-y-1 text-sm">
+          {#each detailEntries as [def, value] (def.key)}
+            <dt class="font-medium text-gray-700">{def.label}</dt>
+            <dd class="text-gray-600">
+              {#if def.type === "richtext"}
+                <!-- eslint-disable-next-line svelte/no-at-html-tags -- sanitized on save in admin -->
+                {@html value}
+              {:else if def.type === "boolean"}
+                {value ? "Yes" : "No"}
+              {:else}
+                {value}
+              {/if}
+            </dd>
+          {/each}
+        </dl>
       {/if}
 
       <!-- Variant Selection -->
