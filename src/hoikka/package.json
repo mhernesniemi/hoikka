@@ -13,6 +13,7 @@
 	},
 	"exports": {
 		"./package.json": "./package.json",
+		"./vite": "./vite.mjs",
 		"./admin/unsaved-changes.svelte": "./admin/unsaved-changes.svelte.ts",
 		"./admin/admin-theme.svelte": "./admin/admin-theme.svelte.ts",
 		"./*.svelte": "./*.svelte",
@@ -28,7 +29,7 @@
 		"routes",
 		"server",
 		"shared",
-		"vite.ts",
+		"vite.mjs",
 		"!**/*.test.ts",
 		"!**/__snapshots__"
 	],

@@ -1,5 +1,9 @@
 /**
- * The one Vite plugin a Hoikka app needs. It does four things:
+ * The one Vite plugin a Hoikka app needs. Plain .mjs on purpose: vite.config
+ * runs in Node's own module loader (vitest/vite externalize bare imports when
+ * bundling the config), and Node refuses to type-strip .ts inside
+ * node_modules — so everything a config file imports from this package must
+ * be plain JavaScript. It does four things:
  *
  * 1. On the cloudflare target, swaps the node-only modules (better-sqlite3,
  *    node:fs storage, sharp) for stubs so they never enter the Workers bundle.
@@ -23,7 +27,6 @@
 import { realpathSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import type { Plugin } from "vite";
 
 // realpath because pnpm links packages via symlinks and Vite watches real paths
 const packageDir = realpathSync(dirname(fileURLToPath(import.meta.url)));
@@ -43,12 +46,16 @@ const STUBS = [
 	}
 ];
 
-export interface HoikkaPluginOptions {
-	/** "node" (default) or "cloudflare" — same value hoikka-target.js resolves. */
-	target?: string;
-}
+/**
+ * @typedef {{ target?: string }} HoikkaPluginOptions
+ *   target: "node" (default) or "cloudflare" — same value hoikka-target.js resolves.
+ */
 
-export function hoikka(options: HoikkaPluginOptions = {}): Plugin {
+/**
+ * @param {HoikkaPluginOptions} [options]
+ * @returns {import("vite").Plugin}
+ */
+export function hoikka(options = {}) {
 	const target = options.target ?? "node";
 
 	return {
@@ -58,7 +65,8 @@ export function hoikka(options: HoikkaPluginOptions = {}): Plugin {
 			config.resolve ??= {};
 			const existing = Array.isArray(config.resolve.alias) ? config.resolve.alias : [];
 
-			const aliases: { find: string; replacement: string }[] = [];
+			/** @type {{ find: string; replacement: string }[]} */
+			const aliases = [];
 
 			// The unit tests need the real node modules whatever the target is.
 			if (target === "cloudflare" && env.mode !== "test") {

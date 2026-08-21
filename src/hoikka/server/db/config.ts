@@ -6,6 +6,7 @@
  * the seed script) can share the exact same resolution.
  */
 import { readFileSync, realpathSync } from "node:fs";
+import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -25,12 +26,23 @@ export function resolveDatabaseUrl(): string {
 }
 
 /**
- * The package's migration folder, resolved from this module's own location so
- * it works identically in the embedded workspace (src/hoikka/drizzle) and when
- * installed from the registry (the pnpm store). realpath because pnpm links
- * packages via symlinks and tooling wants real paths.
+ * The package's migration folder. Resolved by asking Node where @hoikka/core
+ * is installed *from the app root* — import.meta.url is useless here because
+ * the production build bundles this module into build/server/chunks, far from
+ * the drizzle/ folder. Works identically for the embedded workspace link
+ * (src/hoikka) and a registry install (the pnpm store); realpath because pnpm
+ * links packages via symlinks and tooling wants real paths.
+ *
+ * The module-relative fallback covers contexts with no resolvable dependency,
+ * e.g. package-internal tests run straight from the source tree.
  */
 export function migrationsDir(): string {
-	const here = realpathSync(dirname(fileURLToPath(import.meta.url)));
-	return join(here, "..", "..", "drizzle");
+	try {
+		const require = createRequire(join(process.cwd(), "package.json"));
+		const pkgJson = realpathSync(require.resolve("@hoikka/core/package.json"));
+		return join(dirname(pkgJson), "drizzle");
+	} catch {
+		const here = realpathSync(dirname(fileURLToPath(import.meta.url)));
+		return join(here, "..", "..", "drizzle");
+	}
 }
