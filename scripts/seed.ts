@@ -2,15 +2,15 @@
  * Seed demo catalog data into the local SQLite database.
  * Usage: pnpm seed (reads DATABASE_URL from the environment or .env)
  */
-import { createNodeDb } from "../src/hoikka/server/db/node.js";
-import { resolveDatabaseUrl } from "../src/hoikka/server/db/config.js";
+import { createNodeDb } from "@hoikka/core/server/db/node";
+import { resolveDatabaseUrl } from "@hoikka/core/server/db/config";
 import {
 	products,
 	productVariants,
 	categories,
 	productCategories
-} from "../src/hoikka/server/db/schema.js";
-import { reindexProduct } from "../src/hoikka/server/services/reindex.js";
+} from "@hoikka/core/server/db/schema";
+import { reindexProduct } from "@hoikka/core/server/services/reindex";
 
 const db = createNodeDb(resolveDatabaseUrl());
 

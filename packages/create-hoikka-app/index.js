@@ -34,14 +34,20 @@ const pm = {
 // Template source — overridable for forks and local testing
 const REPO = process.env.HOIKKA_TEMPLATE ?? "https://github.com/mhernesniemi/hoikka.git";
 
-// Minimal flag parsing so the CLI is scriptable: --target=local|cloudflare,
-// --seed / --no-seed, --yes (answer "no" to all optional extras)
+// Minimal flag parsing so the CLI is scriptable: --mode=package|embedded,
+// --target=local|cloudflare, --seed / --no-seed, --yes (answer "no" to all
+// optional extras)
 const flags = {};
 for (const arg of process.argv.slice(3)) {
 	if (arg === "--yes") flags.yes = true;
 	else if (arg === "--seed") flags.seed = true;
 	else if (arg === "--no-seed") flags.seed = false;
 	else if (arg.startsWith("--target=")) flags.target = arg.slice("--target=".length);
+	else if (arg.startsWith("--mode=")) flags.mode = arg.slice("--mode=".length);
+}
+if (flags.mode !== undefined && !["package", "embedded"].includes(flags.mode)) {
+	console.error('--mode must be "package" or "embedded"');
+	process.exit(1);
 }
 
 // Files from the hoikka repo that shouldn't leak into scaffolded stores.
@@ -110,7 +116,32 @@ async function main() {
 		process.exit(1);
 	}
 
-	// 2. Deploy target — this only sets HOIKKA_TARGET; the codebase is
+	// 2. Distribution mode — same source either way; package mode swaps the
+	// embedded core for the published @hoikka/core at the template's version.
+	const mode =
+		flags.mode ??
+		(await p.select({
+			message: "How do you want the core?",
+			options: [
+				{
+					label: "Package",
+					value: "package",
+					hint: "@hoikka/core dependency — upgrade with a version bump"
+				},
+				{
+					label: "Embedded",
+					value: "embedded",
+					hint: "full source in src/hoikka, yours to modify"
+				}
+			]
+		}));
+
+	if (p.isCancel(mode)) {
+		p.cancel("Setup cancelled.");
+		process.exit(0);
+	}
+
+	// 3. Deploy target — this only sets HOIKKA_TARGET; the codebase is
 	// identical for both and can be switched later by editing .env.
 	const target =
 		flags.target ??
@@ -127,7 +158,7 @@ async function main() {
 		process.exit(0);
 	}
 
-	// 3. Demo content (local only — Cloudflare needs a D1 database first)
+	// 4. Demo content (local only — Cloudflare needs a D1 database first)
 	let seedDemo = false;
 	if (target === "local") {
 		const answer =
@@ -170,6 +201,67 @@ async function main() {
 		rmSync(path.join(projectDir, entry), { recursive: true, force: true });
 	}
 
+	// --- Distribution mode ---
+	// Both modes clone the same template at the same tag; package mode then
+	// deletes the embedded core and depends on the published @hoikka/core at
+	// exactly that version, so both modes run identical source.
+
+	const corePkgPath = path.join(projectDir, "src/hoikka/package.json");
+	const coreVersion = existsSync(corePkgPath)
+		? JSON.parse(readFileSync(corePkgPath, "utf-8")).version
+		: null;
+
+	if (mode === "package") {
+		const abort = (message) => {
+			rmSync(projectDir, { recursive: true, force: true });
+			p.cancel(message);
+			process.exit(1);
+		};
+		if (!coreVersion) {
+			abort(
+				"This template release predates package mode — choose Embedded, or wait for the next release."
+			);
+		}
+		// The npm artifact publishes after the template tag (CI runs the release
+		// gate first) — a scaffold in that window would fail install on a missing
+		// version. Fail early with a clear message instead. HOIKKA_CORE_DEP
+		// overrides the dependency spec for pre-publish testing (e.g. file:….tgz).
+		const coreDep = process.env.HOIKKA_CORE_DEP ?? `^${coreVersion}`;
+		if (!process.env.HOIKKA_CORE_DEP) {
+			try {
+				execSync(`npm view @hoikka/core@${coreVersion} version`, { stdio: "pipe" });
+			} catch {
+				abort(
+					`@hoikka/core@${coreVersion} is not on npm yet — if this release was just tagged, publishing may still be running. Retry in a few minutes, or choose Embedded mode.`
+				);
+			}
+		}
+
+		rmSync(path.join(projectDir, "src/hoikka"), { recursive: true, force: true });
+		// Package mode has no workspace file — `hoikka eject` recreates it.
+		rmSync(path.join(projectDir, "pnpm-workspace.yaml"), { force: true });
+		// Embedded-repo distribution tooling, and core-migration authoring:
+		// package-mode projects can't author core DB migrations (eject to take
+		// schema ownership), so drizzle-kit goes too.
+		rmSync(path.join(projectDir, "scripts/verify-pack.mjs"), { force: true });
+		rmSync(path.join(projectDir, "scripts/verify-package-mode.mjs"), { force: true });
+		rmSync(path.join(projectDir, "drizzle.config.ts"), { force: true });
+
+		const pkgPath = path.join(projectDir, "package.json");
+		const pkg = JSON.parse(readFileSync(pkgPath, "utf-8"));
+		pkg.dependencies["@hoikka/core"] = coreDep;
+		delete pkg.scripts["verify:pack"];
+		delete pkg.scripts["verify:package"];
+		delete pkg.scripts["db:generate"];
+		delete pkg.scripts["db:studio"];
+		delete pkg.devDependencies["drizzle-kit"];
+		// Unit tests live in the core package — let vitest pass until the
+		// project grows tests of its own.
+		pkg.scripts.test = "vitest --run --passWithNoTests";
+		pkg.scripts["test:unit"] = "vitest --passWithNoTests";
+		writeFileSync(pkgPath, JSON.stringify(pkg, null, "\t") + "\n");
+	}
+
 	// --- Configuration ---
 
 	s.start("Applying configuration");
@@ -205,6 +297,8 @@ async function main() {
 		template: REPO,
 		ref: tag ?? "main",
 		commit: templateCommit,
+		mode,
+		coreVersion,
 		target,
 		scaffoldedAt: new Date().toISOString(),
 		createHoikkaApp: "0.1.0"
