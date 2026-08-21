@@ -238,8 +238,20 @@ async function main() {
 		}
 
 		rmSync(path.join(projectDir, "src/hoikka"), { recursive: true, force: true });
-		// Package mode has no workspace file — `hoikka eject` recreates it.
-		rmSync(path.join(projectDir, "pnpm-workspace.yaml"), { force: true });
+		// Not deleted but emptied: without its own workspace file the project
+		// would be absorbed by any enclosing pnpm workspace (pnpm walks up),
+		// installing its dependencies into the wrong node_modules entirely.
+		writeFileSync(
+			path.join(projectDir, "pnpm-workspace.yaml"),
+			[
+				"# Marks this project as its own pnpm workspace root so an enclosing pnpm",
+				"# workspace cannot absorb it (pnpm walks up looking for this file otherwise",
+				"# and would install everything into the outer workspace). `hoikka eject`",
+				"# replaces the empty list with src/hoikka.",
+				"packages: []",
+				""
+			].join("\n")
+		);
 		// Embedded-repo distribution tooling, and core-migration authoring:
 		// package-mode projects can't author core DB migrations (eject to take
 		// schema ownership), so drizzle-kit goes too.

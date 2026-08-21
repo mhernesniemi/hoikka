@@ -84,14 +84,18 @@ if (!allowDirty) {
 	}
 }
 
-// A pre-existing workspace file is the user's — never overwrite it, and only
-// proceed when src/hoikka is already listed (checked before any mutation).
+// Package-mode scaffolds carry a workspace file with an empty packages list —
+// a marker that keeps an enclosing pnpm workspace from absorbing the project.
+// That file is ours to rewrite. A workspace file with real entries is the
+// user's: never overwrite it, and only proceed when src/hoikka is listed.
 const workspacePath = path.join(cwd, "pnpm-workspace.yaml");
 const hasWorkspaceFile = existsSync(workspacePath);
-if (
+const workspaceContent = hasWorkspaceFile ? readFileSync(workspacePath, "utf8") : "";
+const listsCore = /(^|\s)-\s*["']?src\/hoikka["']?\s*$/m.test(workspaceContent);
+const emptyMarker =
 	hasWorkspaceFile &&
-	!/(^|\s)-\s*["']?src\/hoikka["']?\s*$/m.test(readFileSync(workspacePath, "utf8"))
-) {
+	/^\s*packages\s*:\s*\[\s*\]\s*$/m.test(workspaceContent.replace(/#[^\n]*/g, ""));
+if (hasWorkspaceFile && !listsCore && !emptyMarker) {
 	console.error(
 		'[hoikka:eject] pnpm-workspace.yaml exists but does not list src/hoikka. Add `- "src/hoikka"` under packages: and rerun.'
 	);
@@ -118,8 +122,11 @@ for (const entry of entries) {
 }
 cpSync(path.join(packageRoot, "package.json"), path.join(corePath, "package.json"));
 
-if (!hasWorkspaceFile) {
-	writeFileSync(workspacePath, 'packages:\n    - "src/hoikka"\n');
+if (!hasWorkspaceFile || emptyMarker) {
+	writeFileSync(
+		workspacePath,
+		'# Marks this project as its own pnpm workspace root so an enclosing pnpm\n# workspace cannot absorb it.\npackages:\n    - "src/hoikka"\n'
+	);
 }
 rootPkg.dependencies["@hoikka/core"] = "workspace:*";
 writeFileSync(rootPkgPath, `${JSON.stringify(rootPkg, null, "\t")}\n`);

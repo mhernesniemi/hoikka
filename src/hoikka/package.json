@@ -1,6 +1,6 @@
 {
 	"name": "@hoikka/core",
-	"version": "0.1.1",
+	"version": "0.1.2",
 	"description": "Hoikka commerce core — services, database, admin, and route handlers for SvelteKit. Shipped as TypeScript/Svelte source.",
 	"type": "module",
 	"license": "MIT",

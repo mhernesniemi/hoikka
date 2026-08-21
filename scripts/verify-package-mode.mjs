@@ -45,9 +45,13 @@ execSync(
 );
 rmSync(path.join(work, "src/hoikka"), { recursive: true, force: true });
 rmSync(path.join(work, "packages"), { recursive: true, force: true });
-// Package mode has no workspace file (eject writes one); the native-build
-// allowlist lives in package.json so nothing else needs it.
-rmSync(path.join(work, "pnpm-workspace.yaml"), { force: true });
+// Package mode keeps an empty workspace marker so an enclosing pnpm workspace
+// cannot absorb the project (the native-build allowlist lives in package.json).
+// Same file create-hoikka-app writes; eject must accept and rewrite it.
+writeFileSync(
+	path.join(work, "pnpm-workspace.yaml"),
+	"# workspace marker — see create-hoikka-app\npackages: []\n"
+);
 
 const pkg = JSON.parse(readFileSync(path.join(work, "package.json"), "utf8"));
 pkg.dependencies["@hoikka/core"] = `file:${tarball}`;
