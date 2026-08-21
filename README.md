@@ -16,12 +16,23 @@ There are no plugin systems, configuration DSLs, or hidden admin logic. Everythi
 pnpx create-hoikka-app my-store
 ```
 
-The CLI clones the latest release and asks where you want to run the store:
+The CLI clones the latest release and asks two questions:
+
+**How do you want the core?**
+
+- **Package** — the managed core (admin, services, database, migrations) installs as an `@hoikka/core` dependency. Your project holds only what you customize: the storefront, `hoikka.config.ts`, and thin wiring. Upgrading is a version bump.
+- **Embedded** — the full core source lives in `src/hoikka/`, yours to modify. Upgrades arrive by merging from the template.
+
+**Where will you run the store?**
 
 - **Local / Node.js** — SQLite file + local uploads. Optionally seeds demo products and starts `pnpm dev`.
 - **Cloudflare** — Workers + D1 + R2. The CLI creates the resources, applies migrations, and deploys.
 
-Switching targets later is one line: flip `HOIKKA_TARGET` in `.env`.
+Switching targets later is one line: flip `HOIKKA_TARGET` in `.env`. Switching modes goes one way: `pnpm exec hoikka eject` copies the installed core into `src/hoikka/` and turns a package-mode project into an embedded one — there is no undo beyond git.
+
+Both modes run identical source; the config file drives both. `hoikka.config.ts` defines store settings (currency, tax rates, countries, payment and shipping providers, limits) and the content model — custom fields on product types, content-page templates, and collections — validated at startup and fully typed in your storefront code.
+
+One deliberate package-mode limitation: core database migrations ship with `@hoikka/core`, so you can't author your own there. Custom data goes through the config-defined custom fields; if you need schema ownership, eject.
 
 ## Features
 
