@@ -6,8 +6,8 @@
  * change. Custom fields declared on product types, content-page templates and
  * collections get admin form inputs and typed storefront access automatically.
  */
-import { defineHoikkaConfig } from "./src/lib/config-schema/index.js";
-import { stripe, mockPayment, flatRate } from "./src/lib/config-schema/providers.js";
+import { defineHoikkaConfig } from "@hoikka/core/config/index";
+import { stripe, mockPayment, flatRate } from "@hoikka/core/config/providers";
 
 export default defineHoikkaConfig({
 	store: {

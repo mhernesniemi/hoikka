@@ -1,6 +1,6 @@
-import { productService } from "$lib/server/services/products.js";
-import { collectionService } from "$lib/server/services/collections.js";
-import { categoryService } from "$lib/server/services/categories.js";
+import { productService } from "@hoikka/core/server/services/products";
+import { collectionService } from "@hoikka/core/server/services/collections";
+import { categoryService } from "@hoikka/core/server/services/categories";
 import { env } from "$env/dynamic/public";
 import type { RequestHandler } from "./$types";
 

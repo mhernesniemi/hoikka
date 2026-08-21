@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Command as CommandPrimitive } from "bits-ui";
   import SearchIcon from "@lucide/svelte/icons/search";
-  import { cn } from "$lib/utils.js";
+  import { cn } from "@hoikka/core/shared/utils";
 
   let {
     ref = $bindable(null),

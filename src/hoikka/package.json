@@ -1,0 +1,56 @@
+{
+	"name": "@hoikka/core",
+	"version": "0.1.0",
+	"description": "Hoikka commerce core \u2014 services, database, admin, and route handlers for SvelteKit. Shipped as TypeScript/Svelte source.",
+	"type": "module",
+	"license": "MIT",
+	"svelte": "./shared/types.ts",
+	"engines": {
+		"node": ">=20"
+	},
+	"bin": {
+		"hoikka": "./internals/cli.mjs"
+	},
+	"exports": {
+		"./package.json": "./package.json",
+		"./admin/unsaved-changes.svelte": "./admin/unsaved-changes.svelte.ts",
+		"./admin/admin-theme.svelte": "./admin/admin-theme.svelte.ts",
+		"./*.svelte": "./*.svelte",
+		"./*": "./*.ts"
+	},
+	"files": [
+		"admin",
+		"config",
+		"drizzle",
+		"fields",
+		"internals",
+		"remote",
+		"routes",
+		"server",
+		"shared",
+		"vite.ts",
+		"!**/*.test.ts",
+		"!**/__snapshots__"
+	],
+	"publishConfig": {
+		"access": "public"
+	},
+	"peerDependencies": {
+		"@sveltejs/kit": "^2.0.0",
+		"drizzle-orm": "^0.45.0",
+		"svelte": "^5.0.0",
+		"tailwindcss": "^4.0.0",
+		"valibot": "^1.0.0",
+		"better-sqlite3": "^12.0.0",
+		"sharp": "^0.35.0"
+	},
+	"peerDependenciesMeta": {
+		"better-sqlite3": {
+			"optional": true
+		},
+		"sharp": {
+			"optional": true
+		}
+	},
+	"dependencies": {}
+}

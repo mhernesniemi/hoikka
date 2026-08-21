@@ -1,6 +1,6 @@
 import { fail } from "@sveltejs/kit";
 import type { Actions } from "./$types";
-import { customerService } from "$lib/server/services/customers.js";
+import { customerService } from "@hoikka/core/server/services/customers";
 
 export const actions: Actions = {
 	updateProfile: async ({ request, locals }) => {

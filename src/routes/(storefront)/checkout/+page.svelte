@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { DEFAULT_COUNTRY, SHIPPING_COUNTRIES } from "$lib/config/countries.js";
-  import { STORE_NAME } from "$lib/config/store.js";
+  import { DEFAULT_COUNTRY, SHIPPING_COUNTRIES } from "@hoikka/core/config/derived";
+  import { STORE_NAME } from "@hoikka/core/config/derived";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
-  import { commandErrorMessage } from "$lib/utils";
+  import { commandErrorMessage } from "@hoikka/core/shared/utils";
   import {
     getCheckout,
     setShippingAddress,
@@ -20,8 +20,8 @@
   import { Label } from "$lib/components/storefront/ui/label";
   import { Alert } from "$lib/components/storefront/ui/alert";
   import StripePayment from "$lib/components/storefront/StripePayment.svelte";
-  import { formatPrice, cn } from "$lib/utils.js";
-  import { imageUrl } from "$lib/image";
+  import { formatPrice, cn } from "@hoikka/core/shared/utils";
+  import { imageUrl } from "@hoikka/core/shared/image";
   import ShoppingCart from "@lucide/svelte/icons/shopping-cart";
   import LoaderCircle from "@lucide/svelte/icons/loader-circle";
   import type { Stripe, StripeElements } from "@stripe/stripe-js";

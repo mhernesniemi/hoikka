@@ -1,10 +1,10 @@
-import { productService } from "$lib/server/services/products.js";
+import { productService } from "@hoikka/core/server/services/products";
 import {
 	WISHLIST_COOKIE,
 	WISHLIST_COOKIE_OPTIONS,
 	parseWishlistCookie,
 	serializeWishlistCookie
-} from "$lib/server/wishlist-cookie.js";
+} from "@hoikka/core/server/wishlist-cookie";
 import { fail } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
 

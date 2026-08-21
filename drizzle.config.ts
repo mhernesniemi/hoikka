@@ -1,9 +1,9 @@
 import { defineConfig } from "drizzle-kit";
-import { resolveDatabaseUrl } from "./src/lib/server/db/config.js";
+import { resolveDatabaseUrl } from "./src/hoikka/server/db/config.js";
 
 export default defineConfig({
-	schema: "./src/lib/server/db/schema.ts",
-	out: "./drizzle",
+	schema: "./src/hoikka/server/db/schema.ts",
+	out: "./src/hoikka/drizzle",
 	dialect: "sqlite",
 	dbCredentials: { url: resolveDatabaseUrl() },
 	verbose: true,

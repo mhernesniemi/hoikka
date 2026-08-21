@@ -1,11 +1,11 @@
 <script lang="ts">
-  import { BASE_CURRENCY } from "$lib/utils";
+  import { BASE_CURRENCY } from "@hoikka/core/shared/utils";
   import { browser } from "$app/environment";
   import { invalidateAll, goto } from "$app/navigation";
   import { page } from "$app/state";
   import { getCart, setCartQuantity, removeCartLine } from "$lib/remote/cart.remote";
   import { getCheckout } from "$lib/remote/checkout.remote";
-  import { withQuantity } from "$lib/cart-optimistic";
+  import { withQuantity } from "@hoikka/core/shared/cart-optimistic";
   import Img from "$lib/components/storefront/Img.svelte";
   import { cartStore } from "$lib/stores/cart.svelte";
   import {

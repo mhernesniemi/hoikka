@@ -6,7 +6,7 @@
    *
    *   <Img src={asset.source} alt={name} width={400} class="h-full w-full object-cover" />
    */
-  import { imageUrl, imageSrcset, focalPosition } from "$lib/image";
+  import { imageUrl, imageSrcset, focalPosition } from "@hoikka/core/shared/image";
 
   let {
     src,

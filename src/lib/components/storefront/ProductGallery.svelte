@@ -4,11 +4,11 @@
    * images at hero size once the browser is idle, so switching is instant.
    */
   import { browser } from "$app/environment";
-  import { cn } from "$lib/utils";
+  import { cn } from "@hoikka/core/shared/utils";
   import Img from "$lib/components/storefront/Img.svelte";
-  import { HERO_SIZES, HERO_WIDTH, warmGalleryImages } from "$lib/product-images";
+  import { HERO_SIZES, HERO_WIDTH, warmGalleryImages } from "@hoikka/core/shared/product-images";
   import ImageIcon from "@lucide/svelte/icons/image";
-  import type { ProductWithRelations } from "$lib/types";
+  import type { ProductWithRelations } from "@hoikka/core/shared/types";
 
   type GalleryImage = ProductWithRelations["assets"][number];
 

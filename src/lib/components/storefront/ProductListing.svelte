@@ -1,18 +1,18 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
-  import { cn, getCurrencySymbol } from "$lib/utils";
+  import { cn, getCurrencySymbol } from "@hoikka/core/shared/utils";
   import { SelectNative } from "$lib/components/storefront/ui/select-native";
   import ProductCard from "$lib/components/storefront/ProductCard.svelte";
-  import type { ListingResult } from "$lib/server/services/product-search";
+  import type { ListingResult } from "@hoikka/core/server/services/product-search";
   import {
     PRODUCT_SORT_OPTIONS,
     type CachedProduct,
     type FacetWithValues,
     type ProductSortKey,
     type ProductWithRelations
-  } from "$lib/types";
-  import type { ActiveDiscount } from "$lib/promotion-utils";
+  } from "@hoikka/core/shared/types";
+  import type { ActiveDiscount } from "@hoikka/core/shared/promotion-utils";
   import Check from "@lucide/svelte/icons/check";
   import SlidersHorizontal from "@lucide/svelte/icons/sliders-horizontal";
   import X from "@lucide/svelte/icons/x";

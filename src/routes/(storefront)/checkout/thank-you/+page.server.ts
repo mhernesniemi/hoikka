@@ -10,9 +10,9 @@
  * checkout token and the full address snapshot.
  */
 import { error } from "@sveltejs/kit";
-import { orderService } from "$lib/server/services/index.js";
-import { digitalDeliveryService } from "$lib/server/services/digitalDelivery.js";
-import { RECEIPT_COOKIE, parseReceiptCookie } from "$lib/server/cart-cookie.js";
+import { orderService } from "@hoikka/core/server/services/index";
+import { digitalDeliveryService } from "@hoikka/core/server/services/digitalDelivery";
+import { RECEIPT_COOKIE, parseReceiptCookie } from "@hoikka/core/server/cart-cookie";
 import type { PageServerLoad } from "./$types.js";
 
 export const load: PageServerLoad = async ({ url, locals, cookies }) => {

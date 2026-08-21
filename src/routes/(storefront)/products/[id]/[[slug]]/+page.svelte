@@ -1,16 +1,16 @@
 <script lang="ts">
   import hoikkaConfig from "$hoikka/config";
-  import { customFields } from "$lib/fields/index.js";
-  import { STORE_NAME } from "$lib/config/store.js";
+  import { customFields } from "@hoikka/core/fields/index";
+  import { STORE_NAME } from "@hoikka/core/config/derived";
   import { browser } from "$app/environment";
-  import { cn, formatPrice, stripHtml, commandErrorMessage } from "$lib/utils";
-  import { imageUrl, imageSrcset } from "$lib/image";
-  import { galleryImages, HERO_SIZES, HERO_WIDTH } from "$lib/product-images";
+  import { cn, formatPrice, stripHtml, commandErrorMessage } from "@hoikka/core/shared/utils";
+  import { imageUrl, imageSrcset } from "@hoikka/core/shared/image";
+  import { galleryImages, HERO_SIZES, HERO_WIDTH } from "@hoikka/core/shared/product-images";
   import { productJsonLd } from "$lib/seo";
   import { addVariantToCart, optimisticSeed } from "$lib/cart-actions";
   import { toggleWishlist, isProductWishlisted } from "$lib/remote/wishlist.remote";
   import { cartStore } from "$lib/stores/cart.svelte";
-  import { findBestDiscount, getDiscountedPrice } from "$lib/promotion-utils";
+  import { findBestDiscount, getDiscountedPrice } from "@hoikka/core/shared/promotion-utils";
   import ProductGallery from "$lib/components/storefront/ProductGallery.svelte";
   import ProductReviews from "$lib/components/storefront/ProductReviews.svelte";
   import ProductCard from "$lib/components/storefront/ProductCard.svelte";

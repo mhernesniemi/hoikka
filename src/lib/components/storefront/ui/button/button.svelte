@@ -37,7 +37,7 @@
 </script>
 
 <script lang="ts">
-  import { cn } from "$lib/utils.js";
+  import { cn } from "@hoikka/core/shared/utils";
   import type { HTMLButtonAttributes } from "svelte/elements";
 
   let {

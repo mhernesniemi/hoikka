@@ -6,7 +6,7 @@
    * so state resets per product.
    */
   import { enhance } from "$app/forms";
-  import { cn } from "$lib/utils";
+  import { cn } from "@hoikka/core/shared/utils";
   import { Button } from "$lib/components/storefront/ui/button";
   import { Alert } from "$lib/components/storefront/ui/alert";
 

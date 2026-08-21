@@ -1,4 +1,2 @@
-/** Derived from hoikka.config.ts — edit the config, not this file. */
-import config from "$hoikka/config";
-
-export const DATE_LOCALE = config.locales.dateLocale;
+// Re-export from @hoikka/core so userland imports keep their $lib paths.
+export { DATE_LOCALE } from "@hoikka/core/config/derived";

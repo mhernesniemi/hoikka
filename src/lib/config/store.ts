@@ -1,5 +1,2 @@
-/** Store identity, derived from hoikka.config.ts — edit the config, not this file. */
-import config from "$hoikka/config";
-
-export const STORE_NAME = config.store.name;
-export const SUPPORT_EMAIL = config.store.supportEmail;
+// Re-export from @hoikka/core so userland imports keep their $lib paths.
+export { STORE_NAME, SUPPORT_EMAIL } from "@hoikka/core/config/derived";

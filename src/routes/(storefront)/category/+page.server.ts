@@ -1,5 +1,5 @@
 import type { PageServerLoad } from "./$types";
-import { categoryService } from "$lib/server/services/categories.js";
+import { categoryService } from "@hoikka/core/server/services/categories";
 
 export const load: PageServerLoad = async () => {
 	const tree = await categoryService.getTree();

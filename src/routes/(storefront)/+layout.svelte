@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { STORE_NAME } from "$lib/config/store.js";
+  import { STORE_NAME } from "@hoikka/core/config/derived";
   import { browser } from "$app/environment";
   import { invalidateAll, onNavigate } from "$app/navigation";
-  import { cn } from "$lib/utils";
+  import { cn } from "@hoikka/core/shared/utils";
   import SearchBar from "$lib/components/storefront/SearchBar.svelte";
   import CartSheet from "$lib/components/storefront/CartSheet.svelte";
   import { getWishlistCount } from "$lib/remote/wishlist.remote";

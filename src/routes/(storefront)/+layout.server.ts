@@ -1,4 +1,4 @@
-import { promotionService } from "$lib/server/services/promotions.js";
+import { promotionService } from "@hoikka/core/server/services/promotions";
 import type { LayoutServerLoad } from "./$types";
 
 export const load: LayoutServerLoad = async () => {

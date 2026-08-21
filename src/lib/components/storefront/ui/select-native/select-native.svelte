@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { cn } from "$lib/utils.js";
+  import { cn } from "@hoikka/core/shared/utils";
   import type { HTMLSelectAttributes } from "svelte/elements";
   import type { Snippet } from "svelte";
 

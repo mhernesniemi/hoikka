@@ -1,7 +1,7 @@
-import { productService } from "$lib/server/services/products.js";
-import { loadProductPageData } from "$lib/server/services/product-page.js";
-import { reviewService } from "$lib/server/services/reviews.js";
-import { taxService } from "$lib/server/services/tax.js";
+import { productService } from "@hoikka/core/server/services/products";
+import { loadProductPageData } from "@hoikka/core/server/services/product-page";
+import { reviewService } from "@hoikka/core/server/services/reviews";
+import { taxService } from "@hoikka/core/server/services/tax";
 import { error, fail, redirect } from "@sveltejs/kit";
 import type { PageServerLoad, Actions } from "./$types";
 

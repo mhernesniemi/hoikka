@@ -4,7 +4,7 @@
  */
 import { fail } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
-import { customerService } from "$lib/server/services/customers";
+import { customerService } from "@hoikka/core/server/services/customers";
 
 export const load: PageServerLoad = async ({ parent }) => {
 	const { customer } = await parent();

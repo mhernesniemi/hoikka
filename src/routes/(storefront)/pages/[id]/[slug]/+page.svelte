@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { STORE_NAME } from "$lib/config/store.js";
-  import { stripHtml } from "$lib/utils";
-  import { imageUrl } from "$lib/image";
+  import { STORE_NAME } from "@hoikka/core/config/derived";
+  import { stripHtml } from "@hoikka/core/shared/utils";
+  import { imageUrl } from "@hoikka/core/shared/image";
 
   let { data } = $props();
 </script>

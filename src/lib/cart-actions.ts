@@ -4,8 +4,8 @@
  */
 import { addToCart, getCart } from "$lib/remote/cart.remote";
 import { cartStore } from "$lib/stores/cart.svelte";
-import { withAddedLine, type OptimisticLineSeed } from "$lib/cart-optimistic";
-import type { ProductWithRelations } from "$lib/types";
+import { withAddedLine, type OptimisticLineSeed } from "@hoikka/core/shared/cart-optimistic";
+import type { ProductWithRelations } from "@hoikka/core/shared/types";
 
 type Variant = ProductWithRelations["variants"][number];
 

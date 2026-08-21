@@ -1,4 +1,4 @@
-import { orderService } from "$lib/server/services/orders.js";
+import { orderService } from "@hoikka/core/server/services/orders";
 import type { PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ parent }) => {

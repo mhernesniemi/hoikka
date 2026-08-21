@@ -1,7 +1,7 @@
 <script lang="ts">
   import { page } from "$app/state";
   import { goto } from "$app/navigation";
-  import { cn } from "$lib/utils";
+  import { cn } from "@hoikka/core/shared/utils";
   import { authClient } from "$lib/auth-client";
   import { buttonVariants } from "$lib/components/storefront/ui/button";
 

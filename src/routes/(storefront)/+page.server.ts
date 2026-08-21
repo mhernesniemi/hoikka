@@ -1,4 +1,4 @@
-import { productService, stampGroupPrices } from "$lib/server/services/products.js";
+import { productService, stampGroupPrices } from "@hoikka/core/server/services/products";
 import type { PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ locals }) => {

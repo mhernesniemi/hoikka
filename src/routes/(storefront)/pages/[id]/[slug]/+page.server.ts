@@ -1,5 +1,5 @@
 import type { PageServerLoad } from "./$types";
-import { contentPageService } from "$lib/server/services/content-pages.js";
+import { contentPageService } from "@hoikka/core/server/services/content-pages";
 import { error, redirect } from "@sveltejs/kit";
 
 export const load: PageServerLoad = async ({ params, url, locals }) => {

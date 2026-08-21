@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { SHIPPING_COUNTRIES } from "$lib/config/countries.js";
-  import { STORE_NAME } from "$lib/config/store.js";
+  import { SHIPPING_COUNTRIES } from "@hoikka/core/config/derived";
+  import { STORE_NAME } from "@hoikka/core/config/derived";
   import { enhance } from "$app/forms";
   import { Button } from "$lib/components/storefront/ui/button";
   import type { PageData, ActionData } from "./$types";

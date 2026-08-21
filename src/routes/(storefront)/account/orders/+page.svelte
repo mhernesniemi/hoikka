@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { STORE_NAME } from "$lib/config/store.js";
-  import { cn, orderStateLabel } from "$lib/utils";
+  import { STORE_NAME } from "@hoikka/core/config/derived";
+  import { cn, orderStateLabel } from "@hoikka/core/shared/utils";
   import type { PageData } from "./$types";
 
   let { data }: { data: PageData } = $props();

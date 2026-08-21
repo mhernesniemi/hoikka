@@ -1,8 +1,8 @@
 import config from "$hoikka/config";
 import type { PageServerLoad } from "./$types";
-import { collectionService } from "$lib/server/services/collections.js";
-import { facetService } from "$lib/server/services/facets.js";
-import { listProducts, parseListingParams } from "$lib/server/services/product-search.js";
+import { collectionService } from "@hoikka/core/server/services/collections";
+import { facetService } from "@hoikka/core/server/services/facets";
+import { listProducts, parseListingParams } from "@hoikka/core/server/services/product-search";
 import { error, redirect } from "@sveltejs/kit";
 
 export const load: PageServerLoad = async ({ params, url, locals }) => {

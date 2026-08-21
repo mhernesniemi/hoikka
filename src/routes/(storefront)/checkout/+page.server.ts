@@ -9,17 +9,17 @@
  * `getCheckout` query and its commands in `$lib/remote/checkout.remote.ts`.
  */
 import { error, redirect } from "@sveltejs/kit";
-import { orderService } from "$lib/server/services/index.js";
-import { isSettledState } from "$lib/server/services/order-utils.js";
-import { grantReceipt } from "$lib/server/cart-cookie.js";
-import { rateLimit } from "$lib/server/rate-limit.js";
+import { orderService } from "@hoikka/core/server/services/index";
+import { isSettledState } from "@hoikka/core/server/services/order-utils";
+import { grantReceipt } from "@hoikka/core/server/cart-cookie";
+import { rateLimit } from "@hoikka/core/server/rate-limit";
 import config from "$hoikka/config";
 import {
 	CART_COOKIE,
 	CHECKOUT_COOKIE,
 	CHECKOUT_COOKIE_OPTIONS,
 	parseCartCookie
-} from "$lib/server/cart-cookie.js";
+} from "@hoikka/core/server/cart-cookie";
 import type { PageServerLoad } from "./$types.js";
 
 // Entering checkout without a *resolvable* draft writes a new order row, and

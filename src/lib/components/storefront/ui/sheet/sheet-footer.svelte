@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { cn, type WithElementRef } from "$lib/utils.js";
+  import { cn, type WithElementRef } from "@hoikka/core/shared/utils";
   import type { HTMLAttributes } from "svelte/elements";
 
   let {

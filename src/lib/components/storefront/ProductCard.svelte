@@ -1,8 +1,12 @@
 <script lang="ts">
-  import type { ProductWithRelations } from "$lib/types";
-  import { formatPrice, cn } from "$lib/utils";
+  import type { ProductWithRelations } from "@hoikka/core/shared/types";
+  import { formatPrice, cn } from "@hoikka/core/shared/utils";
   import Img from "$lib/components/storefront/Img.svelte";
-  import { findBestDiscount, getDiscountedPrice, type ActiveDiscount } from "$lib/promotion-utils";
+  import {
+    findBestDiscount,
+    getDiscountedPrice,
+    type ActiveDiscount
+  } from "@hoikka/core/shared/promotion-utils";
   import ImageIcon from "@lucide/svelte/icons/image";
 
   let {

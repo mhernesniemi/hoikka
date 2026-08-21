@@ -14,10 +14,10 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { eq, and, isNull, desc, like, getTableColumns } from "drizzle-orm";
-import { createNodeDb } from "../src/lib/server/db/node.js";
-import { resolveDatabaseUrl } from "../src/lib/server/db/config.js";
-import * as schema from "../src/lib/server/db/schema.js";
-import { reindexProduct, reindexAll } from "../src/lib/server/services/reindex.js";
+import { createNodeDb } from "../src/hoikka/server/db/node.js";
+import { resolveDatabaseUrl } from "../src/hoikka/server/db/config.js";
+import * as schema from "../src/hoikka/server/db/schema.js";
+import { reindexProduct, reindexAll } from "../src/hoikka/server/services/reindex.js";
 
 const db = createNodeDb(resolveDatabaseUrl());
 

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Command as CommandPrimitive } from "bits-ui";
-  import { cn } from "$lib/utils.js";
+  import { cn } from "@hoikka/core/shared/utils";
 
   let {
     ref = $bindable(null),

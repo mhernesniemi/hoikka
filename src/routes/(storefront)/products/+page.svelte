@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { STORE_NAME } from "$lib/config/store.js";
+  import { STORE_NAME } from "@hoikka/core/config/derived";
   import ProductListing from "$lib/components/storefront/ProductListing.svelte";
   import type { PageData } from "./$types";
 

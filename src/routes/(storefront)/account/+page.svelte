@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { STORE_NAME } from "$lib/config/store.js";
+  import { STORE_NAME } from "@hoikka/core/config/derived";
   import { enhance } from "$app/forms";
   import { Button } from "$lib/components/storefront/ui/button";
   import type { PageData, ActionData } from "./$types";

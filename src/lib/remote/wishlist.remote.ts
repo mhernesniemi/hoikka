@@ -1,45 +1,16 @@
 /**
- * Wishlist remote functions. The wishlist is a cookie (see
- * $lib/server/wishlist-cookie.ts) — toggling rewrites the cookie and
- * refreshes the count query in the same roundtrip.
+ * Remote-function bindings — project-owned. SvelteKit's experimental
+ * remote functions must live in the app's own .remote.ts files, so this
+ * wrapper binds the handlers from @hoikka/core; the logic lives there.
  */
-import { query, command, getRequestEvent } from "$app/server";
-import * as v from "valibot";
-import {
-	WISHLIST_COOKIE,
-	WISHLIST_COOKIE_OPTIONS,
-	parseWishlistCookie,
-	serializeWishlistCookie,
-	toggleId
-} from "$lib/server/wishlist-cookie.js";
+import { query, command } from "$app/server";
+import * as remote from "@hoikka/core/remote/wishlist";
 
-export const getWishlistCount = query(async () => {
-	const { cookies } = getRequestEvent();
-	return parseWishlistCookie(cookies.get(WISHLIST_COOKIE)).length;
-});
-
-/**
- * Whether a product is wishlisted. Queried client-side so cached storefront
- * pages stay identical for every visitor (the cookie never touches SSR).
- */
+export const getWishlistCount = query(remote.getWishlistCount);
 export const isProductWishlisted = query(
-	v.pipe(v.number(), v.integer(), v.minValue(1)),
-	async (productId) => {
-		const { cookies } = getRequestEvent();
-		return parseWishlistCookie(cookies.get(WISHLIST_COOKIE)).includes(productId);
-	}
+	remote.isProductWishlistedSchema,
+	remote.isProductWishlisted
 );
 
-export const toggleWishlist = command(
-	v.object({ productId: v.pipe(v.number(), v.integer(), v.minValue(1)) }),
-	async ({ productId }) => {
-		const { cookies } = getRequestEvent();
-		const { ids, added } = toggleId(
-			parseWishlistCookie(cookies.get(WISHLIST_COOKIE)),
-			productId
-		);
-		cookies.set(WISHLIST_COOKIE, serializeWishlistCookie(ids), WISHLIST_COOKIE_OPTIONS);
-		await getWishlistCount().refresh();
-		return { added };
-	}
-);
+const handlers = remote.commands(() => getWishlistCount().refresh());
+export const toggleWishlist = command(remote.schemas.toggleWishlist, handlers.toggleWishlist);

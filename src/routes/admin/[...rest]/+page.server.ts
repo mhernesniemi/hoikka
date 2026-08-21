@@ -1,5 +1,2 @@
-import { error } from "@sveltejs/kit";
-
-export const load = () => {
-	throw error(404, "Not found");
-};
+// Hoikka route shim - regenerate with `hoikka sync-routes --write`.
+export { load } from "@hoikka/core/routes/admin/[...rest]/page.server";

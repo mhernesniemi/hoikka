@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { cn } from "$lib/utils.js";
+  import { cn } from "@hoikka/core/shared/utils";
   import { Command as CommandPrimitive } from "bits-ui";
 
   export type CommandRootApi = CommandPrimitive.Root;

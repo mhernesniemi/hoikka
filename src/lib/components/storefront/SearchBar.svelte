@@ -1,7 +1,7 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
-  import { formatPrice } from "$lib/utils";
-  import { imageUrl } from "$lib/image";
+  import { formatPrice } from "@hoikka/core/shared/utils";
+  import { imageUrl } from "@hoikka/core/shared/image";
   import { quickSearch } from "$lib/remote/search.remote";
   import * as Command from "$lib/components/storefront/ui/command/index.js";
 

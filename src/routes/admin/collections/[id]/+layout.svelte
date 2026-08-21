@@ -1,10 +1,7 @@
+<!-- Hoikka route shim - regenerate with `hoikka sync-routes --write`. -->
 <script lang="ts">
-  import { page } from "$app/state";
-
+  import Layout from "@hoikka/core/routes/admin/collections/[id]/Layout.svelte";
   let { children } = $props();
 </script>
 
-<!-- Remount the page component when the ID changes so $state initializers re-run with fresh data -->
-{#key page.params.id}
-  {@render children()}
-{/key}
+<Layout {children} />

@@ -1,5 +1,6 @@
 packages:
     - "packages/*"
+    - "src/hoikka"
 
 # pnpm 10: native deps that may run build scripts
 onlyBuiltDependencies:
