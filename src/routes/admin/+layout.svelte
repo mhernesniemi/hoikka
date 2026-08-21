@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { STORE_NAME } from "$lib/config/store.js";
   import "./admin.css";
   import { onMount } from "svelte";
   import { page } from "$app/state";
@@ -108,7 +109,7 @@
           dark ? "text-blue-400" : "text-blue-600"
         )}
       >
-        Hoikka
+        {STORE_NAME}
       </h1>
       <p class={cn("text-sm", dark ? "text-gray-400" : "text-gray-500")}>Store Dashboard</p>
     </div>

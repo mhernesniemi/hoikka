@@ -1,5 +1,9 @@
+<script lang="ts">
+  import { STORE_NAME, SUPPORT_EMAIL } from "$lib/config/store.js";
+</script>
+
 <svelte:head>
-  <title>Privacy Policy | Hoikka</title>
+  <title>Privacy Policy | {STORE_NAME}</title>
   <meta name="description" content="Privacy policy and data processing information." />
 </svelte:head>
 
@@ -101,9 +105,7 @@
       <h2 class="text-xl font-semibold">9. Contact</h2>
       <p class="mt-2 text-gray-700">
         For any questions about this privacy policy or your personal data, please contact us at
-        <a href="mailto:privacy@hoikka.dev" class="text-blue-600 hover:underline"
-          >privacy@hoikka.dev</a
-        >.
+        <a href="mailto:{SUPPORT_EMAIL}" class="text-blue-600 hover:underline">{SUPPORT_EMAIL}</a>.
       </p>
     </section>
 

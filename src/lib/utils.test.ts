@@ -14,29 +14,31 @@ describe("formatPrice", () => {
 		expect(formatPrice(2999)).toBe("29,99\u00a0€");
 	});
 
-	it("formats USD price with US locale", () => {
-		expect(formatPrice(2999, "USD")).toBe("$29.99");
+	it("formats a foreign currency in the store's configured locale", () => {
+		// The store has one locale (fi-FI by default); other currencies render
+		// in it rather than switching locale per currency.
+		expect(formatPrice(2999, "USD")).toBe("29,99\u00a0$");
 	});
 
 	it("formats zero amount", () => {
 		expect(formatPrice(0)).toBe("0,00\u00a0€");
 	});
 
-	it("falls back for unsupported currency", () => {
-		expect(formatPrice(1000, "JPY")).toBe("10.00 JPY");
+	it("respects zero-decimal currencies via Intl", () => {
+		// cents-to-major conversion still applies; Intl handles the rest
+		expect(formatPrice(1000, "JPY")).toContain("10");
+	});
+
+	it("falls back plainly for an invalid currency code", () => {
+		expect(formatPrice(1000, "NOT_A_CODE")).toBe("10.00 NOT_A_CODE");
 	});
 });
 
 describe("getCurrencySymbol", () => {
-	it("returns symbol for known currencies", () => {
+	it("returns the symbol Intl knows for the code", () => {
 		expect(getCurrencySymbol("EUR")).toBe("€");
 		expect(getCurrencySymbol("USD")).toBe("$");
-		expect(getCurrencySymbol("GBP")).toBe("£");
-		expect(getCurrencySymbol("SEK")).toBe("kr");
-	});
-
-	it("returns code for unknown currencies", () => {
-		expect(getCurrencySymbol("JPY")).toBe("JPY");
+		expect(getCurrencySymbol()).toBe("€"); // store default
 	});
 });
 

@@ -21,6 +21,7 @@ import { capStream } from "$lib/server/http.js";
 // $lib specifier so the cloudflare build can alias sharp away (vite.config.ts)
 import { optimizeMasterImage } from "$lib/server/images/node.js";
 import { env } from "$env/dynamic/private";
+import config from "$hoikka/config";
 
 const IMAGE_TYPES = new Set([
 	"image/jpeg",
@@ -46,11 +47,11 @@ const DIGITAL_TYPES = new Set([
 
 const OPTIMIZABLE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
-const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+const MAX_IMAGE_BYTES = config.limits.upload.maxImageBytes;
 // Streamed, so this is a policy limit rather than a memory one. The hard
 // ceiling above it is the platform's request-body limit, which on Workers
 // depends on the plan (100 MB free, higher on paid).
-const MAX_DELIVERABLE_BYTES = 200 * 1024 * 1024;
+const MAX_DELIVERABLE_BYTES = config.limits.upload.maxDeliverableBytes;
 
 /**
  * Stream a digital product's deliverable to storage. The body is the file

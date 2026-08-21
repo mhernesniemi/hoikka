@@ -2,6 +2,7 @@
  * Structured-data builders for <svelte:head>.
  */
 import { stripHtml } from "$lib/utils";
+import config from "$hoikka/config";
 import type { ProductWithRelations } from "$lib/types";
 
 /**
@@ -38,7 +39,7 @@ export function productJsonLd(
 			sku: product.variants[0]?.sku,
 			offers: {
 				"@type": "AggregateOffer",
-				priceCurrency: "EUR",
+				priceCurrency: config.currency.code,
 				lowPrice: (Math.min(...product.variants.map((v) => v.price)) / 100).toFixed(2),
 				highPrice: (Math.max(...product.variants.map((v) => v.price)) / 100).toFixed(2),
 				offerCount: product.variants.length,

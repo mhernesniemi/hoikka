@@ -1,3 +1,4 @@
+import config from "$hoikka/config";
 import { categoryService } from "$lib/server/services/categories.js";
 import { taxService } from "$lib/server/services/tax.js";
 import { translationService } from "$lib/server/services/translations.js";
@@ -24,7 +25,7 @@ export const actions: Actions = {
 		const slug = formData.get("slug") as string;
 		const name = formData.get("name") as string;
 		const parentId = formData.get("parent_id") as string;
-		const taxCode = (formData.get("tax_code") as string) || "standard";
+		const taxCode = (formData.get("tax_code") as string) || config.tax.defaultRate;
 
 		if (!slug || !name) {
 			return fail(400, { error: "Slug and name are required" });
@@ -61,7 +62,7 @@ export const actions: Actions = {
 		const slug = formData.get("slug") as string;
 		const name = formData.get("name") as string;
 		const parentId = formData.get("parent_id") as string;
-		const taxCode = (formData.get("tax_code") as string) || "standard";
+		const taxCode = (formData.get("tax_code") as string) || config.tax.defaultRate;
 
 		if (!id || !slug || !name) {
 			return fail(400, { error: "All fields are required" });
@@ -92,7 +93,7 @@ export const actions: Actions = {
 		const formData = await request.formData();
 		const raw = (formData.get("names") as string) ?? "";
 		const parentId = formData.get("parent_id") as string;
-		const taxCode = (formData.get("tax_code") as string) || "standard";
+		const taxCode = (formData.get("tax_code") as string) || config.tax.defaultRate;
 
 		const names = raw
 			.split(",")

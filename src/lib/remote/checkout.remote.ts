@@ -14,6 +14,7 @@
  * the thank-you page.
  */
 import { query, command, getRequestEvent } from "$app/server";
+import config from "$hoikka/config";
 import { error } from "@sveltejs/kit";
 import * as v from "valibot";
 import {
@@ -195,7 +196,7 @@ export const setContactInfo = command(
 			streetLine1: "Digital Delivery",
 			city: "N/A",
 			postalCode: "00000",
-			country: "FI"
+			country: config.countries.default
 		});
 
 		// Store email on the order

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { STORE_NAME } from "$lib/config/store.js";
   import { browser } from "$app/environment";
   import { invalidateAll, onNavigate } from "$app/navigation";
   import { cn } from "$lib/utils";
@@ -51,7 +52,7 @@
   <header class="sticky top-0 z-50 bg-white/95 backdrop-blur-sm">
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
       <div class="flex h-16 items-center justify-between gap-2">
-        <a href="/" class="shrink-0 bg-[#f7d0dd] text-xl font-bold text-gray-900">"Hoikka"</a>
+        <a href="/" class="shrink-0 bg-[#f7d0dd] text-xl font-bold text-gray-900">"{STORE_NAME}"</a>
 
         <!-- Desktop search -->
         <div class="hidden flex-1 items-center justify-center sm:flex">

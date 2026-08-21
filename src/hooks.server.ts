@@ -12,6 +12,7 @@ import { eq } from "drizzle-orm";
 import { stringify } from "devalue";
 import { env } from "$env/dynamic/private";
 import { ensureNodeScheduler } from "$lib/server/integrations/scheduler.js";
+import { syncConfiguredMethods } from "$lib/server/services/method-sync.js";
 import { edgeCache } from "$lib/server/edge-cache.js";
 
 // Session handler — validates session via Better Auth and syncs customer record.
@@ -152,8 +153,11 @@ export const adminGuard: Handle = async ({ event, resolve }) => {
 };
 
 // On the node target, start the background outbox drain once (no-op on CF).
+// Also aligns payment/shipping method rows with hoikka.config.ts, once per
+// server instance.
 const tasksInit: Handle = async ({ event, resolve }) => {
 	ensureNodeScheduler();
+	void syncConfiguredMethods();
 	return resolve(event);
 };
 

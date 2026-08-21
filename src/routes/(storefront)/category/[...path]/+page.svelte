@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { STORE_NAME } from "$lib/config/store.js";
   import type { PageData } from "./$types";
   import ProductListing from "$lib/components/storefront/ProductListing.svelte";
 
@@ -19,15 +20,15 @@
 </script>
 
 <svelte:head>
-  <title>{data.category.name} | Hoikka</title>
+  <title>{data.category.name} | {STORE_NAME}</title>
   <meta
     name="description"
-    content="Browse {data.category.name} products. Find the best selection at Hoikka."
+    content="Browse {data.category.name} products. Find the best selection at {STORE_NAME}."
   />
-  <meta property="og:title" content="{data.category.name} | Hoikka" />
+  <meta property="og:title" content="{data.category.name} | {STORE_NAME}" />
   <meta
     property="og:description"
-    content="Browse {data.category.name} products. Find the best selection at Hoikka."
+    content="Browse {data.category.name} products. Find the best selection at {STORE_NAME}."
   />
   <meta property="og:type" content="website" />
 </svelte:head>

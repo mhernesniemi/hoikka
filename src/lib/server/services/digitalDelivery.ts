@@ -12,6 +12,7 @@
  */
 import { eq, and, isNotNull, isNull, lt } from "drizzle-orm";
 import { nanoid } from "nanoid";
+import config from "$hoikka/config";
 import { db } from "../db/index.js";
 import {
 	assets,
@@ -24,9 +25,10 @@ import {
 import { sendEmail } from "../email.js";
 import { storeOrigin } from "../utils/origin.js";
 
-/** How long a download link stays valid. */
-const GRANT_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
-const MAX_DOWNLOADS = 10;
+/** How long a download link stays valid and how often it may be used —
+ * both from hoikka.config.ts. */
+const GRANT_TTL_MS = config.limits.digitalDelivery.grantTtlDays * 24 * 60 * 60 * 1000;
+const MAX_DOWNLOADS = config.limits.digitalDelivery.maxDownloads;
 
 export type DownloadGrant = {
 	token: string;

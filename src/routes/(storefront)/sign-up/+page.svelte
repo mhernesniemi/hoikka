@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { STORE_NAME } from "$lib/config/store.js";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import { authClient } from "$lib/auth-client";
@@ -51,7 +52,7 @@
 </script>
 
 <svelte:head>
-  <title>Sign Up | Hoikka</title>
+  <title>Sign Up | {STORE_NAME}</title>
   <meta name="robots" content="noindex" />
 </svelte:head>
 

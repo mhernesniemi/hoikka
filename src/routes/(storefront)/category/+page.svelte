@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { STORE_NAME } from "$lib/config/store.js";
   import type { PageData } from "./$types";
   import FolderOpen from "@lucide/svelte/icons/folder-open";
 
@@ -10,7 +11,7 @@
 </script>
 
 <svelte:head>
-  <title>Categories | Hoikka</title>
+  <title>Categories | {STORE_NAME}</title>
   <meta
     name="description"
     content="Browse products by category. Find exactly what you're looking for."

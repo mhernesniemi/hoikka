@@ -1,11 +1,14 @@
+/**
+ * Language settings, derived from hoikka.config.ts — edit the config, not this
+ * file. Kept at this path so existing imports stay stable.
+ */
+import config from "$hoikka/config";
+
 /** Default language — stored directly on entity tables */
-export const DEFAULT_LANGUAGE = "en";
+export const DEFAULT_LANGUAGE = config.locales.defaultLanguage;
 
 /** All supported languages */
-export const LANGUAGES = [
-	{ code: "en", name: "English" },
-	{ code: "fi", name: "Finnish" }
-] as const;
+export const LANGUAGES = config.locales.languages;
 
 /** Languages that use translation tables (everything except default) */
 export const TRANSLATION_LANGUAGES = LANGUAGES.filter((l) => l.code !== DEFAULT_LANGUAGE);

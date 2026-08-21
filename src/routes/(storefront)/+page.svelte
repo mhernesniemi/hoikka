@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { STORE_NAME } from "$lib/config/store.js";
   import type { PageData } from "./$types";
   import ProductCard from "$lib/components/storefront/ProductCard.svelte";
   import ArrowRightIcon from "@lucide/svelte/icons/arrow-right";
@@ -7,8 +8,8 @@
 </script>
 
 <svelte:head>
-  <title>Hoikka</title>
-  <meta name="description" content="A store built with Hoikka." />
+  <title>{STORE_NAME}</title>
+  <meta name="description" content="Welcome to {STORE_NAME}." />
 </svelte:head>
 
 <div class="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">

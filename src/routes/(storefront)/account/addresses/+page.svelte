@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { SHIPPING_COUNTRIES } from "$lib/config/countries.js";
+  import { STORE_NAME } from "$lib/config/store.js";
   import { enhance } from "$app/forms";
   import { Button } from "$lib/components/storefront/ui/button";
   import type { PageData, ActionData } from "./$types";
@@ -15,7 +17,7 @@
 </script>
 
 <svelte:head>
-  <title>My Addresses | Hoikka</title>
+  <title>My Addresses | {STORE_NAME}</title>
   <meta name="robots" content="noindex" />
 </svelte:head>
 
@@ -145,7 +147,9 @@
               class="w-full rounded-lg border border-gray-300 px-3 py-2"
             >
               <option value="">Select country</option>
-              <option value="FI">Finland</option>
+              {#each SHIPPING_COUNTRIES as shippingCountry}
+                <option value={shippingCountry.code}>{shippingCountry.name}</option>
+              {/each}
               <option value="SE">Sweden</option>
               <option value="NO">Norway</option>
               <option value="DK">Denmark</option>
@@ -300,7 +304,13 @@
                 class="w-full rounded-lg border border-gray-300 px-3 py-2"
               >
                 <option value="">Select country</option>
-                <option value="FI" selected={address.country === "FI"}>Finland</option>
+                {#each SHIPPING_COUNTRIES as shippingCountry}
+                  <option
+                    value={shippingCountry.code}
+                    selected={address.country === shippingCountry.code}
+                    >{shippingCountry.name}</option
+                  >
+                {/each}
                 <option value="SE" selected={address.country === "SE"}>Sweden</option>
                 <option value="NO" selected={address.country === "NO"}>Norway</option>
                 <option value="DK" selected={address.country === "DK"}>Denmark</option>

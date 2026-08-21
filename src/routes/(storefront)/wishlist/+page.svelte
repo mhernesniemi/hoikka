@@ -1,8 +1,9 @@
 <script lang="ts">
+  import { STORE_NAME } from "$lib/config/store.js";
   import { enhance } from "$app/forms";
   import { Button } from "$lib/components/storefront/ui/button";
   import { Alert } from "$lib/components/storefront/ui/alert";
-  import { cn } from "$lib/utils";
+  import { BASE_CURRENCY, cn } from "$lib/utils";
   import { imageUrl } from "$lib/image";
   import { cartStore } from "$lib/stores/cart.svelte";
   import { addVariantToCart, optimisticSeed } from "$lib/cart-actions";
@@ -65,7 +66,7 @@
 </script>
 
 <svelte:head>
-  <title>Wishlist | Hoikka</title>
+  <title>Wishlist | {STORE_NAME}</title>
   <meta name="robots" content="noindex" />
 </svelte:head>
 
@@ -136,7 +137,7 @@
               <a href="/products/{productId}/{slug}" class="font-medium hover:text-blue-600"
                 >{name}</a
               >
-              <span class="text-lg font-semibold">{(price / 100).toFixed(2)} EUR</span>
+              <span class="text-lg font-semibold">{(price / 100).toFixed(2)} {BASE_CURRENCY}</span>
             </div>
 
             <div class="mt-auto flex items-center justify-between pt-4">

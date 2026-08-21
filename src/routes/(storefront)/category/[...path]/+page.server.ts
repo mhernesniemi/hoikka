@@ -1,3 +1,4 @@
+import config from "$hoikka/config";
 import { error } from "@sveltejs/kit";
 import type { PageServerLoad } from "./$types";
 import { categoryService } from "$lib/server/services/categories.js";
@@ -32,6 +33,7 @@ export const load: PageServerLoad = async ({ params, url, locals }) => {
 	]);
 
 	const listing = await listProducts({
+		limit: config.limits.pageSize.storefront,
 		...parseListingParams(url),
 		productIds,
 		customerId: locals.customer?.id ?? null

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { STORE_NAME } from "$lib/config/store.js";
   import { goto, invalidateAll } from "$app/navigation";
   import { Button } from "$lib/components/admin/ui/button";
   import { Input } from "$lib/components/admin/ui/input";
@@ -38,7 +39,7 @@
 <div class="flex min-h-screen items-center justify-center bg-gray-900 font-sans">
   <div class="w-full max-w-sm">
     <div class="rounded-lg bg-white p-8 shadow-lg">
-      <h1 class="mb-2 text-2xl font-bold text-gray-900">Hoikka Admin</h1>
+      <h1 class="mb-2 text-2xl font-bold text-gray-900">{STORE_NAME} Admin</h1>
       <p class="mb-6 text-sm text-gray-600">Sign in to your account</p>
 
       {#if error}

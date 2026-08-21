@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { STORE_NAME } from "$lib/config/store.js";
   import { enhance } from "$app/forms";
   import { Button } from "$lib/components/storefront/ui/button";
   import type { PageData, ActionData } from "./$types";
@@ -7,7 +8,7 @@
 </script>
 
 <svelte:head>
-  <title>My Account | Hoikka</title>
+  <title>My Account | {STORE_NAME}</title>
   <meta name="robots" content="noindex" />
 </svelte:head>
 

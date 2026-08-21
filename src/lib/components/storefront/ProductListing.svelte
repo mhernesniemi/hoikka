@@ -293,7 +293,7 @@
     <!-- Price Range Filter -->
     {#if priceRange && priceRange.min !== priceRange.max}
       <div class="mb-6">
-        <h3 class="mb-3 font-semibold">Price ({getCurrencySymbol("EUR")})</h3>
+        <h3 class="mb-3 font-semibold">Price ({getCurrencySymbol()})</h3>
         <form
           class="flex items-center gap-2"
           onsubmit={(e) => {

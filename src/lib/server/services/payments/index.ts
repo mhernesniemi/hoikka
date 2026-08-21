@@ -15,12 +15,39 @@ import type {
 	RefundInfo
 } from "./types.js";
 import { MockProvider, StripeProvider } from "./providers/index.js";
+import config from "$hoikka/config";
 
-// Provider registry - maps provider codes to provider instances
-const PROVIDERS = new Map<string, PaymentProvider>([
-	["mock", new MockProvider()],
-	["stripe", new StripeProvider()]
-]);
+/**
+ * Provider registry, built from hoikka.config.ts. A descriptor's `code` maps
+ * to a built-in implementation; an object that already implements
+ * PaymentProvider registers as-is — the extension point that works without
+ * ejecting.
+ */
+const BUILT_IN: Record<string, (options: Record<string, unknown>) => PaymentProvider> = {
+	mock: () => new MockProvider(),
+	stripe: (options) => new StripeProvider(options)
+};
+
+function buildRegistry(): Map<string, PaymentProvider> {
+	const registry = new Map<string, PaymentProvider>();
+	for (const entry of config.payments) {
+		const candidate = entry as PaymentProvider & { options?: Record<string, unknown> };
+		if (typeof candidate.createPayment === "function") {
+			registry.set(candidate.code, candidate);
+			continue;
+		}
+		const factory = BUILT_IN[candidate.code];
+		if (!factory) {
+			throw new Error(
+				`hoikka.config.ts: unknown payment provider "${candidate.code}" — built-ins are ${Object.keys(BUILT_IN).join(", ")}, or pass an object implementing PaymentProvider`
+			);
+		}
+		registry.set(candidate.code, factory(candidate.options ?? {}));
+	}
+	return registry;
+}
+
+const PROVIDERS = buildRegistry();
 
 /** Both SQLite drivers report the partial-unique clash the same way. */
 function isUniqueViolation(error: unknown): boolean {

@@ -7,6 +7,7 @@
 </script>
 
 <script lang="ts">
+  import { BASE_CURRENCY } from "$lib/utils";
   import type { Snippet } from "svelte";
   import { Checkbox } from "$lib/components/admin/ui/checkbox";
   import { Input } from "$lib/components/admin/ui/input";
@@ -117,7 +118,7 @@
             <Label for="discountType">Discount Type</Label>
             <SelectNative id="discountType" name="discountType" bind:value={discountType}>
               <option value="percentage">Percentage (%)</option>
-              <option value="fixed_amount">Fixed Amount (EUR)</option>
+              <option value="fixed_amount">Fixed Amount ({BASE_CURRENCY})</option>
             </SelectNative>
           </div>
           <div>
@@ -214,7 +215,7 @@
     <AdminCard title="Conditions">
       <div class="grid grid-cols-3 gap-4">
         <div>
-          <Label for="minOrderAmount">Min Order (EUR)</Label>
+          <Label for="minOrderAmount">Min Order ({BASE_CURRENCY})</Label>
           <Input
             type="number"
             id="minOrderAmount"

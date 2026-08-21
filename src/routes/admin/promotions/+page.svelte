@@ -9,7 +9,7 @@
   import type { PageData } from "./$types";
   import { Percent as PercentIcon } from "@lucide/svelte";
   import PlusIcon from "@lucide/svelte/icons/plus";
-  import { formatDate } from "$lib/utils";
+  import { BASE_CURRENCY, formatDate } from "$lib/utils";
 
   let { data }: { data: PageData } = $props();
 
@@ -49,7 +49,7 @@
   function getDiscountLabel(promo: PromoRow) {
     if (promo.promotionType === "free_shipping") return "Free shipping";
     if (promo.discountType === "percentage") return `${promo.discountValue}%`;
-    return `${formatPrice(promo.discountValue)} EUR`;
+    return `${formatPrice(promo.discountValue)} ${BASE_CURRENCY}`;
   }
 
   function formatDateOrDash(date: Date | null) {

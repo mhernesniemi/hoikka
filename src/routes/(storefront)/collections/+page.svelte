@@ -1,11 +1,12 @@
 <script lang="ts">
+  import { STORE_NAME } from "$lib/config/store.js";
   import FolderOpen from "@lucide/svelte/icons/folder-open";
 
   let { data } = $props();
 </script>
 
 <svelte:head>
-  <title>Collections | Hoikka</title>
+  <title>Collections | {STORE_NAME}</title>
   <meta name="description" content="Browse our curated collections of products." />
   <meta property="og:title" content="Collections | Hoikka" />
   <meta property="og:description" content="Browse our curated collections of products." />

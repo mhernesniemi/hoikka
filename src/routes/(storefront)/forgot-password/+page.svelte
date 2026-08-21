@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { STORE_NAME } from "$lib/config/store.js";
   import { goto } from "$app/navigation";
   import { authClient } from "$lib/auth-client";
   import { Button } from "$lib/components/storefront/ui/button";
@@ -59,7 +60,7 @@
 </script>
 
 <svelte:head>
-  <title>Forgot Password | Hoikka</title>
+  <title>Forgot Password | {STORE_NAME}</title>
   <meta name="robots" content="noindex" />
 </svelte:head>
 

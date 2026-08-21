@@ -7,7 +7,7 @@
   import ImageIcon from "@lucide/svelte/icons/image";
   import TriangleAlert from "@lucide/svelte/icons/triangle-alert";
   import type { ActionData, PageData } from "./$types";
-  import { formatDateTime, orderStateLabel } from "$lib/utils";
+  import { BASE_CURRENCY, formatDateTime, orderStateLabel } from "$lib/utils";
   import { imageUrl } from "$lib/image";
 
   function formatPrice(cents: number): string {
@@ -141,7 +141,7 @@
                 <p class="text-sm text-muted-foreground">SKU: {line.sku}</p>
               </div>
               <div class="shrink-0 text-right">
-                <p class="font-medium">{formatPrice(line.lineTotal)} EUR</p>
+                <p class="font-medium">{formatPrice(line.lineTotal)} {BASE_CURRENCY}</p>
                 <p class="text-sm text-muted-foreground">
                   {formatPrice(line.unitPrice)} x {line.quantity}
                 </p>
@@ -155,16 +155,16 @@
           <dl class="space-y-1.5 text-sm">
             <div class="flex justify-between">
               <dt class="text-foreground-secondary">Subtotal</dt>
-              <dd>{formatPrice(data.order.subtotal)} EUR</dd>
+              <dd>{formatPrice(data.order.subtotal)} {BASE_CURRENCY}</dd>
             </div>
             <div class="flex justify-between">
               <dt class="text-foreground-secondary">Shipping</dt>
-              <dd>{formatPrice(data.order.shipping)} EUR</dd>
+              <dd>{formatPrice(data.order.shipping)} {BASE_CURRENCY}</dd>
             </div>
             {#if data.order.discount > 0}
               <div class="flex justify-between text-green-600">
                 <dt>Discount</dt>
-                <dd>-{formatPrice(data.order.discount)} EUR</dd>
+                <dd>-{formatPrice(data.order.discount)} {BASE_CURRENCY}</dd>
               </div>
             {/if}
             <div class="flex justify-between border-t border-border pt-1.5 text-base font-bold">
@@ -225,7 +225,7 @@
             {/if}
             <div class="flex justify-between">
               <dt class="text-foreground-secondary">Cost</dt>
-              <dd>{(data.orderShipping.price / 100).toFixed(2)} EUR</dd>
+              <dd>{(data.orderShipping.price / 100).toFixed(2)} {BASE_CURRENCY}</dd>
             </div>
           </dl>
 
@@ -273,7 +273,7 @@
             </div>
             <div class="flex justify-between">
               <dt class="text-foreground-secondary">Amount</dt>
-              <dd>{(data.payment.amount / 100).toFixed(2)} EUR</dd>
+              <dd>{(data.payment.amount / 100).toFixed(2)} {BASE_CURRENCY}</dd>
             </div>
             {#if data.payment.transactionId}
               <div class="flex justify-between">

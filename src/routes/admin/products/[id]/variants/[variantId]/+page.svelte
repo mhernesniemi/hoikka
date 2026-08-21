@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { BASE_CURRENCY } from "$lib/utils";
   import { enhance } from "$app/forms";
   import { toast } from "svelte-sonner";
   import { Button } from "$lib/components/admin/ui/button";
@@ -243,7 +244,7 @@
               {/if}
             </div>
             <div>
-              <Label for="price">Price (EUR) <span class="text-red-500">*</span></Label>
+              <Label for="price">Price ({BASE_CURRENCY}) <span class="text-red-500">*</span></Label>
               <Input
                 type="number"
                 id="price"
@@ -297,7 +298,9 @@
             <!-- Column headers -->
             <div class="grid grid-cols-2 gap-4">
               <span class="text-sm font-medium text-foreground-secondary">Group</span>
-              <span class="text-sm font-medium text-foreground-secondary">Price (EUR)</span>
+              <span class="text-sm font-medium text-foreground-secondary"
+                >Price ({BASE_CURRENCY})</span
+              >
             </div>
 
             {#each groupPrices as gp}
@@ -474,7 +477,7 @@
         </SelectNative>
       </div>
       <div>
-        <Label for="dialog-group-price">Price (EUR)</Label>
+        <Label for="dialog-group-price">Price ({BASE_CURRENCY})</Label>
         <Input
           id="dialog-group-price"
           type="number"

@@ -16,7 +16,7 @@
   import ChevronLeft from "@lucide/svelte/icons/chevron-left";
   import AdminCard from "$lib/components/admin/AdminCard.svelte";
   import type { PageData, ActionData } from "./$types";
-  import { formatDate } from "$lib/utils";
+  import { BASE_CURRENCY, formatDate } from "$lib/utils";
 
   let { data, form }: { data: PageData; form: ActionData } = $props();
 
@@ -141,7 +141,8 @@
                     </Badge>
                   </TableCell>
                   <TableCell class="px-4 py-3 text-right text-sm font-medium">
-                    {formatPrice(order.total)} EUR
+                    {formatPrice(order.total)}
+                    {BASE_CURRENCY}
                   </TableCell>
                 </TableRow>
               {/each}

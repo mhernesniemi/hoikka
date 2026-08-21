@@ -7,6 +7,7 @@
  * the DB boundary; all business logic below works with decimals.
  */
 import { eq, and } from "drizzle-orm";
+import config from "$hoikka/config";
 import { db } from "../db/index.js";
 import { taxRates, customerGroupMembers, customerGroups } from "../db/schema.js";
 import {
@@ -28,20 +29,17 @@ const TAX_RATE_SCALE = 10_000;
 export const taxRateFromDb = (n: number) => n / TAX_RATE_SCALE;
 export const taxRateToDb = (n: number) => Math.round(n * TAX_RATE_SCALE);
 
-// Default tax rates for Finland (standard 25.5% since 2024-09,
-// reduced 13.5% since 2026-01; books moved from 10% to the reduced band in 2025)
-const DEFAULT_TAX_RATES: TaxRateInfo[] = [
-	{ code: "standard", rate: 0.255, name: "Standard VAT (25.5%)" },
-	{ code: "food", rate: 0.135, name: "Food VAT (13.5%)" },
-	{ code: "books", rate: 0.135, name: "Books VAT (13.5%)" },
-	{ code: "zero", rate: 0, name: "Zero VAT (0%)" }
-];
+// Rates come from hoikka.config.ts; the DB table is seeded from them and, once
+// populated, is the runtime authority (admins can adjust rates there).
+const DEFAULT_TAX_RATES: TaxRateInfo[] = config.tax.rates.map((rate) => ({ ...rate }));
+const FALLBACK_RATE =
+	config.tax.rates.find((rate) => rate.code === config.tax.defaultRate)?.rate ?? 0;
 
 export class TaxService {
 	async getTaxRate(taxCode: string): Promise<number> {
 		const [rate] = await db.select().from(taxRates).where(eq(taxRates.code, taxCode));
 		if (rate) return taxRateFromDb(rate.rate);
-		return DEFAULT_TAX_RATES.find((r) => r.code === taxCode)?.rate ?? 0.255;
+		return DEFAULT_TAX_RATES.find((r) => r.code === taxCode)?.rate ?? FALLBACK_RATE;
 	}
 
 	async getAllTaxRates(): Promise<TaxRateInfo[]> {

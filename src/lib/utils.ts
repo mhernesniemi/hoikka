@@ -2,6 +2,7 @@ import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import type { Snippet } from "svelte";
 import { DATE_LOCALE } from "$lib/config/locale.js";
+import config from "$hoikka/config";
 
 export function cn(...inputs: ClassValue[]) {
 	return twMerge(clsx(inputs));
@@ -18,50 +19,41 @@ export type WithoutChildrenOrChild<T> = Omit<T, "children" | "child">;
 // CURRENCY UTILITIES
 // ============================================================================
 
-/** Base currency for the system */
-export const BASE_CURRENCY = "EUR";
-
-/** Supported currencies with their locale and symbol info */
-const CURRENCY_CONFIG: Record<
-	string,
-	{ locale: string; symbol: string; symbolPosition: "before" | "after" }
-> = {
-	EUR: { locale: "fi-FI", symbol: "€", symbolPosition: "after" },
-	USD: { locale: "en-US", symbol: "$", symbolPosition: "before" },
-	GBP: { locale: "en-GB", symbol: "£", symbolPosition: "before" },
-	SEK: { locale: "sv-SE", symbol: "kr", symbolPosition: "after" },
-	NOK: { locale: "nb-NO", symbol: "kr", symbolPosition: "after" },
-	DKK: { locale: "da-DK", symbol: "kr", symbolPosition: "after" }
-};
+/** The store's currency, from hoikka.config.ts. */
+export const BASE_CURRENCY = config.currency.code;
 
 /**
- * Format a price in minor units (cents) to a display string
- *
- * @param cents - Amount in minor units (e.g., 2999 for 29.99)
- * @param currencyCode - ISO 4217 currency code (default: EUR)
- * @returns Formatted price string (e.g., "29.99 €" or "$29.99")
+ * Format a price in minor units (cents) to a display string using the store's
+ * configured locale (e.g. "29,99 €" for EUR/fi-FI, "$29.99" for USD/en-US).
  */
 export function formatPrice(cents: number, currencyCode: string = BASE_CURRENCY): string {
 	const amount = cents / 100;
-	const config = CURRENCY_CONFIG[currencyCode];
-
-	if (config) {
-		// Use Intl.NumberFormat for proper locale-aware formatting
-		return new Intl.NumberFormat(config.locale, {
+	try {
+		return new Intl.NumberFormat(config.currency.locale, {
 			style: "currency",
 			currency: currencyCode
 		}).format(amount);
+	} catch {
+		// Unknown currency code — plain fallback
+		return `${amount.toFixed(2)} ${currencyCode}`;
 	}
-
-	// Fallback for unsupported currencies
-	return `${amount.toFixed(2)} ${currencyCode}`;
 }
 
 /**
- * Get currency symbol for a currency code
+ * Get the symbol for the store currency (or any other ISO code).
  */
-export function getCurrencySymbol(currencyCode: string): string {
-	return CURRENCY_CONFIG[currencyCode]?.symbol ?? currencyCode;
+export function getCurrencySymbol(currencyCode: string = BASE_CURRENCY): string {
+	try {
+		const part = new Intl.NumberFormat(config.currency.locale, {
+			style: "currency",
+			currency: currencyCode
+		})
+			.formatToParts(1)
+			.find((p) => p.type === "currency");
+		return part?.value ?? currencyCode;
+	} catch {
+		return currencyCode;
+	}
 }
 
 // ============================================================================

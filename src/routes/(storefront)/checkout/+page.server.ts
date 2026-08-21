@@ -13,6 +13,7 @@ import { orderService } from "$lib/server/services/index.js";
 import { isSettledState } from "$lib/server/services/order-utils.js";
 import { grantReceipt } from "$lib/server/cart-cookie.js";
 import { rateLimit } from "$lib/server/rate-limit.js";
+import config from "$hoikka/config";
 import {
 	CART_COOKIE,
 	CHECKOUT_COOKIE,
@@ -28,8 +29,8 @@ import type { PageServerLoad } from "./$types.js";
 // cookie is present.
 // Generous on purpose: this counts *new* drafts per IP, and behind CGNAT or an
 // office NAT one address is many shoppers. The limit exists to bound table
-// growth from scripted abuse, not to police humans.
-const NEW_DRAFTS_PER_HOUR = 60;
+// growth from scripted abuse, not to police humans. Tune in hoikka.config.ts.
+const NEW_DRAFTS_PER_HOUR = config.limits.rateLimit.checkoutDraftsPerHour;
 const HOUR_MS = 60 * 60 * 1000;
 
 export const load: PageServerLoad = async ({ locals, cookies, getClientAddress }) => {

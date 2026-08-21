@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { STORE_NAME } from "$lib/config/store.js";
   import { cn, orderStateLabel } from "$lib/utils";
   import { imageUrl } from "$lib/image";
   import type { PageData } from "./$types";
@@ -38,7 +39,7 @@
 </script>
 
 <svelte:head>
-  <title>Order #{data.order.code} | Hoikka</title>
+  <title>Order #{data.order.code} | {STORE_NAME}</title>
   <meta name="robots" content="noindex" />
 </svelte:head>
 

@@ -1,10 +1,11 @@
 <script lang="ts">
+  import { STORE_NAME } from "$lib/config/store.js";
   import ProductListing from "$lib/components/storefront/ProductListing.svelte";
   import type { PageData } from "./$types";
 
   let { data }: { data: PageData } = $props();
 
-  const pageTitle = "Products | Hoikka";
+  const pageTitle = `Products | ${STORE_NAME}`;
 </script>
 
 <svelte:head>

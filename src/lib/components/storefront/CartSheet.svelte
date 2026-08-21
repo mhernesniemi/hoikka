@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { BASE_CURRENCY } from "$lib/utils";
   import { browser } from "$app/environment";
   import { invalidateAll, goto } from "$app/navigation";
   import { page } from "$app/state";
@@ -204,7 +205,7 @@
                     </button>
                   </div>
                   <span class="text-sm font-medium text-gray-900"
-                    >{formatPrice(line.lineTotal)} EUR</span
+                    >{formatPrice(line.lineTotal)} {BASE_CURRENCY}</span
                   >
                 </div>
               </div>
@@ -223,32 +224,34 @@
             <div class="space-y-2">
               <div class="flex justify-between text-sm">
                 <span class="text-gray-500">Subtotal</span>
-                <span class="text-gray-700">{formatPrice(cart.subtotal)} EUR</span>
+                <span class="text-gray-700">{formatPrice(cart.subtotal)} {BASE_CURRENCY}</span>
               </div>
 
               {#if cart.discount > 0}
                 <div class="flex justify-between text-sm text-green-600">
                   <span>Discount</span>
-                  <span>-{formatPrice(cart.discount)} EUR</span>
+                  <span>-{formatPrice(cart.discount)} {BASE_CURRENCY}</span>
                 </div>
               {/if}
 
               {#if cart.isTaxExempt}
                 <div class="flex justify-between text-sm text-gray-500">
                   <span>Tax exempt (B2B)</span>
-                  <span>0.00 EUR</span>
+                  <span>0.00 {BASE_CURRENCY}</span>
                 </div>
               {:else if cart.taxTotal > 0}
                 <div class="flex justify-between text-sm text-gray-500">
                   <span>Incl. VAT</span>
-                  <span>{formatPrice(cart.taxTotal)} EUR</span>
+                  <span>{formatPrice(cart.taxTotal)} {BASE_CURRENCY}</span>
                 </div>
               {/if}
             </div>
 
             <div class="flex justify-between border-t border-gray-200 pt-2">
               <span class="font-semibold text-gray-900">Total</span>
-              <span class="font-semibold text-gray-900">{formatPrice(cart.total)} EUR</span>
+              <span class="font-semibold text-gray-900"
+                >{formatPrice(cart.total)} {BASE_CURRENCY}</span
+              >
             </div>
           {/if}
 

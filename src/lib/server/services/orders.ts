@@ -9,6 +9,7 @@
  * the `checkout_token` cookie; they become real orders at `payment_pending`.
  */
 import { eq, and, desc, lt, sql, inArray, exists } from "drizzle-orm";
+import config from "$hoikka/config";
 import { db, atomic } from "../db/index.js";
 import { paginationOf, resolveSort } from "../pagination.js";
 import {
@@ -101,7 +102,7 @@ export class OrderService {
 				checkoutToken: input.checkoutToken ?? null,
 				active: true,
 				state: "created",
-				currencyCode: input.currencyCode ?? "EUR",
+				currencyCode: input.currencyCode ?? config.currency.code,
 				subtotal: 0,
 				shipping: 0,
 				discount: 0,

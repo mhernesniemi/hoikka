@@ -9,14 +9,23 @@ import { generateTrackingNumber } from "../shipping-utils.js";
 export class FlatRateProvider implements ShippingProvider {
 	code = "flat_rate";
 
+	constructor(
+		private options: {
+			amount?: number;
+			label?: string;
+			estimatedDeliveryDays?: number;
+			description?: string;
+		} = {}
+	) {}
+
 	async getRates(_order: OrderWithRelations): Promise<ShippingRate[]> {
 		return [
 			{
 				id: "flat_rate",
-				name: "Standard Shipping",
-				price: 590,
-				estimatedDeliveryDays: 5,
-				description: "Standard delivery"
+				name: this.options.label ?? "Standard Shipping",
+				price: this.options.amount ?? 590,
+				estimatedDeliveryDays: this.options.estimatedDeliveryDays ?? 5,
+				description: this.options.description ?? "Standard delivery"
 			}
 		];
 	}

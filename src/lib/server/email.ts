@@ -6,6 +6,7 @@
 import { Resend } from "resend";
 import { dev } from "$app/environment";
 import { env } from "$env/dynamic/private";
+import config from "$hoikka/config";
 
 /**
  * Send one email. Returns { sent: false } when RESEND_API_KEY is missing. In
@@ -32,7 +33,7 @@ export async function sendEmail(
 	}
 	const resend = new Resend(env.RESEND_API_KEY);
 	const { error } = await resend.emails.send({
-		from: env.RESEND_FROM_EMAIL || "noreply@example.com",
+		from: env.RESEND_FROM_EMAIL || config.store.emailFrom,
 		to,
 		subject,
 		html

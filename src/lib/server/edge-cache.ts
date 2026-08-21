@@ -22,15 +22,16 @@
  * anything else session-dependent stays live by construction.
  */
 import { version as buildVersion } from "$app/environment";
+import config from "$hoikka/config";
 import { getRequestEvent } from "$app/server";
 import type { Handle } from "@sveltejs/kit";
 
 const VERSION_KEY = "catalog-version";
 const AUTH_COOKIE = "better-auth.session_token";
-const BACKSTOP_SECONDS = 300;
+const BACKSTOP_SECONDS = config.limits.edgeCache.backstopSeconds;
 /** KV mirror lives longer — its hit rate is the whole point, and version
  *  bumps (not the TTL) are the real invalidation path */
-const KV_TTL_SECONDS = 3600;
+const KV_TTL_SECONDS = config.limits.edgeCache.kvTtlSeconds;
 
 /** GET routes rendered identically for every guest */
 const CACHEABLE =

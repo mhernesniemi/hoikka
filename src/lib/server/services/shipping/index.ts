@@ -13,9 +13,33 @@ import type {
 } from "$lib/types.js";
 import type { ShippingProvider, ShippingRate, ShipmentInfo } from "./types.js";
 import { FlatRateProvider } from "./providers/index.js";
+import config from "$hoikka/config";
 
-// Provider registry - maps provider codes to provider instances
-const PROVIDERS = new Map<string, ShippingProvider>([["flat_rate", new FlatRateProvider()]]);
+/** Provider registry, built from hoikka.config.ts — see payments/index.ts. */
+const BUILT_IN: Record<string, (options: Record<string, unknown>) => ShippingProvider> = {
+	flat_rate: (options) => new FlatRateProvider(options)
+};
+
+function buildRegistry(): Map<string, ShippingProvider> {
+	const registry = new Map<string, ShippingProvider>();
+	for (const entry of config.shipping) {
+		const candidate = entry as ShippingProvider & { options?: Record<string, unknown> };
+		if (typeof candidate.getRates === "function") {
+			registry.set(candidate.code, candidate);
+			continue;
+		}
+		const factory = BUILT_IN[candidate.code];
+		if (!factory) {
+			throw new Error(
+				`hoikka.config.ts: unknown shipping provider "${candidate.code}" — built-ins are ${Object.keys(BUILT_IN).join(", ")}, or pass an object implementing ShippingProvider`
+			);
+		}
+		registry.set(candidate.code, factory(candidate.options ?? {}));
+	}
+	return registry;
+}
+
+const PROVIDERS = buildRegistry();
 
 export class ShippingService {
 	/**

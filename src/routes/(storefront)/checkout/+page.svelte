@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { DEFAULT_COUNTRY, SHIPPING_COUNTRIES } from "$lib/config/countries.js";
+  import { STORE_NAME } from "$lib/config/store.js";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import { commandErrorMessage } from "$lib/utils";
@@ -123,7 +125,7 @@
     streetLine1: "",
     city: "",
     postalCode: "",
-    country: "FI"
+    country: DEFAULT_COUNTRY
   });
 
   // Form data for digital products (contact info)
@@ -142,7 +144,7 @@
       streetLine1: checkout.cart.shippingStreetLine1 ?? "",
       city: checkout.cart.shippingCity ?? "",
       postalCode: checkout.cart.shippingPostalCode ?? "",
-      country: checkout.cart.shippingCountry ?? "FI"
+      country: checkout.cart.shippingCountry ?? DEFAULT_COUNTRY
     };
     contactFormData = {
       fullName: checkout.customerFullName ?? checkout.cart.shippingFullName ?? "",
@@ -305,7 +307,7 @@
 </script>
 
 <svelte:head>
-  <title>Checkout | Hoikka</title>
+  <title>Checkout | {STORE_NAME}</title>
   <meta name="robots" content="noindex" />
 </svelte:head>
 
@@ -490,7 +492,7 @@
                         streetLine1: cart?.shippingStreetLine1 ?? "",
                         city: cart?.shippingCity ?? "",
                         postalCode: cart?.shippingPostalCode ?? "",
-                        country: cart?.shippingCountry ?? "FI"
+                        country: cart?.shippingCountry ?? DEFAULT_COUNTRY
                       };
                       isEditingAddress = true;
                     }}
@@ -572,7 +574,9 @@
                       required
                       class="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2"
                     >
-                      <option value="FI">Finland</option>
+                      {#each SHIPPING_COUNTRIES as shippingCountry}
+                        <option value={shippingCountry.code}>{shippingCountry.name}</option>
+                      {/each}
                       <option value="SE">Sweden</option>
                       <option value="NO">Norway</option>
                       <option value="DK">Denmark</option>

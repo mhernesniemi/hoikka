@@ -25,6 +25,7 @@
  * - Fulfilment is a separate capture-gated step in fulfillment.ts.
  */
 import type { Cookies } from "@sveltejs/kit";
+import config from "$hoikka/config";
 import { orderService, paymentService, isPaymentSuccessful, customerService } from "./index.js";
 import { isFulfillableState, isSettledState } from "./order-utils.js";
 import { ensureFulfilled, isOrderDigitalOnly } from "./fulfillment.js";
@@ -108,7 +109,7 @@ export async function completeCheckout(opts: {
 				streetLine1: order.shippingStreetLine1,
 				city: order.shippingCity || "",
 				postalCode: order.shippingPostalCode || "",
-				country: order.shippingCountry || "FI",
+				country: order.shippingCountry || config.countries.default,
 				isDefault: false
 			});
 		} catch (e) {

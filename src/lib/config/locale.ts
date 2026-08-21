@@ -1,5 +1,4 @@
-/**
- * Locale used for date and number formatting across the admin and storefront.
- * Uses BCP 47 language tags (e.g. "fi-FI", "en-US", "sv-SE").
- */
-export const DATE_LOCALE = "fi-FI";
+/** Derived from hoikka.config.ts — edit the config, not this file. */
+import config from "$hoikka/config";
+
+export const DATE_LOCALE = config.locales.dateLocale;

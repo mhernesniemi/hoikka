@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { STORE_NAME } from "$lib/config/store.js";
   import { browser } from "$app/environment";
   import { cn, formatPrice, stripHtml, commandErrorMessage } from "$lib/utils";
   import { imageUrl, imageSrcset } from "$lib/image";
@@ -124,7 +125,7 @@
 </script>
 
 <svelte:head>
-  <title>{product.name} | Hoikka</title>
+  <title>{product.name} | {STORE_NAME}</title>
   <meta
     name="description"
     content={stripHtml(product.description)?.slice(0, 160) ||

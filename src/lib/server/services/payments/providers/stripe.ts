@@ -49,6 +49,8 @@ export function paymentStatusForIntent(
 export class StripeProvider implements PaymentProvider {
 	code = "stripe";
 
+	constructor(private options: { manualCapture?: boolean } = {}) {}
+
 	isAvailable(): boolean {
 		return !!env.STRIPE_SECRET_KEY;
 	}
@@ -80,7 +82,10 @@ export class StripeProvider implements PaymentProvider {
 				// after ~7 days. With automatic capture the same race loss is
 				// handled by an automatic refund instead (see refundDeadSale in
 				// checkout-completion.ts).
-				capture_method: env.STRIPE_MANUAL_CAPTURE === "true" ? "manual" : "automatic",
+				capture_method:
+					env.STRIPE_MANUAL_CAPTURE === "true" || this.options.manualCapture
+						? "manual"
+						: "automatic",
 				metadata: {
 					orderId: order.id.toString(),
 					orderCode: order.code,

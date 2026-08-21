@@ -35,7 +35,7 @@
   import Trash2 from "@lucide/svelte/icons/trash-2";
   import ChevronLeft from "@lucide/svelte/icons/chevron-left";
   import ExternalLink from "@lucide/svelte/icons/external-link";
-  import { cn } from "$lib/utils";
+  import { BASE_CURRENCY, cn } from "$lib/utils";
   import { imageUrl } from "$lib/image";
   import ImageIcon from "@lucide/svelte/icons/image";
   import CategoryCombobox from "$lib/components/admin/CategoryCombobox.svelte";
@@ -548,7 +548,9 @@
                       {variant.name}
                     </button>
                   </TableCell>
-                  <TableCell class="text-sm">{(variant.price / 100).toFixed(2)} EUR</TableCell>
+                  <TableCell class="text-sm"
+                    >{(variant.price / 100).toFixed(2)} {BASE_CURRENCY}</TableCell
+                  >
                   <TableCell
                     class={cn(
                       "text-sm",
@@ -981,7 +983,8 @@
             {/if}
           </div>
           <div>
-            <Label for="create_variant_price">Price (EUR) <span class="text-red-500">*</span></Label
+            <Label for="create_variant_price"
+              >Price ({BASE_CURRENCY}) <span class="text-red-500">*</span></Label
             >
             <Input
               type="number"

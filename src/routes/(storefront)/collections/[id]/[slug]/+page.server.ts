@@ -1,3 +1,4 @@
+import config from "$hoikka/config";
 import type { PageServerLoad } from "./$types";
 import { collectionService } from "$lib/server/services/collections.js";
 import { facetService } from "$lib/server/services/facets.js";
@@ -29,6 +30,7 @@ export const load: PageServerLoad = async ({ params, url, locals }) => {
 	]);
 
 	const listing = await listProducts({
+		limit: config.limits.pageSize.storefront,
 		...parseListingParams(url),
 		productIds,
 		customerId: locals.customer?.id ?? null

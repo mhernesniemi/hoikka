@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { STORE_NAME } from "$lib/config/store.js";
   import type { PageData } from "./$types.js";
   import Check from "@lucide/svelte/icons/check";
   import Download from "@lucide/svelte/icons/download";
@@ -15,7 +16,7 @@
 </script>
 
 <svelte:head>
-  <title>Order Confirmed | Hoikka</title>
+  <title>Order Confirmed | {STORE_NAME}</title>
   <meta name="robots" content="noindex" />
 </svelte:head>
 
