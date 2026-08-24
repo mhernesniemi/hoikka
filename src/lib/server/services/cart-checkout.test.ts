@@ -255,6 +255,22 @@ describe("startCheckout", () => {
 		expect(second.order.lines[0].quantity).toBe(1);
 	});
 
+	it("excludes the shopper's own checkout reservation from their cart view", async () => {
+		const { variant } = await makeProduct({ price: 1000, stock: 2 });
+		const { order } = await orderService.startCheckout(
+			[{ variantId: variant.id, quantity: 2 }],
+			{}
+		);
+
+		const withoutExclusion = await getCartView([{ variantId: variant.id, quantity: 2 }], null);
+		const ownCart = await getCartView([{ variantId: variant.id, quantity: 2 }], null, {
+			excludeReservationOrderId: order.id
+		});
+
+		expect(withoutExclusion.lines[0].quantity).toBe(0);
+		expect(ownCart.lines[0].quantity).toBe(2);
+	});
+
 	it("silently removes stale deleted variants from the resolved cart", async () => {
 		const stale = await makeProduct({ price: 500 });
 		const current = await makeProduct({ price: 1000 });

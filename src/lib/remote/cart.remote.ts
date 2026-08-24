@@ -38,14 +38,12 @@ function writeLines(lines: CartLine[]): void {
 }
 
 /**
- * When a checkout draft is active, its 15-minute stock reservations must
- * shrink with the cart — otherwise items removed (or a cart emptied)
- * mid-checkout keep blocking stock for other shoppers until expiry.
- * Quantity *reductions* are left to the reconcile on next checkout entry;
- * dropped lines and an emptied cart release immediately.
+ * Keep an active checkout draft in lockstep with the cookie. Cart mutations
+ * refresh the cart query before calling this function so the shopper's newly
+ * rebuilt reservations cannot make their own cart appear out of stock.
  */
-async function syncCheckoutReservations(lines: CartLine[]): Promise<void> {
-	const { cookies } = getRequestEvent();
+async function syncCheckoutDraft(lines: CartLine[]): Promise<void> {
+	const { cookies, locals } = getRequestEvent();
 	const token = cookies.get(CHECKOUT_COOKIE);
 	if (!token) return;
 	const draft = await orderService.getDraftByToken(token);
@@ -58,17 +56,33 @@ async function syncCheckoutReservations(lines: CartLine[]): Promise<void> {
 		return;
 	}
 
-	const inCart = new Set(lines.map((l) => l.variantId));
-	for (const line of draft.lines) {
-		if (!inCart.has(line.variantId)) {
-			await reservationService.releaseForVariant(draft.id, line.variantId);
-		}
+	const { resolvedCartLines } = await orderService.startCheckout(lines, {
+		customerId: locals.customer?.id,
+		checkoutToken: token
+	});
+	if (serializeCartCookie(resolvedCartLines) !== serializeCartCookie(lines)) {
+		writeLines(resolvedCartLines);
 	}
+}
+
+async function getActiveCheckoutDraft() {
+	const { cookies } = getRequestEvent();
+	return orderService.getDraftByToken(cookies.get(CHECKOUT_COOKIE));
+}
+
+async function getAvailableStock(variantId: number): Promise<number> {
+	const draft = await getActiveCheckoutDraft();
+	return draft
+		? reservationService.getAvailableStockExcludingOrder(variantId, draft.id)
+		: reservationService.getAvailableStock(variantId);
 }
 
 export const getCart = query(async () => {
 	const { locals } = getRequestEvent();
-	return getCartView(readLines(), locals.customer?.id ?? null);
+	const draft = await getActiveCheckoutDraft();
+	return getCartView(readLines(), locals.customer?.id ?? null, {
+		excludeReservationOrderId: draft?.id
+	});
 });
 
 const variantIdSchema = v.pipe(v.number(), v.integer(), v.minValue(1));
@@ -88,7 +102,7 @@ export const addToCart = command(
 
 		const lines = readLines();
 		if (variant.trackInventory) {
-			const available = await reservationService.getAvailableStock(variantId);
+			const available = await getAvailableStock(variantId);
 			const inCart = lines.find((l) => l.variantId === variantId)?.quantity ?? 0;
 			if (inCart + quantity > available) {
 				// Reservations from active checkouts count against stock, so
@@ -102,8 +116,10 @@ export const addToCart = command(
 			}
 		}
 
-		writeLines(addLine(lines, variantId, quantity));
+		const next = addLine(lines, variantId, quantity);
+		writeLines(next);
 		await getCart().refresh();
+		await syncCheckoutDraft(next);
 	}
 );
 
@@ -122,15 +138,15 @@ export const setCartQuantity = command(
 				.from(productVariants)
 				.where(eq(productVariants.id, variantId));
 			if (variant?.trackInventory) {
-				const available = await reservationService.getAvailableStock(variantId);
+				const available = await getAvailableStock(variantId);
 				clamped = clampToAvailable(quantity, available);
 			}
 		}
 
 		const next = setQuantity(readLines(), variantId, clamped);
 		writeLines(next);
-		await syncCheckoutReservations(next);
 		await getCart().refresh();
+		await syncCheckoutDraft(next);
 	}
 );
 
@@ -139,7 +155,7 @@ export const removeCartLine = command(
 	async ({ variantId }) => {
 		const next = removeLine(readLines(), variantId);
 		writeLines(next);
-		await syncCheckoutReservations(next);
 		await getCart().refresh();
+		await syncCheckoutDraft(next);
 	}
 );

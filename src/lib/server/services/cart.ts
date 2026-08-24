@@ -6,7 +6,7 @@
  * Nothing here writes to the database — the first write happens at checkout
  * (orderService.startCheckout).
  */
-import { eq, and, sql, isNull, inArray, gt } from "drizzle-orm";
+import { eq, and, sql, isNull, inArray, gt, ne } from "drizzle-orm";
 import { db } from "../db/index.js";
 import {
 	products,
@@ -80,7 +80,7 @@ export function clampToAvailable(quantity: number, available: number | null): nu
 export async function getCartView(
 	cartLines: CartLine[],
 	customerId: number | null,
-	opts: { skipPromotions?: boolean } = {}
+	opts: { skipPromotions?: boolean; excludeReservationOrderId?: number } = {}
 ): Promise<CartView> {
 	if (cartLines.length === 0) return EMPTY_CART;
 
@@ -160,7 +160,10 @@ export async function getCartView(
 		.where(
 			and(
 				inArray(stockReservations.variantId, variantIds),
-				gt(stockReservations.expiresAt, new Date())
+				gt(stockReservations.expiresAt, new Date()),
+				opts.excludeReservationOrderId
+					? ne(stockReservations.orderId, opts.excludeReservationOrderId)
+					: undefined
 			)
 		)
 		.groupBy(stockReservations.variantId);

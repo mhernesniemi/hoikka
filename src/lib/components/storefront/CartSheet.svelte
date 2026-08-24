@@ -44,6 +44,23 @@
 
   const isOnCheckout = $derived(page.url.pathname === "/checkout");
 
+  async function refreshCheckoutView() {
+    if (!isOnCheckout) return;
+    await invalidateAll();
+    await getCheckout().refresh();
+  }
+
+  function setCartOpen(open: boolean) {
+    if (!open) {
+      cartStore.close();
+      return;
+    }
+    cartStore.open();
+    // Another tab can change the cookie while checkout remains open. Refresh
+    // when the drawer opens so its contents and the summary cannot disagree.
+    void refreshCheckoutView().catch(() => {});
+  }
+
   async function mutate(action: () => Promise<unknown>) {
     try {
       await cartStore.track(action);
@@ -51,10 +68,7 @@
       // The refreshed cart query is authoritative either way
     }
     if (isOnCheckout) {
-      // The checkout draft order is rebuilt from the cookie on load, then the
-      // checkout query must be refetched to pick up the reconciled draft
-      await invalidateAll();
-      await getCheckout().refresh();
+      await refreshCheckoutView();
       if ((cartQuery?.current?.itemCount ?? 0) === 0) {
         cartStore.close();
         goto("/products");
@@ -79,13 +93,10 @@
     );
 </script>
 
-<Sheet
-  open={cartStore.isOpen}
-  onOpenChange={(open) => (open ? cartStore.open() : cartStore.close())}
->
+<Sheet open={cartStore.isOpen} onOpenChange={setCartOpen}>
   <button
     type="button"
-    onclick={() => cartStore.open()}
+    onclick={() => setCartOpen(true)}
     class="relative"
     aria-label="Shopping cart"
   >
