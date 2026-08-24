@@ -40,6 +40,7 @@ import { promotionService } from "./promotions.js";
 import { calculateDiscount } from "./promotion-utils.js";
 import { getCartView } from "./cart.js";
 import { bumpCatalogVersion } from "$lib/server/edge-cache.js";
+import type { CartLine } from "$lib/server/cart-cookie.js";
 
 // Abandoned checkout drafts are swept after this long. Long enough that a
 // shopper who wanders off mid-checkout still finds their cart, short enough
@@ -176,13 +177,14 @@ export class OrderService {
 	 * checkout.
 	 */
 	async startCheckout(
-		cartLines: { variantId: number; quantity: number }[],
+		cartLines: CartLine[],
 		opts: { customerId?: number | null; checkoutToken?: string | null }
 	): Promise<{
 		order: OrderWithRelations;
 		checkoutToken: string;
 		isNew: boolean;
 		stockErrors: string[];
+		resolvedCartLines: CartLine[];
 	}> {
 		// Expired reservations must go before stock is read, so this one stays
 		// on the request path. The abandoned-draft sweep does not — it runs on
@@ -254,7 +256,9 @@ export class OrderService {
 			for (const cartLine of cartLines) {
 				const line = viewByVariant.get(cartLine.variantId);
 				if (!line) {
-					stockErrors.push("An item in your cart is no longer available");
+					// Deleted variants are already absent from the cart view. Drop the
+					// stale cookie entry silently; reporting it here made checkout warn
+					// about products the shopper had already removed and could not see.
 					continue;
 				}
 				if (line.outOfStock) {
@@ -312,7 +316,18 @@ export class OrderService {
 		const order = await this.getById(draft.id);
 		if (!order) throw new Error("Failed to load checkout order");
 
-		return { order, checkoutToken: draft.checkoutToken!, isNew, stockErrors };
+		const resolvedCartLines = order.lines.map((line) => ({
+			variantId: line.variantId,
+			quantity: line.quantity
+		}));
+
+		return {
+			order,
+			checkoutToken: draft.checkoutToken!,
+			isNew,
+			stockErrors,
+			resolvedCartLines
+		};
 	}
 
 	/**

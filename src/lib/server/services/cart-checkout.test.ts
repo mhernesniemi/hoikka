@@ -255,6 +255,28 @@ describe("startCheckout", () => {
 		expect(second.order.lines[0].quantity).toBe(1);
 	});
 
+	it("silently removes stale deleted variants from the resolved cart", async () => {
+		const stale = await makeProduct({ price: 500 });
+		const current = await makeProduct({ price: 1000 });
+		await db
+			.update(productVariants)
+			.set({ deletedAt: new Date() })
+			.where(eq(productVariants.id, stale.variant.id));
+
+		const result = await orderService.startCheckout(
+			[
+				{ variantId: stale.variant.id, quantity: 1 },
+				{ variantId: current.variant.id, quantity: 2 }
+			],
+			{}
+		);
+
+		expect(result.stockErrors).toEqual([]);
+		expect(result.order.lines).toHaveLength(1);
+		expect(result.order.lines[0].variantId).toBe(current.variant.id);
+		expect(result.resolvedCartLines).toEqual([{ variantId: current.variant.id, quantity: 2 }]);
+	});
+
 	it("applies and recalculates a code promotion on the draft", async () => {
 		const { variant } = await makeProduct({ price: 10000 });
 		await promotionService.create({

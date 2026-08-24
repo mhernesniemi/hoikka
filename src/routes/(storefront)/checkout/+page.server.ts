@@ -16,9 +16,11 @@ import { rateLimit } from "$lib/server/rate-limit.js";
 import config from "$hoikka/config";
 import {
 	CART_COOKIE,
+	CART_COOKIE_OPTIONS,
 	CHECKOUT_COOKIE,
 	CHECKOUT_COOKIE_OPTIONS,
-	parseCartCookie
+	parseCartCookie,
+	serializeCartCookie
 } from "$lib/server/cart-cookie.js";
 import type { PageServerLoad } from "./$types.js";
 
@@ -77,11 +79,21 @@ export const load: PageServerLoad = async ({ locals, cookies, getClientAddress }
 		order,
 		checkoutToken: draftToken,
 		isNew,
-		stockErrors
+		stockErrors,
+		resolvedCartLines
 	} = await orderService.startCheckout(cartLines, {
 		customerId: locals.customer?.id,
 		checkoutToken
 	});
+
+	// Checkout is the authoritative reconciliation point. Keep the cookie in
+	// sync with the accepted draft so deleted products and stock-clamped
+	// quantities cannot reappear on the next visit.
+	const resolvedCartCookie = serializeCartCookie(resolvedCartLines);
+	if (resolvedCartCookie !== cookies.get(CART_COOKIE)) {
+		cookies.set(CART_COOKIE, resolvedCartCookie, CART_COOKIE_OPTIONS);
+	}
+
 	if (isNew) {
 		cookies.set(CHECKOUT_COOKIE, draftToken, CHECKOUT_COOKIE_OPTIONS);
 	}
