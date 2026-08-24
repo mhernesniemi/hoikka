@@ -39,7 +39,6 @@ import { isValidTransition, calculateOrderTotals } from "./order-utils.js";
 import { promotionService } from "./promotions.js";
 import { calculateDiscount } from "./promotion-utils.js";
 import { getCartView } from "./cart.js";
-import { bumpCatalogVersion } from "$lib/server/edge-cache.js";
 import type { CartLine } from "$lib/server/cart-cookie.js";
 
 // Abandoned checkout drafts are swept after this long. Long enough that a
@@ -692,10 +691,11 @@ export class OrderService {
 			await reservationService.releaseForOrder(orderId);
 		}
 
-		// Stock changed — cached storefront pages must re-render
-		if (newState === "paid" || newState === "cancelled") {
-			await bumpCatalogVersion();
-		}
+		// Deliberately no catalog-version bump here. Stock changed, but stock is
+		// read separately from the cached page (see
+		// $lib/server/services/availability.ts) — bumping would orphan every
+		// cached storefront page on every sale, which is exactly backwards
+		// during a burst.
 
 		return updated;
 	}

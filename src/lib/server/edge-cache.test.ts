@@ -6,7 +6,7 @@
  * per-user getCart responses globally).
  */
 import { describe, it, expect } from "vitest";
-import { isCacheableRequest } from "./edge-cache.js";
+import { isCacheableRequest, invalidatesCatalog } from "./edge-cache.js";
 
 const B = "https://shop.example";
 const cacheable = (path: string, cookie: string | null = null) =>
@@ -46,5 +46,31 @@ describe("isCacheableRequest", () => {
 		expect(cacheable("/products/9/grape?preview=1")).toBe(false);
 		expect(cacheable("/products/9/grape", "better-auth.session_token=abc")).toBe(false);
 		expect(cacheable("/products/9/grape", "cart=%5B1%2C%5B13%2C1%5D%5D")).toBe(true);
+	});
+});
+
+describe("invalidatesCatalog", () => {
+	it("orphans the cache when an editor changes content", () => {
+		for (const p of [
+			"/admin/products/9",
+			"/admin/categories",
+			"/admin/pages/about",
+			"/api/assets/upload"
+		]) {
+			expect(invalidatesCatalog(p), p).toBe(true);
+		}
+	});
+
+	// A sale must not cold-render the storefront for everyone else: stock is
+	// read out of band and re-checked at checkout.
+	it("leaves the cache alone for order administration and storefront writes", () => {
+		for (const p of [
+			"/admin/orders",
+			"/admin/orders/42",
+			"/checkout",
+			"/api/webhooks/stripe"
+		]) {
+			expect(invalidatesCatalog(p), p).toBe(false);
+		}
 	});
 });

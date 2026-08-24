@@ -9,6 +9,7 @@
   import { productJsonLd } from "$lib/seo";
   import { addVariantToCart, optimisticSeed } from "$lib/cart-actions";
   import { toggleWishlist, isProductWishlisted } from "$lib/remote/wishlist.remote";
+  import { productAvailability } from "$lib/remote/availability.remote";
   import { cartStore } from "$lib/stores/cart.svelte";
   import { findBestDiscount, getDiscountedPrice } from "$lib/promotion-utils";
   import ProductGallery from "$lib/components/storefront/ProductGallery.svelte";
@@ -88,6 +89,21 @@
   // query created during SSR would serialize per-visitor state into shared HTML
   const wishlistedQuery = $derived(browser ? isProductWishlisted(product.id) : null);
   const isWishlisted = $derived(wishlistOverride ?? wishlistedQuery?.current ?? false);
+
+  // --- Live availability -----------------------------------------------
+  // Stock is queried client-side for a related reason: this page is edge-cached
+  // for guests, and a purchase must not invalidate that cache. The SSR value is
+  // the snapshot taken when the page rendered; this query corrects it, and
+  // checkout stays the authority (see $lib/server/services/availability.ts).
+  const availabilityQuery = $derived(browser ? productAvailability(product.id) : null);
+  const liveVariantStock = $derived(
+    new Map(availabilityQuery?.current?.variants.map((v) => [v.id, v.inStock]) ?? [])
+  );
+  const canAddSelectedVariant = $derived(
+    !!selectedVariant &&
+      (liveVariantStock.get(selectedVariant.id) ??
+        (!selectedVariant.trackInventory || selectedVariant.stock > 0))
+  );
 
   function getVariantName(variant: (typeof product.variants)[0]): string {
     return variant.name ?? variant.sku;
@@ -332,7 +348,7 @@
       <!-- Stock Status -->
       {#if selectedVariant}
         <div class="mb-3 text-sm">
-          {#if !selectedVariant.trackInventory || selectedVariant.stock > 0}
+          {#if canAddSelectedVariant}
             <div class="flex items-center gap-2">
               <CheckIcon class="h-4 w-4 text-green-600" />
               <span class="text-green-600">In stock</span>
@@ -344,7 +360,7 @@
       {/if}
 
       <!-- Add to Cart -->
-      {#if selectedVariant && (!selectedVariant.trackInventory || selectedVariant.stock > 0)}
+      {#if canAddSelectedVariant}
         <Button type="button" size="xl" onclick={handleAddToCart} class="flex-1 py-3">
           Add to Cart
         </Button>

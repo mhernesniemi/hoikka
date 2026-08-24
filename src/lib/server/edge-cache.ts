@@ -18,6 +18,15 @@
  * for 60s, so a change is visible globally within a minute. Entry TTLs
  * backstop writes that bypass the app (e.g. direct D1/wrangler).
  *
+ * The version tracks CONTENT only — what an editor changes: descriptions,
+ * prices, images, categories. It deliberately does NOT track availability.
+ * Stock moves with every paid or cancelled order, and bumping on those would
+ * orphan the whole storefront on every sale, forcing cold renders for everyone
+ * else precisely when traffic is highest. Stock is read out of band instead
+ * ($lib/server/services/availability.ts) and re-validated at checkout, so many
+ * visitors share one cached product page while only the small stock query
+ * reaches the database.
+ *
  * Logged-in visitors always bypass the cache — previews, group prices, and
  * anything else session-dependent stays live by construction.
  */
@@ -62,6 +71,16 @@ export function isCacheableRequest(rawUrl: URL, cookieHeader: string | null): bo
 }
 
 /**
+ * Whether a successful non-GET request changed storefront CONTENT and must
+ * therefore orphan the cache. Order administration is excluded on purpose: it
+ * moves stock, which the storefront reads out of band.
+ */
+export function invalidatesCatalog(pathname: string): boolean {
+	if (pathname === "/api/assets/upload") return true;
+	return pathname.startsWith("/admin") && !/^\/admin\/orders(?:\/|$)/.test(pathname);
+}
+
+/**
  * Invalidate all cached storefront pages. Callable from services (uses the
  * request event's KV binding); a no-op outside the cloudflare target.
  */
@@ -84,14 +103,12 @@ export const edgeCache: Handle = async ({ event, resolve }) => {
 	const kv = platform?.env?.CACHE_KV;
 	if (!cache || !kv) return resolve(event);
 
-	// Catalog mutations through the admin UI (form actions) or asset uploads
-	// invalidate every cached page at once
+	// Content mutations through the admin UI (form actions) or asset uploads
+	// invalidate every cached page at once. Order administration is excluded:
+	// it moves stock, not content (see the availability note above).
 	if (request.method !== "GET") {
 		const response = await resolve(event);
-		if (
-			response.ok &&
-			(url.pathname.startsWith("/admin") || url.pathname === "/api/assets/upload")
-		) {
+		if (response.ok && invalidatesCatalog(url.pathname)) {
 			platform.ctx?.waitUntil(bumpCatalogVersion(kv));
 		}
 		return response;
