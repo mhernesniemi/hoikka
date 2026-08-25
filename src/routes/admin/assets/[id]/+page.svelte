@@ -8,7 +8,7 @@
   import FocalPointPicker from "$lib/components/admin/FocalPointPicker.svelte";
   import TranslationEditor from "$lib/components/admin/TranslationEditor.svelte";
   import DeleteConfirmDialog from "$lib/components/admin/DeleteConfirmDialog.svelte";
-  import { translationsToMap, TRANSLATION_LANGUAGES } from "$lib/config/languages.js";
+  import { translationsToMap } from "$lib/config/languages.js";
   import { formatFileSize } from "$lib/utils";
   import ChevronLeft from "@lucide/svelte/icons/chevron-left";
   import type { ActionData, PageData } from "./$types";
@@ -87,7 +87,12 @@
       >
         <input type="hidden" name="focalX" value={focalX} />
         <input type="hidden" name="focalY" value={focalY} />
-        <AdminCard title="Details">
+        <TranslationEditor
+          title="Details"
+          fields={[{ name: "alt", label: "Alt text", type: "text" }]}
+          translations={translationMap}
+          formId="asset-form"
+        >
           <div class="space-y-4">
             <div>
               <Label for="name">Name <span class="text-red-500">*</span></Label>
@@ -108,17 +113,8 @@
               </p>
             </div>
           </div>
-        </AdminCard>
+        </TranslationEditor>
       </form>
-
-      <!-- Translations -->
-      {#if TRANSLATION_LANGUAGES.length > 0}
-        <TranslationEditor
-          fields={[{ name: "alt", label: "Alt text", type: "text" }]}
-          translations={translationMap}
-          formId="asset-form"
-        />
-      {/if}
 
       <button
         type="button"

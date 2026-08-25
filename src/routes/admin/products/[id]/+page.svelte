@@ -358,43 +358,42 @@
             }
           };
         }}
-        class="overflow-hidden rounded-lg bg-surface shadow"
       >
-        <div class="space-y-4 p-6">
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <Label for="name">Name <span class="text-red-500">*</span></Label>
-              <Input type="text" id="name" name="name" bind:value={productName} required />
+        <TranslationEditor
+          title="Product"
+          fields={[
+            { name: "name", label: "Name", type: "text" },
+            { name: "slug", label: "Slug", type: "text" },
+            { name: "description", label: "Description", type: "richtext" }
+          ]}
+          translations={translationMap}
+          formId="product-form"
+        >
+          <div class="space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <Label for="name">Name <span class="text-red-500">*</span></Label>
+                <Input type="text" id="name" name="name" bind:value={productName} required />
+              </div>
+
+              <div>
+                <Label for="slug">Slug <span class="text-red-500">*</span></Label>
+                <Input type="text" id="slug" name="slug" bind:value={productSlug} required />
+              </div>
             </div>
 
             <div>
-              <Label for="slug">Slug <span class="text-red-500">*</span></Label>
-              <Input type="text" id="slug" name="slug" bind:value={productSlug} required />
+              <Label for="description">Description</Label>
+              <RichTextEditor
+                name="description"
+                content={data.product.description ?? ""}
+                placeholder="Write product description..."
+                onchange={(html) => (productDescription = html)}
+              />
             </div>
           </div>
-
-          <div>
-            <Label for="description">Description</Label>
-            <RichTextEditor
-              name="description"
-              content={data.product.description ?? ""}
-              placeholder="Write product description..."
-              onchange={(html) => (productDescription = html)}
-            />
-          </div>
-        </div>
+        </TranslationEditor>
       </form>
-
-      <!-- Translations -->
-      <TranslationEditor
-        fields={[
-          { name: "name", label: "Name", type: "text" },
-          { name: "slug", label: "Slug", type: "text" },
-          { name: "description", label: "Description", type: "richtext" }
-        ]}
-        translations={translationMap}
-        formId="product-form"
-      />
 
       <!-- Images Section -->
       <AdminCard title="Images">

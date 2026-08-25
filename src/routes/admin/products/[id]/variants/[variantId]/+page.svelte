@@ -204,7 +204,12 @@
         {#if isFeatured}
           <input type="hidden" name="isFeatured" value="on" />
         {/if}
-        <AdminCard title="Variant Details">
+        <TranslationEditor
+          title="Variant Details"
+          fields={[{ name: "name", label: "Name", type: "text" }]}
+          translations={translationsToMap(data.translations)}
+          formId="variant-form"
+        >
           <div class="grid grid-cols-2 gap-4">
             <div>
               <Label for="variant_name">Name</Label>
@@ -215,7 +220,7 @@
               <Input type="text" id="sku" name="sku" bind:value={variantSku} required />
             </div>
           </div>
-        </AdminCard>
+        </TranslationEditor>
       </form>
 
       <!-- Price and Stock -->
@@ -354,12 +359,6 @@
 
     <!-- Sidebar (Right) -->
     <div class="w-full space-y-6 lg:w-80 lg:shrink-0">
-      <!-- Translations -->
-      <TranslationEditor
-        fields={[{ name: "name", label: "Name", type: "text" }]}
-        translations={translationsToMap(data.translations)}
-        formId="variant-form"
-      />
       <!-- Featured Variant -->
       <AdminCard title="Featured Variant" variant="sidebar">
         <div class="flex items-center gap-2">

@@ -246,7 +246,12 @@
       >
         <input type="hidden" name="values_json" value={valuesJson} />
         <input type="hidden" name="is_hidden" value={facetIsHidden ? "on" : ""} />
-        <AdminCard title="Facet Details">
+        <TranslationEditor
+          title="Facet Details"
+          fields={[{ name: "name", label: "Name", type: "text" }]}
+          translations={translationsToMap(data.facetTranslations)}
+          formId="facet-form"
+        >
           <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <Label for="facet_name">Name <span class="text-red-500">*</span></Label>
@@ -257,7 +262,7 @@
               <Input type="text" id="facet_code" name="code" required bind:value={facetCode} />
             </div>
           </div>
-        </AdminCard>
+        </TranslationEditor>
       </form>
 
       <!-- Values -->
@@ -349,13 +354,6 @@
           </label>
         </div>
       </AdminCard>
-      {#if TRANSLATION_LANGUAGES.length > 0}
-        <TranslationEditor
-          fields={[{ name: "name", label: "Name", type: "text" }]}
-          translations={translationsToMap(data.facetTranslations)}
-          formId="facet-form"
-        />
-      {/if}
     </div>
   </div>
 </div>

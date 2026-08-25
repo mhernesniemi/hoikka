@@ -337,8 +337,17 @@
         <input type="hidden" name="filters" value={filtersJson} />
         <input type="hidden" name="is_private" value={isPrivate ? "on" : ""} />
 
-        <div class="overflow-hidden rounded-lg bg-surface shadow">
-          <div class="space-y-4 p-6">
+        <TranslationEditor
+          title="Collection"
+          fields={[
+            { name: "name", label: "Name", type: "text" },
+            { name: "slug", label: "Slug", type: "text" },
+            { name: "description", label: "Description", type: "richtext" }
+          ]}
+          translations={translationMap}
+          formId="collection-form"
+        >
+          <div class="space-y-4">
             <div class="grid grid-cols-2 gap-4">
               <div>
                 <Label for="name">Name <span class="text-red-500">*</span></Label>
@@ -359,19 +368,8 @@
               />
             </div>
           </div>
-        </div>
+        </TranslationEditor>
       </form>
-
-      <!-- Translations -->
-      <TranslationEditor
-        fields={[
-          { name: "name", label: "Name", type: "text" },
-          { name: "slug", label: "Slug", type: "text" },
-          { name: "description", label: "Description", type: "richtext" }
-        ]}
-        translations={translationMap}
-        formId="collection-form"
-      />
 
       <!-- Collection Filters -->
       <AdminCard title="Filters">
