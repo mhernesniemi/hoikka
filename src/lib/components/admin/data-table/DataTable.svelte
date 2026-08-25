@@ -83,6 +83,22 @@
     }, 300);
   }
 
+  // What the user is currently searching for, whichever mode the table is in
+  const activeSearch = $derived(serverPagination ? serverSearchValue : globalFilter);
+
+  function clearSearch() {
+    if (serverPagination) {
+      serverSearchValue = "";
+      clearTimeout(searchDebounceTimer);
+      const url = new URL(page.url);
+      url.searchParams.delete("search");
+      url.searchParams.delete("page");
+      goto(url.toString(), { keepFocus: true });
+    } else {
+      table.setGlobalFilter("");
+    }
+  }
+
   const table = createSvelteTable({
     get data() {
       return data;
@@ -184,8 +200,10 @@
   let canNextServer = $derived(serverPagination ? serverPage < pageCount : false);
 </script>
 
-<!-- Table or empty state -->
-{#if data.length === 0 && emptyIcon}
+<!-- Table or empty state. A search that matches nothing keeps the toolbar,
+     so the query can be changed or cleared; the onboarding state is only
+     for a list with nothing in it at all. -->
+{#if data.length === 0 && emptyIcon && !activeSearch}
   <div class="mt-2 mb-6 rounded-lg border border-dashed border-input-border p-12 text-center">
     {#if emptyIcon}
       {@const Icon = emptyIcon}
@@ -264,7 +282,14 @@
       {:else}
         <TableRow class="hover:bg-transparent">
           <TableCell colspan={columns.length} class="py-12 text-center text-muted-foreground">
-            No results found
+            {#if activeSearch}
+              <p>No results for "{activeSearch}"</p>
+              <Button type="button" variant="outline" size="sm" class="mt-3" onclick={clearSearch}>
+                Clear search
+              </Button>
+            {:else}
+              No results found
+            {/if}
           </TableCell>
         </TableRow>
       {/each}
