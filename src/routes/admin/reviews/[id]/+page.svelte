@@ -99,7 +99,7 @@
     </div>
 
     <!-- Sidebar -->
-    <div class="w-full space-y-6 lg:w-80 lg:shrink-0">
+    <div class="w-full space-y-6 lg:w-96 lg:shrink-0">
       <!-- Details -->
       <AdminCard title="Details" variant="sidebar">
         <div class="space-y-3 text-sm">

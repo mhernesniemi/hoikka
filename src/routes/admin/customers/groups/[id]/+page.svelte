@@ -289,7 +289,7 @@
     </div>
 
     <!-- Sidebar -->
-    <div class="w-full space-y-6 lg:w-80 lg:shrink-0">
+    <div class="w-full space-y-6 lg:w-96 lg:shrink-0">
       <!-- Tax Exempt -->
       <AdminCard title="Tax" variant="sidebar">
         <div class="flex items-center gap-2">

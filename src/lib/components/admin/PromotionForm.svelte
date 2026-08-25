@@ -272,7 +272,7 @@
   </div>
 
   <!-- Right Sidebar -->
-  <div class="w-full space-y-6 lg:w-80 lg:shrink-0">
+  <div class="w-full space-y-6 lg:w-96 lg:shrink-0">
     {@render sidebarTop?.()}
 
     <!-- Combination Settings -->

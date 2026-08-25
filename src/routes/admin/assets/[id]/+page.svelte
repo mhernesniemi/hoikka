@@ -122,7 +122,7 @@
     </div>
 
     <!-- Sidebar (Right) -->
-    <div class="w-full space-y-6 lg:w-80 lg:shrink-0">
+    <div class="w-full space-y-6 lg:w-96 lg:shrink-0">
       <AdminCard title="File Info" variant="sidebar">
         <dl class="space-y-3 text-sm">
           {#if data.asset.width && data.asset.height}

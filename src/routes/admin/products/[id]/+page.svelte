@@ -606,7 +606,7 @@
     </div>
 
     <!-- Sidebar (Right) -->
-    <div class="w-full space-y-6 lg:w-80 lg:shrink-0">
+    <div class="w-full space-y-6 lg:w-96 lg:shrink-0">
       <!-- Visibility Section -->
       <AdminCard title="Visibility" variant="sidebar">
         <div class="relative">

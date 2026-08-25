@@ -562,7 +562,7 @@
     </div>
 
     <!-- Sidebar (Right) -->
-    <div class="w-full space-y-6 lg:w-80 lg:shrink-0">
+    <div class="w-full space-y-6 lg:w-96 lg:shrink-0">
       <!-- Private Section -->
       {#if hoikkaConfig.collections.fields.length > 0}
         <AdminCard title="Details" variant="sidebar">
