@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageActionsMenu from "$lib/components/admin/PageActionsMenu.svelte";
   import { enhance } from "$app/forms";
   import { toast } from "svelte-sonner";
   import { Button } from "$lib/components/admin/ui/button";
@@ -47,9 +48,12 @@
     >
       <ChevronLeft class="h-4 w-4" /> Back to Assets
     </a>
-    <Button type="submit" form="asset-form" disabled={isSubmitting}>
-      {isSubmitting ? "Saving..." : "Save Changes"}
-    </Button>
+    <div class="flex items-center gap-2">
+      <Button type="submit" form="asset-form" disabled={isSubmitting}>
+        {isSubmitting ? "Saving..." : "Save Changes"}
+      </Button>
+      <PageActionsMenu deleteLabel="Delete this asset" ondelete={() => (showDelete = true)} />
+    </div>
   </div>
 
   <h1 class="text-2xl font-bold">{name || "Edit Asset"}</h1>
@@ -115,14 +119,6 @@
           </div>
         </TranslationEditor>
       </form>
-
-      <button
-        type="button"
-        class="text-sm text-red-600 hover:text-red-800 dark:text-red-700"
-        onclick={() => (showDelete = true)}
-      >
-        Delete this asset
-      </button>
     </div>
 
     <!-- Sidebar (Right) -->

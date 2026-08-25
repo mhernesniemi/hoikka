@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageActionsMenu from "$lib/components/admin/PageActionsMenu.svelte";
   import { enhance } from "$app/forms";
   import { cn } from "$lib/utils";
   import { page } from "$app/state";
@@ -131,9 +132,12 @@
   </div>
   <div class="flex items-center justify-between">
     <h1 class="text-2xl font-bold">{data.group.name}</h1>
-    <Button type="submit" form="group-form" disabled={isSubmitting}>
-      {isSubmitting ? "Saving..." : "Save Changes"}
-    </Button>
+    <div class="flex items-center gap-2">
+      <Button type="submit" form="group-form" disabled={isSubmitting}>
+        {isSubmitting ? "Saving..." : "Save Changes"}
+      </Button>
+      <PageActionsMenu deleteLabel="Delete this group" ondelete={() => (showDelete = true)} />
+    </div>
   </div>
 
   <div class="flex flex-col gap-6 lg:flex-row">
@@ -298,14 +302,6 @@
       </AdminCard>
     </div>
   </div>
-
-  <button
-    type="button"
-    class="text-sm text-red-600 hover:text-red-800 dark:text-red-700"
-    onclick={() => (showDelete = true)}
-  >
-    Delete this group
-  </button>
 </div>
 
 <UnsavedChangesDialog isDirty={() => hasUnsavedChanges} isSaving={() => isSubmitting} />

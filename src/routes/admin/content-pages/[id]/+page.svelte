@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageActionsMenu from "$lib/components/admin/PageActionsMenu.svelte";
   import hoikkaConfig from "$hoikka/config";
   import FieldRenderer from "$lib/components/admin/FieldRenderer.svelte";
   import { SelectNative } from "$lib/components/admin/ui/select-native";
@@ -118,6 +119,7 @@
       <Button type="submit" form="content-page-form" disabled={isSubmitting}>
         {isSubmitting ? "Saving..." : "Save Changes"}
       </Button>
+      <PageActionsMenu deleteLabel="Delete this page" ondelete={() => (showDelete = true)} />
     </div>
   </div>
 
@@ -233,14 +235,6 @@
           {/each}
         </div>
       </form>
-
-      <button
-        type="button"
-        class="text-sm text-red-600 hover:text-red-800 dark:text-red-700"
-        onclick={() => (showDelete = true)}
-      >
-        Delete this page
-      </button>
     </div>
 
     <!-- Sidebar (Right) -->

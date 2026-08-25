@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageActionsMenu from "$lib/components/admin/PageActionsMenu.svelte";
   import { enhance } from "$app/forms";
   import { cn } from "$lib/utils";
   import { toast } from "svelte-sonner";
@@ -52,6 +53,7 @@
         {data.review.status}
       </Badge>
     </div>
+    <PageActionsMenu deleteLabel="Delete this review" ondelete={() => (showDelete = true)} />
   </div>
 
   <div class="flex flex-col gap-6 lg:flex-row">
@@ -94,14 +96,6 @@
           {/if}
         </div>
       </AdminCard>
-
-      <button
-        type="button"
-        class="text-sm text-red-600 hover:text-red-800 dark:text-red-700"
-        onclick={() => (showDelete = true)}
-      >
-        Delete this review
-      </button>
     </div>
 
     <!-- Sidebar -->

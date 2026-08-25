@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageActionsMenu from "$lib/components/admin/PageActionsMenu.svelte";
   import { enhance } from "$app/forms";
   import { page } from "$app/state";
   import { onMount } from "svelte";
@@ -125,7 +126,10 @@
       <Badge variant="outline">{typeLabels[promo.promotionType]}</Badge>
       <Badge variant={promoStatus.variant}>{promoStatus.label}</Badge>
     </div>
-    <Button type="submit" form="edit-form">Save Changes</Button>
+    <div class="flex items-center gap-2">
+      <Button type="submit" form="edit-form">Save Changes</Button>
+      <PageActionsMenu deleteLabel="Delete this promotion" ondelete={() => (showDelete = true)} />
+    </div>
   </div>
 
   <form
@@ -183,16 +187,6 @@
             </div>
           {/if}
         </AdminCard>
-      {/snippet}
-
-      {#snippet mainFooter()}
-        <button
-          type="button"
-          class="text-sm text-red-600 hover:text-red-800 dark:text-red-700"
-          onclick={() => (showDelete = true)}
-        >
-          Delete this promotion
-        </button>
       {/snippet}
 
       {#snippet sidebarTop()}

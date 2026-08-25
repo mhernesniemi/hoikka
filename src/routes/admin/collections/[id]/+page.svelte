@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageActionsMenu from "$lib/components/admin/PageActionsMenu.svelte";
   import hoikkaConfig from "$hoikka/config";
   import FieldRenderer from "$lib/components/admin/FieldRenderer.svelte";
   import { deserialize, enhance } from "$app/forms";
@@ -297,6 +298,10 @@
         <Button type="submit" form="collection-form" disabled={isSubmitting}>
           {isSubmitting ? "Saving..." : "Save Changes"}
         </Button>
+        <PageActionsMenu
+          deleteLabel="Delete this collection"
+          ondelete={() => (showDelete = true)}
+        />
       </div>
     </div>
   </div>
@@ -554,14 +559,6 @@
           />
         </div>
       </AdminCard>
-
-      <button
-        type="button"
-        class="text-sm text-red-600 hover:text-red-800 dark:text-red-700"
-        onclick={() => (showDelete = true)}
-      >
-        Delete this collection
-      </button>
     </div>
 
     <!-- Sidebar (Right) -->

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageActionsMenu from "$lib/components/admin/PageActionsMenu.svelte";
   import { enhance } from "$app/forms";
   import { page } from "$app/state";
   import { onMount } from "svelte";
@@ -206,6 +207,7 @@
       <Button type="submit" form="facet-form" disabled={isSubmitting}>
         {isSubmitting ? "Saving..." : "Save Changes"}
       </Button>
+      <PageActionsMenu deleteLabel="Delete this facet" ondelete={() => (showDelete = true)} />
     </div>
   </div>
 
@@ -334,14 +336,6 @@
           </div>
         {/if}
       </AdminCard>
-
-      <button
-        type="button"
-        class="text-sm text-red-600 hover:text-red-800 dark:text-red-700"
-        onclick={() => (showDelete = true)}
-      >
-        Delete this facet
-      </button>
     </div>
 
     <!-- Sidebar (Right) -->

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import PageActionsMenu from "$lib/components/admin/PageActionsMenu.svelte";
   import { BASE_CURRENCY } from "$lib/utils";
   import { enhance } from "$app/forms";
   import { toast } from "svelte-sonner";
@@ -168,9 +169,12 @@
     </div>
     <div class="mt-2 flex items-center justify-between">
       <h1 class="text-2xl font-bold">Edit Variant</h1>
-      <Button type="submit" form="variant-form" disabled={isSubmitting}>
-        {isSubmitting ? "Saving..." : "Save Changes"}
-      </Button>
+      <div class="flex items-center gap-2">
+        <Button type="submit" form="variant-form" disabled={isSubmitting}>
+          {isSubmitting ? "Saving..." : "Save Changes"}
+        </Button>
+        <PageActionsMenu deleteLabel="Delete this variant" ondelete={() => (showDelete = true)} />
+      </div>
     </div>
   </div>
 
@@ -348,13 +352,6 @@
           {/each}
         {/if}
       </AdminCard>
-      <button
-        type="button"
-        class="text-sm text-red-600 hover:text-red-800 dark:text-red-700"
-        onclick={() => (showDelete = true)}
-      >
-        Delete this variant
-      </button>
     </div>
 
     <!-- Sidebar (Right) -->
