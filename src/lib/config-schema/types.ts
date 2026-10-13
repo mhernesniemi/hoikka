@@ -95,6 +95,14 @@ export interface HoikkaConfigInput {
 	collections?: {
 		fields?: readonly FieldDef[];
 	};
+	customers?: {
+		/**
+		 * Let visitors create their own accounts (sign-up page and API, first
+		 * Google or email-code sign-in). `false` closes the store to new sign-ups,
+		 * e.g. for B2B; existing accounts still sign in.
+		 */
+		signUp?: boolean;
+	};
 }
 
 /** The config after defaults are merged — what the rest of the code consumes. */
@@ -125,4 +133,5 @@ export interface ResolvedHoikkaConfig {
 	defaultProductType: string;
 	contentPages: { templates: Record<string, ContentPageTemplateDef> };
 	collections: { fields: readonly FieldDef[] };
+	customers: { signUp: boolean };
 }

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { STORE_NAME } from "$lib/config/store.js";
+  import { SIGN_UP_ENABLED } from "$lib/config/customers.js";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import { authClient } from "$lib/auth-client";
@@ -150,10 +151,12 @@
         </Button>
       </form>
 
-      <p class="mt-4 text-center text-sm text-gray-600">
-        Don't have an account?
-        <a href="/sign-up" class="font-medium text-gray-900 hover:underline">Sign up</a>
-      </p>
+      {#if SIGN_UP_ENABLED}
+        <p class="mt-4 text-center text-sm text-gray-600">
+          Don't have an account?
+          <a href="/sign-up" class="font-medium text-gray-900 hover:underline">Sign up</a>
+        </p>
+      {/if}
     </div>
   </div>
 </div>

@@ -16,6 +16,11 @@ describe("defineHoikkaConfig", () => {
 		expect(config.productTypes.physical).toBeDefined();
 		expect(config.defaultProductType).toBe("physical");
 		expect(config.limits.digitalDelivery.maxDownloads).toBe(10);
+		expect(config.customers.signUp).toBe(true);
+	});
+
+	it("can close the store to new sign-ups", () => {
+		expect(defineHoikkaConfig({ customers: { signUp: false } }).customers.signUp).toBe(false);
 	});
 
 	it("merges a section without wiping its siblings", () => {

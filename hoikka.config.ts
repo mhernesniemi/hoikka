@@ -68,4 +68,6 @@ export default defineHoikkaConfig({
 	collections: {
 		fields: [{ key: "subtitle", label: "Subtitle", type: "text" }]
 	}
+	// Closed / B2B store: turn off self-service sign-up (existing accounts still sign in):
+	// customers: { signUp: false }
 });

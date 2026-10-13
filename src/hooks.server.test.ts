@@ -8,7 +8,14 @@ import { describe, it, expect, vi } from "vitest";
 
 vi.mock("$env/dynamic/private", () => ({ env: { DATABASE_URL: ":memory:" } }));
 
-import { adminGuard, bodyLimitGuard } from "./hooks.server.js";
+const customersConfig = vi.hoisted(() => ({ signUp: true }));
+vi.mock("$lib/config/customers.js", () => ({
+	get SIGN_UP_ENABLED() {
+		return customersConfig.signUp;
+	}
+}));
+
+import { adminGuard, bodyLimitGuard, signUpGuard } from "./hooks.server.js";
 import type { RequestEvent } from "@sveltejs/kit";
 
 const OK = new Response("resolved");
@@ -117,5 +124,33 @@ describe("bodyLimitGuard", () => {
 	it("refuses chunked bodies that declare no length", async () => {
 		const response = await run("/admin/login", "POST", { "transfer-encoding": "chunked" });
 		expect(response.status).toBe(411);
+	});
+});
+
+describe("signUpGuard", () => {
+	const OK = new Response("resolved");
+
+	async function run(pathname: string, signUp: boolean): Promise<Response> {
+		customersConfig.signUp = signUp;
+		const event = {
+			url: new URL(`http://localhost${pathname}`),
+			request: new Request(`http://localhost${pathname}`, { method: "POST" })
+		} as unknown as Parameters<typeof signUpGuard>[0]["event"];
+		return (await signUpGuard({ event, resolve: async () => OK })) as Response;
+	}
+
+	it("lets sign-up requests through when sign-up is enabled", async () => {
+		expect(await run("/api/auth/sign-up/email", true)).toBe(OK);
+	});
+
+	it("rejects the sign-up API with 404 when sign-up is disabled", async () => {
+		expect((await run("/api/auth/sign-up/email", false)).status).toBe(404);
+		expect((await run("/api/auth/sign-up", false)).status).toBe(404);
+	});
+
+	it("leaves sign-in and other auth endpoints alone when sign-up is disabled", async () => {
+		expect(await run("/api/auth/sign-in/email", false)).toBe(OK);
+		expect(await run("/api/auth/get-session", false)).toBe(OK);
+		expect(await run("/api/auth/sign-up-extra", false)).toBe(OK);
 	});
 });

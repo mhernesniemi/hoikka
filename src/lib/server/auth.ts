@@ -7,6 +7,7 @@ import { dev } from "$app/environment";
 import { env } from "$env/dynamic/private";
 import { db } from "./db/index.js";
 import * as schema from "./db/schema.js";
+import { SIGN_UP_ENABLED } from "$lib/config/customers.js";
 import { sendEmail } from "./email.js";
 
 function createAuth() {
@@ -32,7 +33,8 @@ function createAuth() {
 				? {
 						google: {
 							clientId: env.GOOGLE_CLIENT_ID,
-							clientSecret: env.GOOGLE_CLIENT_SECRET
+							clientSecret: env.GOOGLE_CLIENT_SECRET,
+							disableSignUp: !SIGN_UP_ENABLED
 						}
 					}
 				: {},
@@ -48,6 +50,7 @@ function createAuth() {
 		},
 		plugins: [
 			emailOTP({
+				disableSignUp: !SIGN_UP_ENABLED,
 				async sendVerificationOTP({ email, otp, type }) {
 					const subjects: Record<typeof type, string> = {
 						"sign-in": "Your sign-in code",

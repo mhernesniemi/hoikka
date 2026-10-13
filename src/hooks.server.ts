@@ -14,6 +14,7 @@ import { env } from "$env/dynamic/private";
 import { ensureNodeScheduler } from "$lib/server/integrations/scheduler.js";
 import { syncConfiguredMethods } from "$lib/server/services/method-sync.js";
 import { edgeCache } from "$lib/server/edge-cache.js";
+import { SIGN_UP_ENABLED } from "$lib/config/customers.js";
 
 // Session handler — validates session via Better Auth and syncs customer record.
 const sessionHandler: Handle = async ({ event, resolve }) => {
@@ -113,6 +114,16 @@ export const bodyLimitGuard: Handle = async ({ event, resolve }) => {
 	return resolve(event);
 };
 
+// Closed stores (customers.signUp: false) refuse self-registration over HTTP.
+// Server-side auth.api.signUpEmail calls (first-run admin setup) never pass here.
+export const signUpGuard: Handle = async ({ event, resolve }) => {
+	const { pathname } = event.url;
+	const isSignUpApi =
+		pathname === "/api/auth/sign-up" || pathname.startsWith("/api/auth/sign-up/");
+	if (isSignUpApi && !SIGN_UP_ENABLED) return new Response("Not found", { status: 404 });
+	return resolve(event);
+};
+
 // Admin authorization. The admin layout's `load` only guards rendering —
 // form actions and endpoint handlers run *before* layout loads, so a POST to
 // e.g. /admin/products?/create never reached it. Enforcing the role here
@@ -184,6 +195,7 @@ const demoGuard: Handle = async ({ event, resolve }) => {
 // without touching auth or the database at all
 export const handle = sequence(
 	bodyLimitGuard,
+	signUpGuard,
 	tasksInit,
 	demoGuard,
 	edgeCache,

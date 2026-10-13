@@ -56,7 +56,8 @@ const DEFAULTS: ResolvedHoikkaConfig = {
 	},
 	defaultProductType: "physical",
 	contentPages: { templates: { default: { label: "Default", fields: [] } } },
-	collections: { fields: [] }
+	collections: { fields: [] },
+	customers: { signUp: true }
 };
 
 /** Shallow-merge one config section over its default. */
@@ -95,7 +96,8 @@ export function defineHoikkaConfig(input: HoikkaConfigInput = {}): ResolvedHoikk
 		contentPages: {
 			templates: input.contentPages?.templates ?? DEFAULTS.contentPages.templates
 		},
-		collections: section(DEFAULTS.collections, input.collections)
+		collections: section(DEFAULTS.collections, input.collections),
+		customers: section(DEFAULTS.customers, input.customers)
 	};
 
 	// Fail at import time, not at checkout time.
