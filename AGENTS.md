@@ -11,7 +11,7 @@
 
 ## Tools
 
-- Run `./scripts/svelte-check.sh --threshold error` for type checking. This wrapper prevents the Vite dev server from crashing by preserving `.svelte-kit/generated/` timestamps that `svelte-check` would otherwise overwrite.
+- Run `./scripts/svelte-check.sh --threshold error` for type checking. This wrapper runs `svelte-kit sync` + `svelte-check` and then restores the timestamps of unchanged `.svelte-kit/generated/` files, so a running Vite dev server doesn't see spurious changes and crash.
 - After modifying files, run `pnpm exec prettier --write <files>` on the changed files to format them.
 - When making changes to the DB schema, generate a migration with `pnpm db:generate`. On the Node target, migrations apply automatically when the server starts (dev or production). On the Cloudflare target, apply them with `pnpm db:migrate:cf` (`wrangler d1 migrations apply`). Do **not** use `drizzle-kit push`.
 - **Reverting schema changes**: If a migration is reverted, you must also delete its SQL file (`drizzle/NNNN_*.sql`), its snapshot (`drizzle/meta/NNNN_snapshot.json`), and remove its entry from `drizzle/meta/_journal.json`. Leftover files will cause the next `db:generate` to fail or produce broken migrations.
