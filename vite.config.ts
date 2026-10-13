@@ -1,5 +1,5 @@
 import tailwindcss from "@tailwindcss/vite";
-import { defineConfig } from "vitest/config";
+import { configDefaults, defineConfig } from "vitest/config";
 import { sveltekit } from "@sveltejs/kit/vite";
 import { fileURLToPath } from "node:url";
 import type { Plugin } from "vite";
@@ -63,7 +63,7 @@ export default defineConfig({
 					name: "server",
 					environment: "node",
 					include: ["src/**/*.{test,spec}.{js,ts}"],
-					exclude: ["src/**/*.svelte.{test,spec}.{js,ts}"]
+					exclude: [...configDefaults.exclude, "src/**/*.svelte.{test,spec}.{js,ts}"]
 				}
 			}
 		]
