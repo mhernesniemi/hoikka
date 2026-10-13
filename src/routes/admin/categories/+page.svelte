@@ -19,9 +19,9 @@
   import Pencil from "@lucide/svelte/icons/pencil";
   import PlusIcon from "@lucide/svelte/icons/plus";
   import Trash2 from "@lucide/svelte/icons/trash-2";
-  import type { PageData } from "./$types";
+  import type { ActionData, PageData } from "./$types";
 
-  let { data, form }: { data: PageData; form: any } = $props();
+  let { data, form }: { data: PageData; form: ActionData } = $props();
 
   $effect(() => {
     if (form?.error) toast.error(form.error);
@@ -140,7 +140,7 @@
   }
 
   // When tree data changes (create/update/delete), expand any new nodes
-  let prevIds = new Set(collectIds(data.tree));
+  let prevIds = new Set(untrack(() => collectIds(data.tree)));
   $effect(() => {
     const currentIds = collectIds(data.tree);
     untrack(() => {

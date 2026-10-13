@@ -185,7 +185,7 @@ export const actions: Actions = {
 		}
 	},
 
-	updateImageAlt: async ({ params, request }) => {
+	updateImageAlt: async ({ request }) => {
 		const formData = await request.formData();
 		const assetId = Number(formData.get("assetId"));
 		const alt = formData.get("alt") as string;

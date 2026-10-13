@@ -20,11 +20,7 @@
 
   let { data, form }: { data: PageData; form: ActionData } = $props();
 
-  let vatId = $state(data.customer.vatId ?? "");
-
-  $effect(() => {
-    vatId = data.customer.vatId ?? "";
-  });
+  let vatId = $derived(data.customer.vatId ?? "");
 
   $effect(() => {
     if (form?.success) toast.success(form.message || "Saved");

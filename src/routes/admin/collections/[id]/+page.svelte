@@ -4,7 +4,7 @@
   import FieldRenderer from "$lib/components/admin/FieldRenderer.svelte";
   import { deserialize, enhance } from "$app/forms";
   import { page } from "$app/state";
-  import { onMount } from "svelte";
+  import { onMount, untrack } from "svelte";
   import { toast } from "svelte-sonner";
   import type { ColumnDef } from "@tanstack/table-core";
   import { DataTable, renderSnippet } from "$lib/components/admin/data-table";
@@ -63,16 +63,17 @@
   let editingImageAlt = $state<{ id: number; alt: string } | null>(null);
 
   // ── Form state ────────────────────────────────────────────────────────
-  let name = $state(data.collection.name ?? "");
-  let slug = $state(data.collection.slug ?? "");
-  let description = $state(data.collection.description ?? "");
-  let isPrivate = $state(data.collection.isPrivate);
+  const initial = untrack(() => data.collection);
+  let name = $state(initial.name ?? "");
+  let slug = $state(initial.slug ?? "");
+  let description = $state(initial.description ?? "");
+  let isPrivate = $state(initial.isPrivate);
 
   type LocalFilter = { key: number; field: string; operator: string; value: unknown };
   type PreviewProduct = (typeof data.preview)[0];
   let filterKey = 0;
   let localFilters = $state<LocalFilter[]>(
-    data.collection.filters.map((f) => ({
+    initial.filters.map((f) => ({
       key: filterKey++,
       field: f.field,
       operator: f.operator,

@@ -11,7 +11,6 @@
  */
 import { getRequestEvent } from "$app/server";
 import { drizzle as drizzleD1 } from "drizzle-orm/d1";
-import { sql } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import * as schema from "./schema.js";
 import { env } from "$env/dynamic/private";

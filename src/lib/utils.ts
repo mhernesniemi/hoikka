@@ -1,6 +1,5 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
-import type { Snippet } from "svelte";
 import { DATE_LOCALE } from "$lib/config/locale.js";
 import config from "$hoikka/config";
 

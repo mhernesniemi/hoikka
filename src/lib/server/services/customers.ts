@@ -2,7 +2,7 @@
  * Customer Service
  * Handles customer management and addresses
  */
-import { eq, and, desc, isNull, sql, type SQL } from "drizzle-orm";
+import { eq, and, isNull, sql, type SQL } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { paginationOf, resolveSort } from "../pagination.js";
 import { customers, addresses } from "../db/schema.js";

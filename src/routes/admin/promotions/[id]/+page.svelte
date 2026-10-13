@@ -2,7 +2,7 @@
   import PageActionsMenu from "$lib/components/admin/PageActionsMenu.svelte";
   import { enhance } from "$app/forms";
   import { page } from "$app/state";
-  import { onMount } from "svelte";
+  import { onMount, untrack } from "svelte";
   import { Button } from "$lib/components/admin/ui/button";
   import { Checkbox } from "$lib/components/admin/ui/checkbox";
   import { Input } from "$lib/components/admin/ui/input";
@@ -20,29 +20,26 @@
 
   let promo = $derived(data.promotion);
 
-  let discountType = $state(promo.discountType);
-  let appliesTo = $state(promo.appliesTo);
-  let selectedProductIds = $state<number[]>(promo.products.map((p) => p.productId));
-  let selectedCollectionIds = $state<number[]>(promo.collections.map((c) => c.collectionId));
-  let enabled = $state(promo.enabled);
-  let combinesWithOtherPromotions = $state(promo.combinesWithOtherPromotions);
-  let promoTitle = $state(promo.title ?? "");
+  const initial = untrack(() => promo);
+  let discountType = $state(initial.discountType);
+  let appliesTo = $state(initial.appliesTo);
+  let selectedProductIds = $state<number[]>(initial.products.map((p) => p.productId));
+  let selectedCollectionIds = $state<number[]>(initial.collections.map((c) => c.collectionId));
+  let enabled = $state(initial.enabled);
+  let combinesWithOtherPromotions = $state(initial.combinesWithOtherPromotions);
+  let promoTitle = $state(initial.title ?? "");
   let discountValue = $state<number | string>(
-    promo.discountType === "fixed_amount" ? promo.discountValue / 100 : promo.discountValue
+    initial.discountType === "fixed_amount" ? initial.discountValue / 100 : initial.discountValue
   );
   let minOrderAmount = $state<number | string>(
-    promo.minOrderAmount ? promo.minOrderAmount / 100 : ""
+    initial.minOrderAmount ? initial.minOrderAmount / 100 : ""
   );
-  let usageLimit = $state<number | string>(promo.usageLimit ?? "");
-  let usageLimitPerCustomer = $state<number | string>(promo.usageLimitPerCustomer ?? "");
-  let startsAt = $state(formatDateForInput(promo.startsAt));
-  let endsAt = $state(formatDateForInput(promo.endsAt));
-  let customerGroupId = $state(String(promo.customerGroupId ?? ""));
+  let usageLimit = $state<number | string>(initial.usageLimit ?? "");
+  let usageLimitPerCustomer = $state<number | string>(initial.usageLimitPerCustomer ?? "");
+  let startsAt = $state(formatDateForInput(initial.startsAt));
+  let endsAt = $state(formatDateForInput(initial.endsAt));
+  let customerGroupId = $state(String(initial.customerGroupId ?? ""));
   let showDelete = $state(false);
-
-  function formatPrice(cents: number): string {
-    return (cents / 100).toFixed(2);
-  }
 
   function formatDateForInput(date: Date | null): string {
     if (!date) return "";

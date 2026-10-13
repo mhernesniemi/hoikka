@@ -24,8 +24,8 @@
     class?: string;
   } = $props();
 
-  const btnSize = size === "sm" ? "h-7 w-7" : "h-8 w-8";
-  const iconSize = size === "sm" ? "h-3.5 w-3.5" : "h-4 w-4";
+  const btnSize = $derived(size === "sm" ? "h-7 w-7" : "h-8 w-8");
+  const iconSize = $derived(size === "sm" ? "h-3.5 w-3.5" : "h-4 w-4");
 
   const btnClass = $derived(
     buttonVariants({

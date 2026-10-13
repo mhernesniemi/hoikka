@@ -329,10 +329,7 @@ export class ProductService {
 	/**
 	 * Get facet counts for filtering UI
 	 */
-	async getFacetCounts(
-		facetCode: string,
-		currentFilters: Record<string, string[]> = {}
-	): Promise<FacetCount[]> {
+	async getFacetCounts(facetCode: string): Promise<FacetCount[]> {
 		// Get the facet
 		const facet = await db.select().from(facets).where(eq(facets.code, facetCode)).limit(1);
 

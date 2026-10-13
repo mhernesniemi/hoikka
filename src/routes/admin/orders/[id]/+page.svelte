@@ -1,7 +1,7 @@
 <script lang="ts">
   import { toast } from "svelte-sonner";
   import { Button } from "$lib/components/admin/ui/button";
-  import { Badge, type BadgeVariant } from "$lib/components/admin/ui/badge";
+  import { Badge } from "$lib/components/admin/ui/badge";
   import AdminCard from "$lib/components/admin/AdminCard.svelte";
   import ChevronLeft from "@lucide/svelte/icons/chevron-left";
   import ImageIcon from "@lucide/svelte/icons/image";

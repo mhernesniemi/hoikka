@@ -11,7 +11,10 @@
     isSaving?: () => boolean;
   } = $props();
 
-  const unsaved = useUnsavedChanges(isDirty, isSaving);
+  const unsaved = useUnsavedChanges(
+    () => isDirty(),
+    () => isSaving?.() ?? false
+  );
 </script>
 
 <Dialog.Root

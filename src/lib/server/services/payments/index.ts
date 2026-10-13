@@ -6,7 +6,7 @@
 import { eq, and, desc, inArray } from "drizzle-orm";
 import { db } from "../../db/index.js";
 import { paymentMethods, payments } from "../../db/schema.js";
-import type { PaymentMethod, Payment, NewPayment, OrderWithRelations } from "$lib/types.js";
+import type { PaymentMethod, Payment, OrderWithRelations } from "$lib/types.js";
 import type {
 	PaymentProvider,
 	PaymentInfo,

@@ -8,11 +8,11 @@
   import { cartStore } from "$lib/stores/cart.svelte";
   import { addVariantToCart, optimisticSeed } from "$lib/cart-actions";
   import { getWishlistCount } from "$lib/remote/wishlist.remote";
-  import type { PageData, ActionData } from "./$types";
+  import type { PageData } from "./$types";
   import Heart from "@lucide/svelte/icons/heart";
   import ImageIcon from "@lucide/svelte/icons/image";
 
-  let { data, form }: { data: PageData; form: ActionData } = $props();
+  let { data }: { data: PageData } = $props();
 
   const items = $derived(data.wishlistProducts);
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount, onDestroy } from "svelte";
+  import { onMount, onDestroy, untrack } from "svelte";
   import { Editor } from "@tiptap/core";
   import StarterKit from "@tiptap/starter-kit";
   import Link from "@tiptap/extension-link";
@@ -26,7 +26,7 @@
 
   let element: HTMLDivElement;
   let editor: Editor | undefined = $state();
-  let html = $state(content);
+  let html = $state(untrack(() => content));
   let editorVersion = $state(0);
 
   onMount(() => {

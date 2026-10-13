@@ -22,7 +22,7 @@
   import { cn } from "$lib/utils";
   import { imageUrl as imgUrl } from "$lib/image";
   import UnsavedChangesDialog from "$lib/components/admin/UnsavedChangesDialog.svelte";
-  import { onMount } from "svelte";
+  import { onMount, untrack } from "svelte";
   import ImagePicker from "$lib/components/admin/ImagePicker.svelte";
   import Plus from "@lucide/svelte/icons/plus";
   import Trash2 from "@lucide/svelte/icons/trash-2";
@@ -49,7 +49,7 @@
   let title = $state("");
   let slug = $state("");
   let published = $state(false);
-  let template = $state(data.page.template ?? "default");
+  let template = $state(untrack(() => data.page.template) ?? "default");
   const templateFieldDefs = $derived(hoikkaConfig.contentPages.templates[template]?.fields ?? []);
   let body = $state("");
   let imageUrl = $state<string | null>(null);

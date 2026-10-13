@@ -5,17 +5,11 @@
 import type { InferSelectModel, InferInsertModel } from "drizzle-orm";
 import type {
 	products,
-	productTranslations,
 	productVariants,
-	productVariantTranslations,
-	productVariantGroupPrices,
 	facets,
-	facetTranslations,
 	facetValues,
-	facetValueTranslations,
 	assets,
 	customerGroups,
-	customerGroupMembers,
 	customers,
 	addresses,
 	orders,
@@ -23,18 +17,12 @@ import type {
 	payments,
 	paymentMethods,
 	promotions,
-	promotionProducts,
-	promotionCollections,
 	shippingMethods,
 	orderShipping,
 	collections,
-	collectionTranslations,
 	collectionFilters,
 	reviews,
-	stockReservations,
-	taxRates,
-	contentPages,
-	contentPageTranslations
+	contentPages
 } from "$lib/server/db/schema.js";
 
 // ============================================================================

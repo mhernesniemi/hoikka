@@ -5,7 +5,7 @@
   import { enhance } from "$app/forms";
   import { goto, invalidateAll } from "$app/navigation";
   import { page } from "$app/state";
-  import { onMount } from "svelte";
+  import { onMount, untrack } from "svelte";
   import { toast } from "svelte-sonner";
   import { Button } from "$lib/components/admin/ui/button";
   import { Checkbox } from "$lib/components/admin/ui/checkbox";
@@ -48,8 +48,11 @@
 
   let { data, form }: { data: PageData; form: ActionData } = $props();
 
-  let visibility = $state(data.product.visibility);
-  let productType = $state(data.product.type);
+  // Editable drafts start from the loaded data; later reloads don't reset them
+  const initial = untrack(() => data);
+
+  let visibility = $state(initial.product.visibility);
+  let productType = $state(initial.product.type);
   const customFieldDefs = $derived(hoikkaConfig.productTypes[productType]?.fields ?? []);
 
   // Digital deliverable upload (sidebar card, digital products only)
@@ -163,8 +166,8 @@
   let editingImageAlt = $state<{ id: number; alt: string; isFeatured: boolean } | null>(null);
 
   // Selected facet values and categories
-  let selectedProductFacets = $state<number[]>(data.product.facetValues.map((fv) => fv.id));
-  let selectedCategories = $state<number[]>(data.productCategories.map((c) => c.id));
+  let selectedProductFacets = $state<number[]>(initial.product.facetValues.map((fv) => fv.id));
+  let selectedCategories = $state<number[]>(initial.productCategories.map((c) => c.id));
 
   // Flatten facet values for combobox display (derived from data)
   const facetItems = $derived(
@@ -225,7 +228,7 @@
     selectedCategories = selectedCategories.filter((c) => c !== id);
   }
 
-  let selectedRelatedIds = $state<number[]>(data.relatedProducts.map((p) => p.id));
+  let selectedRelatedIds = $state<number[]>(initial.relatedProducts.map((p) => p.id));
 
   // Products available for the picker (exclude current product)
   const pickerProducts = $derived(data.allProducts.filter((p) => p.id !== data.product.id));
@@ -248,9 +251,9 @@
       .filter((p) => p !== undefined);
   }
 
-  let productName = $state(data.product.name);
-  let productSlug = $state(data.product.slug);
-  let productDescription = $state(data.product.description ?? "");
+  let productName = $state(initial.product.name);
+  let productSlug = $state(initial.product.slug);
+  let productDescription = $state(initial.product.description ?? "");
   const translationMap = $derived(translationsToMap(data.translations));
 
   const hasUnsavedChanges = $derived.by(() => {

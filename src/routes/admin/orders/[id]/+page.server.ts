@@ -3,6 +3,7 @@ import { shippingService, paymentService } from "$lib/server/services/index.js";
 import { digitalDeliveryService } from "$lib/server/services/digitalDelivery.js";
 import { emitEvent } from "$lib/server/integrations/events.js";
 import { error, fail } from "@sveltejs/kit";
+import type { OrderState } from "$lib/types.js";
 import type { Actions, PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ params }) => {
@@ -39,10 +40,10 @@ export const actions: Actions = {
 	transition: async ({ params, request }) => {
 		const id = Number(params.id);
 		const formData = await request.formData();
-		const newState = formData.get("state") as string;
+		const newState = formData.get("state") as OrderState;
 
 		try {
-			await orderService.transitionState(id, newState as any);
+			await orderService.transitionState(id, newState);
 
 			// If transitioning to 'paid', create shipment
 			if (newState === "paid") {
@@ -78,10 +79,12 @@ export const actions: Actions = {
 	updateShippingStatus: async ({ params, request }) => {
 		const id = Number(params.id);
 		const formData = await request.formData();
-		const status = formData.get("status") as string;
+		const status = formData.get("status") as Parameters<
+			typeof shippingService.updateShippingStatus
+		>[1];
 
 		try {
-			await shippingService.updateShippingStatus(id, status as any);
+			await shippingService.updateShippingStatus(id, status);
 			return { success: true };
 		} catch (e) {
 			return fail(400, { error: (e as Error).message });

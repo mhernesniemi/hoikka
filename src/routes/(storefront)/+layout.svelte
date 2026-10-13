@@ -6,6 +6,7 @@
   import SearchBar from "$lib/components/storefront/SearchBar.svelte";
   import CartSheet from "$lib/components/storefront/CartSheet.svelte";
   import { getWishlistCount } from "$lib/remote/wishlist.remote";
+  import type { Snippet } from "svelte";
   import type { LayoutData } from "./$types";
   import Heart from "@lucide/svelte/icons/heart";
   import Dot from "@lucide/svelte/icons/dot";
@@ -28,7 +29,7 @@
     });
   });
 
-  let { children, data }: { children: any; data: LayoutData } = $props();
+  let { children, data }: { children: Snippet; data: LayoutData } = $props();
 
   let previousUserId: string | null | undefined = undefined;
 

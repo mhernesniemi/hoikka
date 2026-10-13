@@ -1,20 +1,14 @@
 <script lang="ts">
   import { STORE_NAME } from "$lib/config/store.js";
   import "./admin.css";
-  import { onMount } from "svelte";
+  import { onMount, type Snippet } from "svelte";
   import { page } from "$app/state";
   import { beforeNavigate } from "$app/navigation";
   import { goto } from "$app/navigation";
   import { authClient } from "$lib/auth-client";
   import { Toaster } from "$lib/components/admin/ui/sonner";
   import * as DropdownMenu from "$lib/components/admin/ui/dropdown-menu";
-  import {
-    initTheme,
-    isDark,
-    setTheme,
-    getTheme,
-    type Theme
-  } from "$lib/stores/admin-theme.svelte";
+  import { initTheme, isDark, setTheme, getTheme } from "$lib/stores/admin-theme.svelte";
   import { cn } from "$lib/utils";
   import type { LayoutData } from "./$types";
   import LayoutGrid from "@lucide/svelte/icons/layout-grid";
@@ -36,7 +30,7 @@
   import Check from "@lucide/svelte/icons/check";
   import Menu from "@lucide/svelte/icons/menu";
 
-  let { children, data }: { children: any; data: LayoutData } = $props();
+  let { children, data }: { children: Snippet; data: LayoutData } = $props();
 
   let sidebarOpen = $state(false);
   let mounted = $state(false);

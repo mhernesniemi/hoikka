@@ -5,7 +5,7 @@
    * `children`); the other tabs show the translation inputs for `fields`.
    * Every tab stays mounted (hidden) so all languages submit with the form.
    */
-  import type { Snippet } from "svelte";
+  import { untrack, type Snippet } from "svelte";
   import { RichTextEditor } from "$lib/components/admin/ui/rich-text-editor";
   import { Input } from "$lib/components/admin/ui/input";
   import { Label } from "$lib/components/admin/ui/label";
@@ -34,11 +34,13 @@
 
   const defaultLanguage = LANGUAGES.find((l) => l.code === DEFAULT_LANGUAGE);
   // Without the default-language inputs the card is translations only
-  const tabs = children
-    ? [...(defaultLanguage ? [defaultLanguage] : []), ...TRANSLATION_LANGUAGES]
-    : TRANSLATION_LANGUAGES;
+  const tabs = $derived(
+    children
+      ? [...(defaultLanguage ? [defaultLanguage] : []), ...TRANSLATION_LANGUAGES]
+      : TRANSLATION_LANGUAGES
+  );
 
-  let activeTab = $state(tabs[0]?.code ?? DEFAULT_LANGUAGE);
+  let activeTab = $state(untrack(() => tabs[0]?.code) ?? DEFAULT_LANGUAGE);
 </script>
 
 {#if tabs.length > 0}

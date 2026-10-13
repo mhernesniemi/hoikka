@@ -28,7 +28,7 @@
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import Search from "@lucide/svelte/icons/search";
-  import type { Snippet, Component } from "svelte";
+  import { untrack, type Snippet, type Component } from "svelte";
 
   let {
     columns,
@@ -57,12 +57,13 @@
   } = $props();
 
   // Initialize sorting from URL when server-paginated
-  const urlSort = serverPagination ? page.url.searchParams.get("sort") : null;
-  const urlOrder = serverPagination ? page.url.searchParams.get("order") : null;
+  const sortParams = untrack(() => (serverPagination ? page.url.searchParams : null));
+  const urlSort = sortParams?.get("sort");
+  const urlOrder = sortParams?.get("order");
   let sorting = $state<SortingState>(urlSort ? [{ id: urlSort, desc: urlOrder !== "asc" }] : []);
   let globalFilter = $state("");
   let rowSelection = $state<RowSelectionState>({});
-  let pagination = $state<PaginationState>({ pageIndex: 0, pageSize });
+  let pagination = $state<PaginationState>({ pageIndex: 0, pageSize: untrack(() => pageSize) });
 
   // Server-side search: read initial value from URL and debounce navigation
   let serverSearchValue = $state(page.url.searchParams.get("search") ?? "");

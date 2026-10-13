@@ -1,5 +1,6 @@
 <script lang="ts">
   import PageActionsMenu from "$lib/components/admin/PageActionsMenu.svelte";
+  import { untrack } from "svelte";
   import { BASE_CURRENCY } from "$lib/utils";
   import { enhance } from "$app/forms";
   import { toast } from "svelte-sonner";
@@ -30,7 +31,7 @@
   });
 
   let isSubmitting = $state(false);
-  let trackInventory = $state(data.variant.trackInventory);
+  let trackInventory = $state(untrack(() => data.variant.trackInventory));
   let showDelete = $state(false);
   let showImagePicker = $state(false);
   let variantName = $state("");
@@ -80,7 +81,9 @@
 
   // Group pricing — all client-side, saved with main form
   let groupPrices = $state<{ groupId: number; price: string }[]>(
-    data.groupPrices.map((gp) => ({ groupId: gp.groupId, price: (gp.price / 100).toFixed(2) }))
+    untrack(() =>
+      data.groupPrices.map((gp) => ({ groupId: gp.groupId, price: (gp.price / 100).toFixed(2) }))
+    )
   );
   let showAddGroupPrice = $state(false);
   let newGroupId = $state<number | null>(null);

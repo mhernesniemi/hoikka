@@ -2,15 +2,10 @@
  * Shipping Service
  * Manages shipping methods and order shipping information
  */
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db } from "../../db/index.js";
 import { shippingMethods, orderShipping } from "../../db/schema.js";
-import type {
-	ShippingMethod,
-	OrderShipping,
-	NewOrderShipping,
-	OrderWithRelations
-} from "$lib/types.js";
+import type { ShippingMethod, OrderShipping, OrderWithRelations } from "$lib/types.js";
 import type { ShippingProvider, ShippingRate, ShipmentInfo } from "./types.js";
 import { FlatRateProvider } from "./providers/index.js";
 import config from "$hoikka/config";

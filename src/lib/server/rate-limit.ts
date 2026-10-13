@@ -8,7 +8,7 @@
  * limit. A fixed window is deliberately crude — it costs one upsert and bounds
  * the worst case, which is all that is needed to stop table growth.
  */
-import { eq, lt, sql } from "drizzle-orm";
+import { lt, sql } from "drizzle-orm";
 import { db } from "./db/index.js";
 import { rateLimits } from "./db/schema.js";
 
