@@ -22,7 +22,7 @@ export const load: PageServerLoad = async ({ params, url, locals }) => {
 
 	// Redirect if slug doesn't match (for SEO and correct URLs)
 	if (page.slug && params.slug !== page.slug) {
-		throw redirect(301, `/pages/${id}/${page.slug}`);
+		throw redirect(301, `/pages/${id}/${page.slug}${url.search}`);
 	}
 
 	return { page };

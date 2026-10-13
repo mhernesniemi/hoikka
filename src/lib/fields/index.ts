@@ -128,6 +128,20 @@ export function customFields<Defs extends readonly FieldDef[]>(
 }
 
 /**
+ * An entity's set custom-field values paired with their definitions, in
+ * definition order — for rendering fields generically (label: value lists).
+ */
+export function fieldEntries(
+	defs: readonly FieldDef[],
+	entity: { customFields?: Record<string, unknown> | null }
+): { def: FieldDef; value: string | number | boolean }[] {
+	const stored = customFields(defs, entity) as Record<string, string | number | boolean>;
+	return defs
+		.filter((def) => stored[def.key] !== undefined && stored[def.key] !== "")
+		.map((def) => ({ def, value: stored[def.key] }));
+}
+
+/**
  * Convert submitted form-data strings into the value types the definitions
  * expect (checkbox "on" → boolean, numeric string → number, empty → absent).
  */

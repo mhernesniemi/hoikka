@@ -3,7 +3,13 @@
  * validates, the JSON column stores, the accessor reads back typed.
  */
 import { describe, it, expect } from "vitest";
-import { parseFields, customFields, coerceFormFields, type FieldDef } from "./index.js";
+import {
+	parseFields,
+	customFields,
+	coerceFormFields,
+	fieldEntries,
+	type FieldDef
+} from "./index.js";
 
 const DEFS = [
 	{ key: "material", label: "Material", type: "text" },
@@ -98,5 +104,23 @@ describe("customFields accessor", () => {
 
 	it("tolerates a null column", () => {
 		expect(customFields(DEFS, { customFields: null })).toEqual({});
+	});
+});
+
+describe("fieldEntries", () => {
+	it("pairs set values with their definitions in definition order", () => {
+		const page = {
+			customFields: { badge: "/uploads/a.webp", material: "Wool", limited: false, stale: "x" }
+		};
+		expect(fieldEntries(DEFS, page)).toEqual([
+			{ def: DEFS[0], value: "Wool" },
+			{ def: DEFS[2], value: false },
+			{ def: DEFS[5], value: "/uploads/a.webp" }
+		]);
+	});
+
+	it("skips empty strings and tolerates a null column", () => {
+		expect(fieldEntries(DEFS, { customFields: { material: "" } })).toEqual([]);
+		expect(fieldEntries(DEFS, { customFields: null })).toEqual([]);
 	});
 });
