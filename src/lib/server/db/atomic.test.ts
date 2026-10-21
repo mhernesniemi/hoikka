@@ -10,7 +10,10 @@ vi.mock("$env/dynamic/private", () => ({ env: { DATABASE_URL: ":memory:" } }));
 
 import { eq } from "drizzle-orm";
 import { db, atomic } from "./index.js";
-import { products, rateLimits } from "./schema.js";
+import { createNodeDb } from "./node.js";
+import { runAtomic } from "./run-atomic.js";
+import { outbox, products, rateLimits } from "./schema.js";
+import { eventRow } from "../integrations/event-row.js";
 
 /** A statement that is guaranteed to fail: the key is a primary key. */
 function duplicateKeyInsert(key: string) {
@@ -74,5 +77,20 @@ describe("atomic", () => {
 		);
 		// ...while the failed batch left nothing behind
 		expect(await db.select().from(products).where(eq(products.slug, good))).toHaveLength(0);
+	});
+
+	it("runs on an explicit db outside the request-scoped one", async () => {
+		const own = createNodeDb(":memory:");
+		const name = slug();
+
+		await runAtomic(own, [
+			own.insert(products).values({ name, slug: name }),
+			own.insert(outbox).values(eventRow("test.created", { name }))
+		]);
+
+		expect(await own.select().from(products).where(eq(products.slug, name))).toHaveLength(1);
+		const [event] = await own.select().from(outbox);
+		expect(event).toMatchObject({ type: "test.created", payload: { name }, status: "pending" });
+		expect(await db.select().from(products).where(eq(products.slug, name))).toHaveLength(0);
 	});
 });

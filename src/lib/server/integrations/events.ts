@@ -11,6 +11,7 @@ import { and, eq, isNull, lte, sql } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { orders, outbox } from "../db/schema.js";
 import { getHandler } from "./handlers.js";
+import { eventRow, type EmitOptions } from "./event-row.js";
 // Importing the handlers module registers the built-in handlers as a side effect.
 import "./handlers.js";
 
@@ -19,12 +20,7 @@ const BASE_BACKOFF_MS = 30_000; // 30s, doubled per attempt
 // runs. Generous on purpose: a crash mid-handler retries after the lease.
 const CLAIM_LEASE_MS = 5 * 60_000;
 
-export interface EmitOptions {
-	/** Delay before the first attempt (ms). Default: immediate. */
-	delayMs?: number;
-	/** Max attempts before the event is marked failed. Default: 5. */
-	maxAttempts?: number;
-}
+export type { EmitOptions };
 
 /** Record an event to be processed out-of-band by the next drain. */
 export async function emitEvent(
@@ -33,15 +29,6 @@ export async function emitEvent(
 	options: EmitOptions = {}
 ): Promise<void> {
 	await db.insert(outbox).values(eventRow(type, payload, options));
-}
-
-function eventRow(type: string, payload: unknown, options: EmitOptions = {}) {
-	return {
-		type,
-		payload,
-		nextAttemptAt: new Date(Date.now() + (options.delayMs ?? 0)),
-		maxAttempts: options.maxAttempts ?? 5
-	};
 }
 
 export interface PendingEvent {
