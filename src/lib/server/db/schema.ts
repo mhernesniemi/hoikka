@@ -439,6 +439,10 @@ export const customers = sqliteTable(
 		lastName: text("last_name").notNull(),
 		phone: text("phone"),
 		vatId: text("vat_id"),
+		customFields: text("custom_fields", { mode: "json" })
+			.$type<Record<string, unknown>>()
+			.default({})
+			.notNull(),
 		deletedAt: ts("deleted_at"),
 		createdAt: now(),
 		updatedAt: updatedNow()

@@ -15,6 +15,8 @@
   import { Label } from "$lib/components/admin/ui/label";
   import ChevronLeft from "@lucide/svelte/icons/chevron-left";
   import AdminCard from "$lib/components/admin/AdminCard.svelte";
+  import FieldRenderer from "$lib/components/admin/FieldRenderer.svelte";
+  import hoikkaConfig from "$hoikka/config";
   import type { PageData, ActionData } from "./$types";
   import { BASE_CURRENCY, formatDate } from "$lib/utils";
 
@@ -179,6 +181,30 @@
           </div>
         </div>
       </AdminCard>
+
+      {#if hoikkaConfig.customers.fields.length > 0}
+        <form
+          method="POST"
+          action="?/updateFields"
+          use:enhance={() => {
+            return async ({ update }) => {
+              await update({ reset: false });
+            };
+          }}
+        >
+          <AdminCard title="Details" variant="sidebar">
+            <div class="space-y-4">
+              <FieldRenderer
+                defs={hoikkaConfig.customers.fields}
+                values={data.customer.customFields}
+              />
+              {#if hoikkaConfig.customers.fields.some((def) => !def.readOnly)}
+                <Button type="submit" size="sm">Save</Button>
+              {/if}
+            </div>
+          </AdminCard>
+        </form>
+      {/if}
 
       <!-- VAT ID -->
       <form

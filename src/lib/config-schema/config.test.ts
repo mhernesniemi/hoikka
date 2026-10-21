@@ -17,7 +17,7 @@ describe("defineHoikkaConfig", () => {
 		expect(config.productTypes.physical).toBeDefined();
 		expect(config.defaultProductType).toBe("physical");
 		expect(config.limits.digitalDelivery.maxDownloads).toBe(10);
-		expect(config.customers).toEqual({ signUp: true, requireSignIn: false });
+		expect(config.customers).toEqual({ signUp: true, requireSignIn: false, fields: [] });
 	});
 
 	it("has no staff SSO unless configured, and closes staff passwords by default", () => {
@@ -69,7 +69,8 @@ describe("defineHoikkaConfig", () => {
 					]
 				}
 			},
-			collections: { fields: [{ key: "subtitle", label: "Subtitle", type: "text" }] }
+			collections: { fields: [{ key: "subtitle", label: "Subtitle", type: "text" }] },
+			customers: { fields: [{ key: "creditLimit", label: "Credit limit", type: "number" }] }
 		});
 		const product = { customFields: { heightMm: 40, finish: "matt" } };
 		const fields = customFields(config.productTypes.physical.fields, product);
@@ -79,6 +80,9 @@ describe("defineHoikkaConfig", () => {
 		expectTypeOf(
 			customFields(config.collections.fields, { customFields: {} }).subtitle
 		).toEqualTypeOf<string | undefined>();
+		expectTypeOf(
+			customFields(config.customers.fields, { customFields: {} }).creditLimit
+		).toEqualTypeOf<number | undefined>();
 		const anyType: string = "physical";
 		expectTypeOf(config.productTypes[anyType]).toMatchTypeOf<{ label: string } | undefined>();
 	});

@@ -64,7 +64,7 @@ const DEFAULTS: ResolvedHoikkaConfig = {
 	defaultProductType: "physical",
 	contentPages: { templates: { default: { label: "Default", fields: [] } } },
 	collections: { fields: [] },
-	customers: { signUp: true, requireSignIn: false },
+	customers: { signUp: true, requireSignIn: false, fields: [] },
 	admin: { sso: null }
 };
 

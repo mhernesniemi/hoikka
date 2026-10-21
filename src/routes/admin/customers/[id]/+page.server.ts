@@ -1,6 +1,9 @@
 /**
  * Admin Customer Detail Page Server
  */
+import config from "$hoikka/config";
+import { formFields } from "$lib/fields/index.js";
+import { sanitizeHtml } from "$lib/server/sanitize.js";
 import { dbError } from "$lib/server/db-error.js";
 import { error, fail } from "@sveltejs/kit";
 import type { PageServerLoad, Actions } from "./$types";
@@ -41,6 +44,27 @@ export const actions: Actions = {
 			return { success: true, message: "VAT ID updated" };
 		} catch (e) {
 			return fail(500, { error: dbError(e, "Failed to update VAT ID") });
+		}
+	},
+
+	updateFields: async ({ params, request }) => {
+		const customerId = Number(params.id);
+		const current = await customerService.getById(customerId);
+		if (!current) return fail(404, { error: "Customer not found" });
+
+		const parsed = formFields(
+			config.customers.fields,
+			await request.formData(),
+			current.customFields,
+			sanitizeHtml
+		);
+		if (!parsed.ok) return fail(400, { error: `Custom field ${parsed.error}` });
+
+		try {
+			await customerService.update(customerId, { customFields: parsed.values });
+			return { success: true, message: "Details updated" };
+		} catch (e) {
+			return fail(500, { error: dbError(e, "Failed to update details") });
 		}
 	}
 };

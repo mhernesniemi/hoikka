@@ -145,6 +145,8 @@ export interface HoikkaConfigInput {
 		 * the sign-in page. For portals and closed B2B stores.
 		 */
 		requireSignIn?: boolean;
+		/** Custom fields on customers, e.g. an ERP customer number or credit limit. */
+		fields?: readonly FieldDef[];
 	};
 	admin?: {
 		/**
@@ -183,7 +185,7 @@ export interface ResolvedHoikkaConfig {
 	defaultProductType: string;
 	contentPages: { templates: Record<string, ContentPageTemplateDef> };
 	collections: { fields: readonly FieldDef[] };
-	customers: { signUp: boolean; requireSignIn: boolean };
+	customers: { signUp: boolean; requireSignIn: boolean; fields: readonly FieldDef[] };
 	admin: { sso: (StaffSsoConfig & { passwordLogin: boolean }) | null };
 }
 
@@ -194,7 +196,7 @@ export interface ResolvedHoikkaConfig {
  */
 export type HoikkaConfig<I extends HoikkaConfigInput = HoikkaConfigInput> = Omit<
 	ResolvedHoikkaConfig,
-	"productTypes" | "contentPages" | "collections"
+	"productTypes" | "contentPages" | "collections" | "customers"
 > & {
 	productTypes: ResolvedHoikkaConfig["productTypes"] &
 		(I extends { productTypes: infer P } ? P : unknown);
@@ -204,6 +206,11 @@ export type HoikkaConfig<I extends HoikkaConfigInput = HoikkaConfigInput> = Omit
 	};
 	collections: {
 		fields: I extends { collections: { fields: infer F extends readonly FieldDef[] } }
+			? F
+			: readonly FieldDef[];
+	};
+	customers: Omit<ResolvedHoikkaConfig["customers"], "fields"> & {
+		fields: I extends { customers: { fields: infer F extends readonly FieldDef[] } }
 			? F
 			: readonly FieldDef[];
 	};

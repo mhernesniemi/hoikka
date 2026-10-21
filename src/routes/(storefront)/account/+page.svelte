@@ -2,9 +2,17 @@
   import { STORE_NAME } from "$lib/config/store.js";
   import { enhance } from "$app/forms";
   import { Button } from "$lib/components/storefront/ui/button";
+  import hoikkaConfig from "$hoikka/config";
+  import { fieldEntries } from "$lib/fields/index.js";
+  import { formatDate } from "$lib/utils";
+  import { imageUrl } from "$lib/image";
   import type { PageData, ActionData } from "./$types";
 
   let { data, form }: { data: PageData; form: ActionData } = $props();
+
+  const details = $derived(
+    data.customer ? fieldEntries(hoikkaConfig.customers.fields, data.customer) : []
+  );
 </script>
 
 <svelte:head>
@@ -110,6 +118,30 @@
         <Button type="submit">Save Changes</Button>
       </div>
     </form>
+
+    {#if details.length > 0}
+      <h2 class="mt-8 mb-4 text-lg font-semibold">Account details</h2>
+      <dl class="grid grid-cols-1 gap-x-6 gap-y-1 text-sm sm:grid-cols-[auto_1fr]">
+        {#each details as { def, value } (def.key)}
+          <dt class="font-medium text-gray-700">{def.label}</dt>
+          <dd class="mb-2 text-gray-600 sm:mb-0">
+            {#if def.type === "richtext"}
+              <!-- eslint-disable-next-line svelte/no-at-html-tags -- sanitized on save in admin -->
+              {@html value}
+            {:else if def.type === "date"}
+              <!-- Local midnight: a bare YYYY-MM-DD parses as UTC and can show the previous day -->
+              {formatDate(`${value}T00:00`)}
+            {:else if def.type === "boolean"}
+              {value ? "Yes" : "No"}
+            {:else if def.type === "image"}
+              <img src={imageUrl(String(value), 128)} alt={def.label} class="h-16 w-auto rounded" />
+            {:else}
+              <span class="whitespace-pre-line">{value}</span>
+            {/if}
+          </dd>
+        {/each}
+      </dl>
+    {/if}
   {:else}
     <p class="text-gray-500">Unable to load profile data.</p>
   {/if}

@@ -127,6 +127,13 @@
       "when": 1792624744304,
       "tag": "0017_common_shatterstar",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "6",
+      "when": 1792624853011,
+      "tag": "0018_even_ultimo",
+      "breakpoints": true
     }
   ]
 }
