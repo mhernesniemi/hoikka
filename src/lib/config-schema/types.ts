@@ -46,6 +46,39 @@ export interface ProviderDescriptor {
 	options?: Record<string, unknown>;
 }
 
+/** An OpenID Connect provider staff sign in with. Pure data; secrets come from env. */
+export interface SsoProvider {
+	/**
+	 * Lowercase id. Used in the callback URL (/api/auth/oauth2/callback/<id>)
+	 * and the env names: SSO_<ID>_CLIENT_ID, SSO_<ID>_CLIENT_SECRET and the
+	 * optional SSO_<ID>_DISCOVERY_URL override (e.g. a local mock).
+	 */
+	id: string;
+	/** Button text: "Sign in with <label>". */
+	label: string;
+	discoveryUrl: string;
+	/** ID-token claims that must have exactly these values, e.g. Entra's tenant `tid`. */
+	requireClaims?: Record<string, string>;
+}
+
+export type StaffRole = "admin" | "staff";
+
+export interface StaffSsoConfig {
+	providers: readonly SsoProvider[];
+	/**
+	 * Which ID-token claim carries the person's roles or groups (a dotted path
+	 * for nested claims, e.g. "realm_access.roles"), and how its values map to
+	 * Hoikka roles. The highest match wins; no match means no access.
+	 */
+	roles: { claim: string; map: Record<string, StaffRole> };
+	/**
+	 * Let staff also sign in with a password. Off by default: the identity
+	 * provider decides who is staff. ADMIN_PASSWORD_LOGIN=true turns it on
+	 * without a deploy, e.g. while the provider is down.
+	 */
+	passwordLogin?: boolean;
+}
+
 export interface HoikkaConfigInput {
 	store?: {
 		/** Store display name: header, page titles, admin. */
@@ -113,6 +146,13 @@ export interface HoikkaConfigInput {
 		 */
 		requireSignIn?: boolean;
 	};
+	admin?: {
+		/**
+		 * Staff sign in through an identity provider (Microsoft Entra ID, Okta,
+		 * Google Workspace, any OIDC provider), with roles from its claims.
+		 */
+		sso?: StaffSsoConfig;
+	};
 }
 
 /** The config after defaults are merged — what the rest of the code consumes. */
@@ -144,4 +184,5 @@ export interface ResolvedHoikkaConfig {
 	contentPages: { templates: Record<string, ContentPageTemplateDef> };
 	collections: { fields: readonly FieldDef[] };
 	customers: { signUp: boolean; requireSignIn: boolean };
+	admin: { sso: (StaffSsoConfig & { passwordLogin: boolean }) | null };
 }

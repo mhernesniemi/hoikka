@@ -6,7 +6,7 @@
  * each `code` to its implementation; passing an object that implements the
  * PaymentProvider/ShippingProvider interface instead registers a custom one.
  */
-import type { ProviderDescriptor } from "./types.js";
+import type { ProviderDescriptor, SsoProvider } from "./types.js";
 
 export interface StripeOptions {
 	/**
@@ -42,5 +42,52 @@ export function flatRate(options: FlatRateOptions = {}): ProviderDescriptor {
 		code: "flat_rate",
 		label: options.label ?? "Standard Shipping",
 		options: { ...options }
+	};
+}
+
+// ── Staff sign-in (admin.sso.providers) ──────────────────────────────────────
+
+/** Microsoft Entra ID (Azure AD). Roles: app roles in the `roles` claim. */
+export function entraId(options: { tenantId: string; label?: string }): SsoProvider {
+	return {
+		id: "entra",
+		label: options.label ?? "Microsoft",
+		discoveryUrl: `https://login.microsoftonline.com/${options.tenantId}/v2.0/.well-known/openid-configuration`,
+		requireClaims: { tid: options.tenantId }
+	};
+}
+
+/** Google Workspace accounts of one domain. Roles: map the `hd` (domain) claim. */
+export function googleWorkspace(options: { domain: string; label?: string }): SsoProvider {
+	return {
+		id: "google-workspace",
+		label: options.label ?? "Google",
+		discoveryUrl: "https://accounts.google.com/.well-known/openid-configuration",
+		requireClaims: { hd: options.domain }
+	};
+}
+
+/** Okta. Roles: the `groups` claim, once a groups claim is added to the app's ID token. */
+export function okta(options: { issuer: string; label?: string }): SsoProvider {
+	return oidc({ id: "okta", label: options.label ?? "Okta", issuer: options.issuer });
+}
+
+/** Keycloak realm (issuer: https://host/realms/<realm>). Roles: `realm_access.roles`. */
+export function keycloak(options: { issuer: string; label?: string }): SsoProvider {
+	return oidc({ id: "keycloak", label: options.label ?? "Keycloak", issuer: options.issuer });
+}
+
+/** Any other OpenID Connect provider, by its issuer URL. */
+export function oidc(options: {
+	id: string;
+	label: string;
+	issuer: string;
+	requireClaims?: Record<string, string>;
+}): SsoProvider {
+	return {
+		id: options.id,
+		label: options.label,
+		discoveryUrl: `${options.issuer.replace(/\/$/, "")}/.well-known/openid-configuration`,
+		requireClaims: options.requireClaims
 	};
 }

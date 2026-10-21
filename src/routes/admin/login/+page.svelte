@@ -6,10 +6,28 @@
   import { Label } from "$lib/components/admin/ui/label";
   import { authClient } from "$lib/auth-client";
 
+  let { data } = $props();
+
   let email = $state("");
   let password = $state("");
   let error = $state<string | null>(null);
   let isLoading = $state(false);
+
+  let redirectingTo = $state<string | null>(null);
+
+  async function signInWith(providerId: string) {
+    error = null;
+    redirectingTo = providerId;
+    const result = await authClient.signIn.oauth2({
+      providerId,
+      callbackURL: "/admin",
+      errorCallbackURL: "/admin/login?error=sso"
+    });
+    if (result.error) {
+      error = result.error.message ?? "Single sign-on is not available right now";
+      redirectingTo = null;
+    }
+  }
 
   async function handleSubmit(e: Event) {
     e.preventDefault();
@@ -42,33 +60,53 @@
       <h1 class="mb-2 text-2xl font-bold text-gray-900">{STORE_NAME} Admin</h1>
       <p class="mb-6 text-sm text-gray-600">Sign in to your account</p>
 
-      {#if error}
+      {#if error || data.ssoError}
         <div class="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-600">
-          {error}
+          {error ?? "Your account has no access to the admin. Ask your IT team for a role."}
         </div>
       {/if}
 
-      <form onsubmit={handleSubmit}>
-        <div class="mb-4">
-          <Label for="email">Email</Label>
-          <Input type="email" id="email" bind:value={email} required autocomplete="email" />
+      {#if data.ssoProviders.length > 0}
+        <div class="space-y-3">
+          {#each data.ssoProviders as provider (provider.id)}
+            <Button
+              type="button"
+              onclick={() => signInWith(provider.id)}
+              disabled={redirectingTo !== null}
+              class="w-full bg-gray-900 hover:bg-gray-800"
+            >
+              {redirectingTo === provider.id ? "Redirecting..." : `Sign in with ${provider.label}`}
+            </Button>
+          {/each}
         </div>
+        {#if data.passwordLogin}
+          <p class="my-4 text-center text-xs text-gray-500">or with a password</p>
+        {/if}
+      {/if}
 
-        <div class="mb-6">
-          <Label for="password">Password</Label>
-          <Input
-            type="password"
-            id="password"
-            bind:value={password}
-            required
-            autocomplete="current-password"
-          />
-        </div>
+      {#if data.passwordLogin}
+        <form onsubmit={handleSubmit}>
+          <div class="mb-4">
+            <Label for="email">Email</Label>
+            <Input type="email" id="email" bind:value={email} required autocomplete="email" />
+          </div>
 
-        <Button type="submit" disabled={isLoading} class="w-full bg-gray-900 hover:bg-gray-800">
-          {isLoading ? "Signing in..." : "Sign in"}
-        </Button>
-      </form>
+          <div class="mb-6">
+            <Label for="password">Password</Label>
+            <Input
+              type="password"
+              id="password"
+              bind:value={password}
+              required
+              autocomplete="current-password"
+            />
+          </div>
+
+          <Button type="submit" disabled={isLoading} class="w-full bg-gray-900 hover:bg-gray-800">
+            {isLoading ? "Signing in..." : "Sign in"}
+          </Button>
+        </form>
+      {/if}
     </div>
   </div>
 </div>

@@ -14,6 +14,8 @@ import { auth } from "$lib/server/auth.js";
 import { db } from "$lib/server/db/index.js";
 import { user } from "$lib/server/db/schema.js";
 import { secretMatches } from "$lib/server/secrets.js";
+import { staffPasswordLoginAllowed } from "$lib/server/sso.js";
+import { STAFF_SSO } from "$lib/config/admin.js";
 import type { Actions, PageServerLoad } from "./$types";
 
 async function hasAdminUser(): Promise<boolean> {
@@ -24,13 +26,17 @@ async function hasAdminUser(): Promise<boolean> {
 	return !!admin;
 }
 
-/** Whether first-run setup may be used at all on this deployment. */
+/**
+ * Whether first-run setup may be used at all on this deployment. With SSO as
+ * the only staff sign-in there is nothing to set up: the first admin signs in
+ * through the identity provider.
+ */
 function setupEnabled(): boolean {
-	return dev || !!env.ADMIN_SETUP_SECRET;
+	return (dev || !!env.ADMIN_SETUP_SECRET) && staffPasswordLoginAllowed(STAFF_SSO, env);
 }
 
 export const load: PageServerLoad = async () => {
-	if (await hasAdminUser()) {
+	if ((await hasAdminUser()) || !staffPasswordLoginAllowed(STAFF_SSO, env)) {
 		redirect(303, "/admin/login");
 	}
 	if (!setupEnabled()) {

@@ -68,6 +68,14 @@ export default defineHoikkaConfig({
 	// Closed / B2B store: no self-service sign-up (existing accounts still sign
 	// in); requireSignIn also hides the storefront from anonymous visitors.
 	// customers: { signUp: false, requireSignIn: true },
+	// Staff sign in with Microsoft Entra ID instead of passwords (import entraId
+	// from providers.js and set SSO_ENTRA_CLIENT_ID / SSO_ENTRA_CLIENT_SECRET):
+	// admin: {
+	// 	sso: {
+	// 		providers: [entraId({ tenantId: "<tenant id>" })],
+	// 		roles: { claim: "roles", map: { "Shop.Admin": "admin", "Shop.Staff": "staff" } }
+	// 	}
+	// },
 	collections: {
 		fields: [{ key: "subtitle", label: "Subtitle", type: "text" }]
 	}

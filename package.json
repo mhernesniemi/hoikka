@@ -35,7 +35,8 @@
 		"db:studio": "drizzle-kit studio",
 		"perf": "node scripts/perf.mjs",
 		"seed": "tsx scripts/seed.ts",
-		"mcp": "tsx scripts/mcp.ts"
+		"mcp": "tsx scripts/mcp.ts",
+		"oidc:mock": "tsx scripts/oidc-mock.ts"
 	},
 	"sideEffects": [
 		"**/*.css"
@@ -63,6 +64,7 @@
 		"eslint-config-prettier": "^10.1.8",
 		"eslint-plugin-svelte": "^3.20.0",
 		"globals": "^17.7.0",
+		"oauth2-mock-server": "^9.3.0",
 		"prettier": "^3.9.5",
 		"prettier-plugin-svelte": "^4.1.1",
 		"prettier-plugin-tailwindcss": "^0.8.1",

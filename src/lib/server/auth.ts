@@ -1,7 +1,8 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { emailOTP } from "better-auth/plugins";
-import { createAuthMiddleware } from "better-auth/api";
+import { emailOTP, genericOAuth } from "better-auth/plugins";
+import { APIError, createAuthMiddleware } from "better-auth/api";
+import { and, eq } from "drizzle-orm";
 import { sveltekitCookies } from "better-auth/svelte-kit";
 import { getRequestEvent } from "$app/server";
 import { dev } from "$app/environment";
@@ -9,8 +10,15 @@ import { env } from "$env/dynamic/private";
 import { db } from "./db/index.js";
 import * as schema from "./db/schema.js";
 import { SIGN_UP_ENABLED } from "$lib/config/customers.js";
+import { STAFF_SSO } from "$lib/config/admin.js";
 import { sendEmail } from "./email.js";
 import { customerService } from "./services/customers.js";
+import {
+	decodeIdToken,
+	enabledSsoProviders,
+	staffFromClaims,
+	staffPasswordLoginAllowed
+} from "./sso.js";
 
 // Endpoints that email a code to an existing user
 const CODE_REQUEST_PATHS = new Set([
@@ -19,7 +27,12 @@ const CODE_REQUEST_PATHS = new Set([
 	"/forget-password/email-otp"
 ]);
 
+const PASSWORD_SIGN_IN_PATHS = new Set(["/sign-in/email", "/sign-in/email-otp"]);
+
 function createAuth() {
+	const ssoProviders = enabledSsoProviders(STAFF_SSO, env);
+	const staffPasswordLogin = staffPasswordLoginAllowed(STAFF_SSO, env);
+
 	return betterAuth({
 		database: drizzleAdapter(db, {
 			provider: "sqlite",
@@ -58,20 +71,99 @@ function createAuth() {
 			}
 		},
 		hooks: {
-			// A customer created ahead of their login gets one when they ask for a
-			// code, so "forgot password" doubles as "set your password"
 			before: createAuthMiddleware(async (ctx) => {
-				if (!CODE_REQUEST_PATHS.has(ctx.path)) return;
 				const email = (ctx.body as { email?: unknown } | undefined)?.email;
 				if (typeof email !== "string") return;
-				try {
-					await customerService.provisionLogin(email);
-				} catch (error) {
-					console.error("[auth] Failed to provision a customer login:", error);
+
+				// With staff SSO, the identity provider decides who is staff
+				if (!staffPasswordLogin && PASSWORD_SIGN_IN_PATHS.has(ctx.path)) {
+					const existing = await db.query.user.findFirst({
+						where: eq(schema.user.email, email.toLowerCase()),
+						columns: { role: true }
+					});
+					if (existing?.role === "admin" || existing?.role === "staff") {
+						const labels = ssoProviders.map((provider) => provider.label).join(" or ");
+						throw new APIError("FORBIDDEN", {
+							message: `Staff sign in with ${labels}.`
+						});
+					}
 				}
+
+				// A customer created ahead of their login gets one when they ask for
+				// a code, so "forgot password" doubles as "set your password"
+				if (CODE_REQUEST_PATHS.has(ctx.path)) {
+					try {
+						await customerService.provisionLogin(email);
+					} catch (error) {
+						console.error("[auth] Failed to provision a customer login:", error);
+					}
+				}
+			}),
+			// better-auth never takes `role` from a provider (it is not user
+			// input), so it is set here from the ID token the sign-in just stored.
+			// Re-applied on every sign-in: a role removed at the provider is gone.
+			after: createAuthMiddleware(async (ctx) => {
+				const provider = ssoProviders.find((p) => p.id === ctx.params?.providerId);
+				const userId = ctx.context.newSession?.user.id;
+				if (!provider || !userId || !STAFF_SSO) return;
+				const linked = await db.query.account.findFirst({
+					where: and(
+						eq(schema.account.userId, userId),
+						eq(schema.account.providerId, provider.id)
+					),
+					columns: { idToken: true }
+				});
+				if (!linked?.idToken) return;
+				const result = staffFromClaims(
+					decodeIdToken(linked.idToken),
+					provider,
+					STAFF_SSO.roles
+				);
+				if (!result.ok) return;
+				await db
+					.update(schema.user)
+					.set({ role: result.staff.role })
+					.where(eq(schema.user.id, userId));
 			})
 		},
 		plugins: [
+			...(ssoProviders.length > 0
+				? [
+						genericOAuth({
+							config: ssoProviders.map((provider) => ({
+								providerId: provider.id,
+								discoveryUrl: provider.discoveryUrl,
+								clientId: provider.clientId,
+								clientSecret: provider.clientSecret,
+								scopes: ["openid", "profile", "email"],
+								pkce: true,
+								// Re-sync name and email from the provider on every sign-in
+								overrideUserInfo: true,
+								async getUserInfo(tokens) {
+									if (!tokens.idToken || !STAFF_SSO) return null;
+									const result = staffFromClaims(
+										decodeIdToken(tokens.idToken),
+										provider,
+										STAFF_SSO.roles
+									);
+									if (!result.ok) {
+										console.warn(
+											`[sso] ${provider.id} sign-in refused: ${result.reason}`
+										);
+										return null;
+									}
+									const { staff } = result;
+									return {
+										id: staff.id,
+										email: staff.email,
+										name: staff.name,
+										emailVerified: true
+									};
+								}
+							}))
+						})
+					]
+				: []),
 			emailOTP({
 				disableSignUp: !SIGN_UP_ENABLED,
 				async sendVerificationOTP({ email, otp, type }) {

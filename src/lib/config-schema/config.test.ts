@@ -5,7 +5,7 @@
  */
 import { describe, it, expect } from "vitest";
 import { defineHoikkaConfig } from "./index.js";
-import { stripe, flatRate } from "./providers.js";
+import { stripe, flatRate, entraId } from "./providers.js";
 
 describe("defineHoikkaConfig", () => {
 	it("is a complete store with no input at all", () => {
@@ -17,6 +17,39 @@ describe("defineHoikkaConfig", () => {
 		expect(config.defaultProductType).toBe("physical");
 		expect(config.limits.digitalDelivery.maxDownloads).toBe(10);
 		expect(config.customers).toEqual({ signUp: true, requireSignIn: false });
+	});
+
+	it("has no staff SSO unless configured, and closes staff passwords by default", () => {
+		expect(defineHoikkaConfig({}).admin.sso).toBeNull();
+		const sso = defineHoikkaConfig({
+			admin: {
+				sso: { providers: [entraId({ tenantId: "t" })], roles: { claim: "roles", map: {} } }
+			}
+		}).admin.sso;
+		expect(sso?.passwordLogin).toBe(false);
+	});
+
+	it("rejects bad SSO provider ids and roles", () => {
+		const roles = { claim: "roles", map: {} };
+		const provider = entraId({ tenantId: "t" });
+		expect(() =>
+			defineHoikkaConfig({ admin: { sso: { providers: [provider, provider], roles } } })
+		).toThrow(/used twice/);
+		expect(() =>
+			defineHoikkaConfig({
+				admin: { sso: { providers: [{ ...provider, id: "My IdP" }], roles } }
+			})
+		).toThrow(/lowercase/);
+		expect(() =>
+			defineHoikkaConfig({
+				admin: {
+					sso: {
+						providers: [provider],
+						roles: { claim: "roles", map: { X: "owner" as "admin" } }
+					}
+				}
+			})
+		).toThrow(/expected admin or staff/);
 	});
 
 	it("can close the store to new sign-ups", () => {

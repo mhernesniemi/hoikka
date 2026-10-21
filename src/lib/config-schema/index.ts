@@ -4,7 +4,7 @@
  * The defaults reproduce the behavior the starter shipped with before the
  * config file existed, so an empty `defineHoikkaConfig({})` is a valid store.
  */
-import type { HoikkaConfigInput, ResolvedHoikkaConfig } from "./types.js";
+import type { HoikkaConfigInput, ResolvedHoikkaConfig, StaffSsoConfig } from "./types.js";
 import { stripe, mockPayment, flatRate } from "./providers.js";
 
 export type { HoikkaConfigInput, ResolvedHoikkaConfig } from "./types.js";
@@ -13,7 +13,9 @@ export type {
 	FieldType,
 	ProductTypeDef,
 	ContentPageTemplateDef,
-	ProviderDescriptor
+	ProviderDescriptor,
+	SsoProvider,
+	StaffSsoConfig
 } from "./types.js";
 
 const DEFAULTS: ResolvedHoikkaConfig = {
@@ -57,7 +59,8 @@ const DEFAULTS: ResolvedHoikkaConfig = {
 	defaultProductType: "physical",
 	contentPages: { templates: { default: { label: "Default", fields: [] } } },
 	collections: { fields: [] },
-	customers: { signUp: true, requireSignIn: false }
+	customers: { signUp: true, requireSignIn: false },
+	admin: { sso: null }
 };
 
 /** Shallow-merge one config section over its default. */
@@ -97,7 +100,12 @@ export function defineHoikkaConfig(input: HoikkaConfigInput = {}): ResolvedHoikk
 			templates: input.contentPages?.templates ?? DEFAULTS.contentPages.templates
 		},
 		collections: section(DEFAULTS.collections, input.collections),
-		customers: section(DEFAULTS.customers, input.customers)
+		customers: section(DEFAULTS.customers, input.customers),
+		admin: {
+			sso: input.admin?.sso
+				? { ...input.admin.sso, passwordLogin: input.admin.sso.passwordLogin ?? false }
+				: null
+		}
 	};
 
 	// Fail at import time, not at checkout time.
@@ -117,5 +125,31 @@ export function defineHoikkaConfig(input: HoikkaConfigInput = {}): ResolvedHoikk
 		);
 	}
 
+	if (resolved.admin.sso) validateSso(resolved.admin.sso);
+
 	return resolved;
+}
+
+function validateSso(sso: StaffSsoConfig): void {
+	const ids = new Set<string>();
+	for (const provider of sso.providers) {
+		if (!/^[a-z0-9-]+$/.test(provider.id)) {
+			throw new Error(
+				`hoikka.config.ts: admin.sso provider id "${provider.id}" must be lowercase letters, digits and dashes`
+			);
+		}
+		if (ids.has(provider.id)) {
+			throw new Error(
+				`hoikka.config.ts: admin.sso provider id "${provider.id}" is used twice`
+			);
+		}
+		ids.add(provider.id);
+	}
+	for (const [value, role] of Object.entries(sso.roles.map)) {
+		if (role !== "admin" && role !== "staff") {
+			throw new Error(
+				`hoikka.config.ts: admin.sso.roles.map["${value}"] is "${role}", expected admin or staff`
+			);
+		}
+	}
 }
