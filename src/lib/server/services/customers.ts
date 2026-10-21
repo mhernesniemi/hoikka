@@ -3,9 +3,9 @@
  * Handles customer management and addresses
  */
 import { eq, and, isNull, sql, type SQL } from "drizzle-orm";
-import { db } from "../db/index.js";
+import { atomic, db } from "../db/index.js";
 import { paginationOf, resolveSort } from "../pagination.js";
-import { customers, addresses } from "../db/schema.js";
+import { customers, addresses, user } from "../db/schema.js";
 import type {
 	Customer,
 	CustomerWithAddresses,
@@ -31,6 +31,49 @@ export class CustomerService {
 			.returning();
 
 		return customer;
+	}
+
+	/**
+	 * Give a customer created ahead of their login (an import, an ERP sync) a
+	 * user to sign in with, so the emailed code of a password reset or an
+	 * email sign-in can prove the address. Does nothing for any other email.
+	 */
+	async provisionLogin(email: string): Promise<void> {
+		const address = email.trim().toLowerCase();
+		const [customer] = await db
+			.select()
+			.from(customers)
+			.where(
+				and(
+					sql`lower(${customers.email}) = ${address}`,
+					isNull(customers.authUserId),
+					isNull(customers.deletedAt)
+				)
+			);
+		if (!customer) return;
+		// An existing user claims the customer at sign-in, once the email is verified
+		const [existing] = await db
+			.select({ id: user.id })
+			.from(user)
+			.where(eq(user.email, address));
+		if (existing) return;
+
+		const id = crypto.randomUUID();
+		const now = new Date();
+		await atomic([
+			db.insert(user).values({
+				id,
+				email: address,
+				name: `${customer.firstName} ${customer.lastName}`.trim(),
+				emailVerified: false,
+				createdAt: now,
+				updatedAt: now
+			}),
+			db
+				.update(customers)
+				.set({ authUserId: id })
+				.where(and(eq(customers.id, customer.id), isNull(customers.authUserId)))
+		]);
 	}
 
 	/**

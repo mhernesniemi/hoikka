@@ -8,14 +8,17 @@ import { describe, it, expect, vi } from "vitest";
 
 vi.mock("$env/dynamic/private", () => ({ env: { DATABASE_URL: ":memory:" } }));
 
-const customersConfig = vi.hoisted(() => ({ signUp: true }));
+const customersConfig = vi.hoisted(() => ({ signUp: true, requireSignIn: false }));
 vi.mock("$lib/config/customers.js", () => ({
 	get SIGN_UP_ENABLED() {
 		return customersConfig.signUp;
+	},
+	get SIGN_IN_REQUIRED() {
+		return customersConfig.requireSignIn;
 	}
 }));
 
-import { adminGuard, bodyLimitGuard, signUpGuard } from "./hooks.server.js";
+import { adminGuard, bodyLimitGuard, signInGuard, signUpGuard } from "./hooks.server.js";
 import type { RequestEvent } from "@sveltejs/kit";
 
 const OK = new Response("resolved");
@@ -152,5 +155,62 @@ describe("signUpGuard", () => {
 		expect(await run("/api/auth/sign-in/email", false)).toBe(OK);
 		expect(await run("/api/auth/get-session", false)).toBe(OK);
 		expect(await run("/api/auth/sign-up-extra", false)).toBe(OK);
+	});
+});
+
+describe("signInGuard", () => {
+	const OK = new Response("resolved");
+
+	async function run(
+		path: string,
+		{ method = "GET", signedIn = false, required = true } = {}
+	): Promise<Response> {
+		customersConfig.requireSignIn = required;
+		const event = {
+			url: new URL(`http://localhost${path}`),
+			request: new Request(`http://localhost${path}`, { method }),
+			locals: { user: signedIn ? { id: "u1", role: "customer" } : null }
+		} as unknown as Parameters<typeof signInGuard>[0]["event"];
+		try {
+			return (await signInGuard({ event, resolve: async () => OK })) as Response;
+		} catch (thrown) {
+			const redirect = thrown as { status: number; location: string };
+			return new Response(null, {
+				status: redirect.status,
+				headers: { location: redirect.location }
+			});
+		}
+	}
+
+	it("leaves an open store alone", async () => {
+		expect(await run("/products", { required: false })).toBe(OK);
+	});
+
+	it("sends anonymous page loads to sign-in and back", async () => {
+		const response = await run("/products?page=2");
+		expect(response.status).toBe(303);
+		expect(response.headers.get("location")).toBe("/sign-in?redirect=%2Fproducts%3Fpage%3D2");
+		expect((await run("/")).headers.get("location")).toBe("/sign-in");
+	});
+
+	it("rejects anonymous form actions", async () => {
+		expect((await run("/products/1", { method: "POST" })).status).toBe(401);
+	});
+
+	it("lets signed-in visitors through", async () => {
+		expect(await run("/products", { signedIn: true })).toBe(OK);
+	});
+
+	it("keeps sign-in, auth, admin and integration endpoints reachable", async () => {
+		for (const path of [
+			"/sign-in",
+			"/forgot-password",
+			"/api/auth/sign-in/email",
+			"/admin/login",
+			"/api/tasks/run",
+			"/api/webhooks/erp"
+		]) {
+			expect(await run(path, { method: path.startsWith("/api") ? "POST" : "GET" })).toBe(OK);
+		}
 	});
 });

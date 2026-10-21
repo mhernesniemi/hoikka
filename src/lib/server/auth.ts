@@ -1,6 +1,7 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { emailOTP } from "better-auth/plugins";
+import { createAuthMiddleware } from "better-auth/api";
 import { sveltekitCookies } from "better-auth/svelte-kit";
 import { getRequestEvent } from "$app/server";
 import { dev } from "$app/environment";
@@ -9,6 +10,14 @@ import { db } from "./db/index.js";
 import * as schema from "./db/schema.js";
 import { SIGN_UP_ENABLED } from "$lib/config/customers.js";
 import { sendEmail } from "./email.js";
+import { customerService } from "./services/customers.js";
+
+// Endpoints that email a code to an existing user
+const CODE_REQUEST_PATHS = new Set([
+	"/email-otp/send-verification-otp",
+	"/email-otp/request-password-reset",
+	"/forget-password/email-otp"
+]);
 
 function createAuth() {
 	return betterAuth({
@@ -47,6 +56,20 @@ function createAuth() {
 					input: false
 				}
 			}
+		},
+		hooks: {
+			// A customer created ahead of their login gets one when they ask for a
+			// code, so "forgot password" doubles as "set your password"
+			before: createAuthMiddleware(async (ctx) => {
+				if (!CODE_REQUEST_PATHS.has(ctx.path)) return;
+				const email = (ctx.body as { email?: unknown } | undefined)?.email;
+				if (typeof email !== "string") return;
+				try {
+					await customerService.provisionLogin(email);
+				} catch (error) {
+					console.error("[auth] Failed to provision a customer login:", error);
+				}
+			})
 		},
 		plugins: [
 			emailOTP({

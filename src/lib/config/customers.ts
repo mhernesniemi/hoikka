@@ -2,3 +2,4 @@
 import config from "$hoikka/config";
 
 export const SIGN_UP_ENABLED = config.customers.signUp;
+export const SIGN_IN_REQUIRED = config.customers.requireSignIn;

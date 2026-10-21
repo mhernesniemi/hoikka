@@ -16,7 +16,7 @@ describe("defineHoikkaConfig", () => {
 		expect(config.productTypes.physical).toBeDefined();
 		expect(config.defaultProductType).toBe("physical");
 		expect(config.limits.digitalDelivery.maxDownloads).toBe(10);
-		expect(config.customers.signUp).toBe(true);
+		expect(config.customers).toEqual({ signUp: true, requireSignIn: false });
 	});
 
 	it("can close the store to new sign-ups", () => {

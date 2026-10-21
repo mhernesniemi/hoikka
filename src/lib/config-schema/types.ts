@@ -107,6 +107,11 @@ export interface HoikkaConfigInput {
 		 * e.g. for B2B; existing accounts still sign in.
 		 */
 		signUp?: boolean;
+		/**
+		 * Only signed-in visitors see the storefront; everyone else is sent to
+		 * the sign-in page. For portals and closed B2B stores.
+		 */
+		requireSignIn?: boolean;
 	};
 }
 
@@ -138,5 +143,5 @@ export interface ResolvedHoikkaConfig {
 	defaultProductType: string;
 	contentPages: { templates: Record<string, ContentPageTemplateDef> };
 	collections: { fields: readonly FieldDef[] };
-	customers: { signUp: boolean };
+	customers: { signUp: boolean; requireSignIn: boolean };
 }

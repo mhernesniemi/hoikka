@@ -8,13 +8,13 @@ import type { Handle, HandleServerError } from "@sveltejs/kit";
 import { auth } from "$lib/server/auth.js";
 import { db } from "$lib/server/db/index.js";
 import { customers } from "$lib/server/db/schema.js";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { stringify } from "devalue";
 import { env } from "$env/dynamic/private";
 import { ensureNodeScheduler } from "$lib/server/integrations/scheduler.js";
 import { syncConfiguredMethods } from "$lib/server/services/method-sync.js";
 import { edgeCache } from "$lib/server/edge-cache.js";
-import { SIGN_UP_ENABLED } from "$lib/config/customers.js";
+import { SIGN_IN_REQUIRED, SIGN_UP_ENABLED } from "$lib/config/customers.js";
 
 // Session handler — validates session via Better Auth and syncs customer record.
 const sessionHandler: Handle = async ({ event, resolve }) => {
@@ -55,6 +55,22 @@ const sessionHandler: Handle = async ({ event, resolve }) => {
 			let customer = await db.query.customers.findFirst({
 				where: eq(customers.authUserId, event.locals.user.id)
 			});
+
+			// A customer created ahead of the login (an import, an ERP sync)
+			// is claimed by email, but only once the address is proven
+			if (!customer && event.locals.user.emailVerified) {
+				[customer] = await db
+					.update(customers)
+					.set({ authUserId: event.locals.user.id })
+					.where(
+						and(
+							sql`lower(${customers.email}) = ${event.locals.user.email.toLowerCase()}`,
+							isNull(customers.authUserId),
+							isNull(customers.deletedAt)
+						)
+					)
+					.returning();
+			}
 
 			if (!customer) {
 				try {
@@ -163,6 +179,52 @@ export const adminGuard: Handle = async ({ event, resolve }) => {
 	);
 };
 
+// Stores with customers.requireSignIn show nothing to anonymous visitors. Like
+// adminGuard this covers form actions and endpoints, not just page loads.
+const SIGN_IN_PUBLIC_PATHS = new Set([
+	"/sign-in",
+	"/sign-up",
+	"/forgot-password",
+	"/verify-email",
+	"/privacy-policy",
+	"/robots.txt"
+]);
+const SIGN_IN_PUBLIC_PREFIXES = [
+	"/admin",
+	"/api/auth/",
+	"/api/webhooks/",
+	"/api/tasks/",
+	"/uploads/"
+];
+
+export const signInGuard: Handle = async ({ event, resolve }) => {
+	const { pathname } = event.url;
+	if (
+		!SIGN_IN_REQUIRED ||
+		event.locals.user ||
+		SIGN_IN_PUBLIC_PATHS.has(pathname) ||
+		SIGN_IN_PUBLIC_PREFIXES.some((prefix) => pathname.startsWith(prefix))
+	) {
+		return resolve(event);
+	}
+
+	if (event.request.method === "GET") {
+		const target = pathname + event.url.search;
+		redirect(
+			303,
+			target === "/" ? "/sign-in" : `/sign-in?redirect=${encodeURIComponent(target)}`
+		);
+	}
+	return new Response(
+		JSON.stringify({
+			type: "failure",
+			status: 401,
+			data: stringify({ error: "Please sign in" })
+		}),
+		{ status: 401, headers: { "content-type": "application/json" } }
+	);
+};
+
 // On the node target, start the background outbox drain once (no-op on CF).
 // Also aligns payment/shipping method rows with hoikka.config.ts, once per
 // server instance.
@@ -200,7 +262,8 @@ export const handle = sequence(
 	demoGuard,
 	edgeCache,
 	sessionHandler,
-	adminGuard
+	adminGuard,
+	signInGuard
 );
 
 export const handleError: HandleServerError = async ({ error, event, status, message }) => {

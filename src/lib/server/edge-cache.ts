@@ -101,7 +101,8 @@ export const edgeCache: Handle = async ({ event, resolve }) => {
 	const { request, url, platform } = event;
 	const cache = platform?.caches?.default;
 	const kv = platform?.env?.CACHE_KV;
-	if (!cache || !kv) return resolve(event);
+	// A login-only store has no guest pages to cache
+	if (!cache || !kv || config.customers.requireSignIn) return resolve(event);
 
 	// Content mutations through the admin UI (form actions) or asset uploads
 	// invalidate every cached page at once. Order administration is excluded:

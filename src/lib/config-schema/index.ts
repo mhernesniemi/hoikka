@@ -57,7 +57,7 @@ const DEFAULTS: ResolvedHoikkaConfig = {
 	defaultProductType: "physical",
 	contentPages: { templates: { default: { label: "Default", fields: [] } } },
 	collections: { fields: [] },
-	customers: { signUp: true }
+	customers: { signUp: true, requireSignIn: false }
 };
 
 /** Shallow-merge one config section over its default. */
