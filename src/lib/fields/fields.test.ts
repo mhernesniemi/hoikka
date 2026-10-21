@@ -8,6 +8,7 @@ import {
 	customFields,
 	coerceFormFields,
 	fieldEntries,
+	formFields,
 	type FieldDef
 } from "./index.js";
 
@@ -122,5 +123,31 @@ describe("fieldEntries", () => {
 	it("skips empty strings and tolerates a null column", () => {
 		expect(fieldEntries(DEFS, { customFields: { material: "" } })).toEqual([]);
 		expect(fieldEntries(DEFS, { customFields: null })).toEqual([]);
+	});
+});
+
+describe("formFields", () => {
+	const defs = [
+		{ key: "notes", label: "Notes", type: "richtext" },
+		{ key: "grade", label: "Grade", type: "text", required: true, readOnly: true },
+		{ key: "stockM", label: "Stock (m)", type: "number", readOnly: true }
+	] as const satisfies readonly FieldDef[];
+	const sanitize = (html: string) => html.replace(/<script>.*<\/script>/, "");
+
+	it("keeps stored read-only values over anything the form sends", () => {
+		const form = new FormData();
+		form.set("cf_notes", "<p>Hi</p><script>x</script>");
+		form.set("cf_grade", "tampered");
+
+		const result = formFields(defs, form, { grade: "1.4301", stockM: 120 }, sanitize);
+
+		expect(result).toEqual({
+			ok: true,
+			values: { notes: "<p>Hi</p>", grade: "1.4301", stockM: 120 }
+		});
+	});
+
+	it("doesn't require a read-only field the form can't send", () => {
+		expect(formFields(defs, new FormData(), null, sanitize)).toEqual({ ok: true, values: {} });
 	});
 });

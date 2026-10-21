@@ -1,5 +1,5 @@
 import config from "$hoikka/config";
-import { parseFields, coerceFormFields, sanitizeRichtextFields } from "$lib/fields/index.js";
+import { formFields } from "$lib/fields/index.js";
 import { productService } from "$lib/server/services/products.js";
 import { reindexProduct, removeFromIndex } from "$lib/server/services/product-search.js";
 import { facetService } from "$lib/server/services/facets.js";
@@ -127,7 +127,12 @@ export const actions: Actions = {
 		const currentProduct = await productService.getById(id);
 		const effectiveType = type ?? currentProduct?.type ?? config.defaultProductType;
 		const fieldDefs = config.productTypes[effectiveType]?.fields ?? [];
-		const parsedFields = parseFields(fieldDefs, coerceFormFields(fieldDefs, formData));
+		const parsedFields = formFields(
+			fieldDefs,
+			formData,
+			currentProduct?.customFields,
+			sanitizeHtml
+		);
 		if (!parsedFields.ok) {
 			return fail(400, { error: `Custom field ${parsedFields.error}` });
 		}
@@ -140,13 +145,7 @@ export const actions: Actions = {
 				name,
 				slug,
 				description: description ? sanitizeHtml(description) : undefined,
-				...(fieldDefs.length > 0 && {
-					customFields: sanitizeRichtextFields(
-						fieldDefs,
-						parsedFields.values,
-						sanitizeHtml
-					)
-				})
+				...(fieldDefs.length > 0 && { customFields: parsedFields.values })
 			});
 
 			// Update facet values

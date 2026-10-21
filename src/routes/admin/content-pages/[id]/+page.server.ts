@@ -1,5 +1,5 @@
 import config from "$hoikka/config";
-import { parseFields, coerceFormFields, sanitizeRichtextFields } from "$lib/fields/index.js";
+import { formFields } from "$lib/fields/index.js";
 import type { PageServerLoad, Actions } from "./$types";
 import { contentPageService } from "$lib/server/services/content-pages.js";
 import { translationService } from "$lib/server/services/translations.js";
@@ -46,7 +46,8 @@ export const actions: Actions = {
 			return fail(400, { error: `Unknown page template "${template}"` });
 		}
 		const fieldDefs = config.contentPages.templates[template].fields;
-		const parsedFields = parseFields(fieldDefs, coerceFormFields(fieldDefs, data));
+		const current = await contentPageService.getById(id);
+		const parsedFields = formFields(fieldDefs, data, current?.customFields, sanitizeHtml);
 		if (!parsedFields.ok) {
 			return fail(400, { error: `Custom field ${parsedFields.error}` });
 		}
@@ -59,13 +60,7 @@ export const actions: Actions = {
 				body: body ? sanitizeHtml(body) : undefined,
 				imageUrl: imageUrl || null,
 				template,
-				...(fieldDefs.length > 0 && {
-					customFields: sanitizeRichtextFields(
-						fieldDefs,
-						parsedFields.values,
-						sanitizeHtml
-					)
-				})
+				...(fieldDefs.length > 0 && { customFields: parsedFields.values })
 			});
 
 			// Save translations

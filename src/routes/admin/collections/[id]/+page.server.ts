@@ -1,5 +1,5 @@
 import config from "$hoikka/config";
-import { parseFields, coerceFormFields, sanitizeRichtextFields } from "$lib/fields/index.js";
+import { formFields } from "$lib/fields/index.js";
 import type { PageServerLoad, Actions } from "./$types";
 import { collectionService } from "$lib/server/services/collections.js";
 import { facetService } from "$lib/server/services/facets.js";
@@ -61,7 +61,8 @@ export const actions: Actions = {
 		}
 
 		const fieldDefs = config.collections.fields;
-		const parsedFields = parseFields(fieldDefs, coerceFormFields(fieldDefs, data));
+		const current = await collectionService.getById(id);
+		const parsedFields = formFields(fieldDefs, data, current?.customFields, sanitizeHtml);
 		if (!parsedFields.ok) {
 			return fail(400, { error: `Custom field ${parsedFields.error}` });
 		}
@@ -72,13 +73,7 @@ export const actions: Actions = {
 				name,
 				slug: slugify(slug),
 				description: description ? sanitizeHtml(description) : undefined,
-				...(config.collections.fields.length > 0 && {
-					customFields: sanitizeRichtextFields(
-						fieldDefs,
-						parsedFields.values,
-						sanitizeHtml
-					)
-				})
+				...(fieldDefs.length > 0 && { customFields: parsedFields.values })
 			});
 
 			// Replace filters if provided

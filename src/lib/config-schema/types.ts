@@ -20,6 +20,11 @@ export interface FieldDef {
 	required?: boolean;
 	/** Help text under the admin input. */
 	help?: string;
+	/**
+	 * Written by code (e.g. an ERP sync), not by people: the admin shows the
+	 * value but can't change it, so a save never overwrites what code wrote.
+	 */
+	readOnly?: boolean;
 }
 
 export interface ProductTypeDef {

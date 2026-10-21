@@ -3,7 +3,8 @@
   One component for every entity kind: give it the field definitions and the
   entity's stored values, and it emits inputs named cf_<key> into the
   surrounding form (via the `form` attribute when the inputs live outside the
-  form element). The matching server action reads them with coerceFormFields().
+  form element). The matching server action reads them with formFields().
+  Read-only fields render disabled, so the form doesn't send them.
 -->
 <script lang="ts">
   import type { FieldDef } from "$lib/fields/index.js";
@@ -39,21 +40,27 @@
           name="cf_{def.key}"
           form={formId}
           checked={values[def.key] === true}
+          disabled={def.readOnly}
         />
-        <Label for="cf_{def.key}">{def.label}</Label>
+        <Label for="cf_{def.key}">
+          {def.label}
+          {#if def.readOnly}<span class="font-normal text-muted-foreground">(read-only)</span>{/if}
+        </Label>
       </div>
     {:else}
       <Label for="cf_{def.key}">
         {def.label}
-        {#if def.required}<span class="text-red-500">*</span>{/if}
+        {#if def.required && !def.readOnly}<span class="text-red-500">*</span>{/if}
+        {#if def.readOnly}<span class="font-normal text-muted-foreground">(read-only)</span>{/if}
       </Label>
-      {#if def.type === "textarea"}
+      {#if def.type === "textarea" || (def.type === "richtext" && def.readOnly)}
         <Textarea
           id="cf_{def.key}"
           name="cf_{def.key}"
           form={formId}
           value={asString(def.key)}
           rows={4}
+          disabled={def.readOnly}
         />
       {:else if def.type === "richtext"}
         <RichTextEditor
@@ -63,7 +70,7 @@
           placeholder={def.label}
         />
       {:else if def.type === "select"}
-        <SelectNative id="cf_{def.key}" name="cf_{def.key}" form={formId}>
+        <SelectNative id="cf_{def.key}" name="cf_{def.key}" form={formId} disabled={def.readOnly}>
           <option value="" selected={!values[def.key]}></option>
           {#each def.options ?? [] as option (option)}
             <option value={option} selected={values[def.key] === option}>{option}</option>
@@ -77,6 +84,7 @@
           form={formId}
           value={asString(def.key)}
           step="any"
+          disabled={def.readOnly}
         />
       {:else if def.type === "date"}
         <Input
@@ -85,6 +93,7 @@
           name="cf_{def.key}"
           form={formId}
           value={asString(def.key)}
+          disabled={def.readOnly}
         />
       {:else if def.type === "image"}
         <!-- An /uploads/... URL; upload via the Assets page and paste, or use
@@ -96,6 +105,7 @@
           form={formId}
           value={asString(def.key)}
           placeholder="/uploads/..."
+          disabled={def.readOnly}
         />
       {:else}
         <Input
@@ -104,6 +114,7 @@
           name="cf_{def.key}"
           form={formId}
           value={asString(def.key)}
+          disabled={def.readOnly}
         />
       {/if}
       {#if def.help}

@@ -162,3 +162,25 @@ export function coerceFormFields(
 	}
 	return raw;
 }
+
+/**
+ * The custom fields an admin form submits, ready to store: editable fields are
+ * coerced, validated and sanitized; read-only fields keep their stored values,
+ * since code owns them and the form doesn't send them.
+ */
+export function formFields(
+	defs: readonly FieldDef[],
+	formData: FormData,
+	stored: Record<string, unknown> | null | undefined,
+	sanitize: (html: string) => string
+): { ok: true; values: Record<string, unknown> } | { ok: false; error: string } {
+	const editable = defs.filter((def) => !def.readOnly);
+	const parsed = parseFields(editable, coerceFormFields(editable, formData));
+	if (!parsed.ok) return parsed;
+
+	const values = sanitizeRichtextFields(editable, parsed.values, sanitize);
+	for (const def of defs) {
+		if (def.readOnly && stored?.[def.key] !== undefined) values[def.key] = stored[def.key];
+	}
+	return { ok: true, values };
+}
