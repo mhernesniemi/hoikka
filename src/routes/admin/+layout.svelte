@@ -19,6 +19,7 @@
   import Star from "@lucide/svelte/icons/star";
   import Tag from "@lucide/svelte/icons/tag";
   import FileText from "@lucide/svelte/icons/file-text";
+  import Clock from "@lucide/svelte/icons/clock";
   import { Percent as PercentIcon } from "@lucide/svelte";
   import ImageIcon from "@lucide/svelte/icons/image";
   import ExternalLink from "@lucide/svelte/icons/external-link";
@@ -72,7 +73,8 @@
     { href: "/admin/reviews", label: "Reviews", icon: "star" },
     { href: "/admin/promotions", label: "Promotions", icon: "percent" },
     { href: "/admin/assets", label: "Assets", icon: "image" },
-    { href: "/admin/content-pages", label: "Pages", icon: "file-text" }
+    { href: "/admin/content-pages", label: "Pages", icon: "file-text" },
+    { href: "/admin/tasks", label: "Tasks", icon: "clock" }
   ];
 
   function isActive(href: string): boolean {
@@ -144,6 +146,8 @@
               <ImageIcon class="h-5 w-5" strokeWidth={1.6} />
             {:else if item.icon === "file-text"}
               <FileText class="h-5 w-5" strokeWidth={1.6} />
+            {:else if item.icon === "clock"}
+              <Clock class="h-5 w-5" strokeWidth={1.6} />
             {/if}
           </span>
           {item.label}

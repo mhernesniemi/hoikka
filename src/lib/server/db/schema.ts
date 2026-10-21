@@ -1151,6 +1151,27 @@ export const contentPageTranslations = sqliteTable(
 // Producers INSERT rows via emitEvent; the runner processes them with retry.
 // ============================================================================
 
+export const taskRuns = sqliteTable(
+	"task_runs",
+	{
+		id: pk(),
+		task: text("task").notNull(),
+		trigger: text("trigger", { enum: ["schedule", "manual"] }).notNull(),
+		status: text("status", { enum: ["running", "succeeded", "failed"] }).notNull(),
+		summary: text("summary", { mode: "json" }).$type<Record<string, unknown>>(),
+		error: text("error"),
+		startedAt: ts("started_at").notNull(),
+		finishedAt: ts("finished_at")
+	},
+	(table) => [
+		index("task_runs_task_idx").on(table.task, table.startedAt),
+		// The overlap lock: at most one running row per task
+		uniqueIndex("task_runs_running_idx")
+			.on(table.task)
+			.where(sql`status = 'running'`)
+	]
+);
+
 export const outbox = sqliteTable(
 	"outbox",
 	{

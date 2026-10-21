@@ -3,11 +3,9 @@
  * Cloudflare companion cron worker.
  *
  * The SvelteKit worker only handles `fetch`, so a Cron Trigger can't drain the
- * outbox inline. This tiny worker does: on schedule it POSTs /api/tasks/run on
- * the store, which drains the outbox. Once an hour it also asks for
- * housekeeping (abandoned checkout drafts, spent rate-limit counters, old
- * outbox rows) — the work that must not sit on a customer's request. Deploy
- * separately:
+ * outbox inline. This tiny worker does: every minute it POSTs /api/tasks/run on
+ * the store, which drains the outbox and runs the scheduled tasks that are
+ * due (see src/lib/server/integrations/tasks.ts). Deploy separately:
  *
  *   wrangler deploy --config wrangler.cron.jsonc
  *
@@ -20,14 +18,9 @@ export interface Env {
 }
 
 export default {
-	async scheduled(event: ScheduledController, env: Env, ctx: ExecutionContext) {
-		// The trigger fires every minute; housekeeping only needs the top of
-		// the hour.
-		const housekeeping = new Date(event.scheduledTime).getUTCMinutes() === 0;
-		const path = housekeeping ? "/api/tasks/run?housekeeping=1" : "/api/tasks/run";
-
+	async scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext) {
 		ctx.waitUntil(
-			fetch(new URL(path, env.STORE_URL), {
+			fetch(new URL("/api/tasks/run", env.STORE_URL), {
 				method: "POST",
 				headers: { authorization: `Bearer ${env.TASKS_SECRET}` }
 			}).then((res) => {
