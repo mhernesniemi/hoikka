@@ -12,6 +12,7 @@ import { and, eq, isNull, sql } from "drizzle-orm";
 import { stringify } from "devalue";
 import { env } from "$env/dynamic/private";
 import { ensureNodeScheduler } from "$lib/server/integrations/scheduler.js";
+import "$lib/server/integrations/project.js";
 import { syncConfiguredMethods } from "$lib/server/services/method-sync.js";
 import { edgeCache } from "$lib/server/edge-cache.js";
 import { SIGN_IN_REQUIRED, SIGN_UP_ENABLED } from "$lib/config/customers.js";

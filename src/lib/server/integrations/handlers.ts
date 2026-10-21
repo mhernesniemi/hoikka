@@ -6,7 +6,7 @@
  * This mirrors the payment/shipping provider registries — plain functions in a
  * map, easy to see and extend.
  *
- * Add your ERP sync, PIM push, notification, etc. as handlers here.
+ * Register your ERP sync, PIM push, notification, etc. in ./project.ts.
  */
 /**
  * Context for one delivery attempt. `idempotencyKey` is stable across retries

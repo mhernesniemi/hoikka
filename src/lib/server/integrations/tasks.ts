@@ -8,7 +8,7 @@
  * allows one running row per task, so overlapping ticks or a "Run now" click
  * during a scheduled run skip instead of running twice.
  *
- * Add your own tasks at the bottom of this file, or in a module imported here.
+ * Register your own tasks in ./project.ts.
  */
 import { and, desc, eq, inArray, lt } from "drizzle-orm";
 import { db } from "../db/index.js";
