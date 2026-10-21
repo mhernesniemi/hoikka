@@ -36,7 +36,6 @@ export const actions: Actions = {
 
 		try {
 			const product = await productService.create({
-				type: "physical",
 				visibility: "draft",
 				name,
 				slug

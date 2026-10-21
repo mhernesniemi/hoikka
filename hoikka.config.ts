@@ -50,7 +50,8 @@ export default defineHoikkaConfig({
 				{ key: "weightGrams", label: "Weight (g)", type: "number" }
 			]
 		}
-		// Enable digital products (delivered as downloads after payment):
+		// Enable digital products (delivered as downloads after payment). Any
+		// other key ships, unless it sets fulfillment: "digital":
 		// digital: { label: "Digital", fields: [] }
 	},
 	contentPages: {

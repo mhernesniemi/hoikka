@@ -17,6 +17,7 @@ export type {
 	FieldDef,
 	FieldType,
 	ProductTypeDef,
+	Fulfillment,
 	ContentPageTemplateDef,
 	ProviderDescriptor,
 	SsoProvider,
@@ -59,7 +60,7 @@ const DEFAULTS: ResolvedHoikkaConfig = {
 		edgeCache: { backstopSeconds: 300, kvTtlSeconds: 3600 }
 	},
 	productTypes: {
-		physical: { label: "Physical", fields: [] }
+		physical: { label: "Physical", fields: [], fulfillment: "physical" }
 	},
 	defaultProductType: "physical",
 	contentPages: { templates: { default: { label: "Default", fields: [] } } },
@@ -73,7 +74,7 @@ function section<T extends object>(base: T, override: Partial<T> | undefined): T
 	return override ? { ...base, ...override } : base;
 }
 
-export function defineHoikkaConfig<const I extends HoikkaConfigInput = {}>(
+export function defineHoikkaConfig<const I extends HoikkaConfigInput = Record<never, never>>(
 	input: I = {} as I
 ): HoikkaConfig<I> {
 	const resolved: ResolvedHoikkaConfig = {
@@ -100,7 +101,18 @@ export function defineHoikkaConfig<const I extends HoikkaConfigInput = {}>(
 			pageSize: section(DEFAULTS.limits.pageSize, input.limits?.pageSize),
 			edgeCache: section(DEFAULTS.limits.edgeCache, input.limits?.edgeCache)
 		},
-		productTypes: input.productTypes ?? DEFAULTS.productTypes,
+		productTypes: input.productTypes
+			? Object.fromEntries(
+					Object.entries(input.productTypes).map(([key, def]) => [
+						key,
+						{
+							...def,
+							fulfillment:
+								def.fulfillment ?? (key === "digital" ? "digital" : "physical")
+						}
+					])
+				)
+			: DEFAULTS.productTypes,
 		defaultProductType:
 			input.defaultProductType ?? Object.keys(input.productTypes ?? DEFAULTS.productTypes)[0],
 		contentPages: {

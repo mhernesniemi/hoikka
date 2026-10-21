@@ -13,6 +13,7 @@
 import { eq, and, isNotNull, isNull, lt } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import config from "$hoikka/config";
+import { fulfillmentOf } from "$lib/config/products.js";
 import { db } from "../db/index.js";
 import {
 	assets,
@@ -135,7 +136,7 @@ export class DigitalDeliveryService {
 			// How the line is being sold is pinned too, and pinned first: whether
 			// this order owes a shipment or a download must not change later
 			// because someone edited the product.
-			const soldAs = line.pinnedType ?? line.productType;
+			const soldAs = line.pinnedType ?? fulfillmentOf(line.productType);
 			if (!line.pinnedType) {
 				await db
 					.update(orderLines)
@@ -185,7 +186,7 @@ export class DigitalDeliveryService {
 		return lines
 			.filter(
 				(line) =>
-					(line.pinnedType ?? line.productType) === "digital" &&
+					(line.pinnedType ?? fulfillmentOf(line.productType)) === "digital" &&
 					!line.pinnedAssetId &&
 					!line.currentAssetId
 			)

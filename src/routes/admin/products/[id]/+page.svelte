@@ -11,6 +11,7 @@
   import { Checkbox } from "$lib/components/admin/ui/checkbox";
   import DeleteConfirmDialog from "$lib/components/admin/DeleteConfirmDialog.svelte";
   import CreateDialog from "$lib/components/admin/CreateDialog.svelte";
+  import { fulfillmentOf } from "$lib/config/products.js";
   import AdminCard from "$lib/components/admin/AdminCard.svelte";
   import { Input } from "$lib/components/admin/ui/input";
   import { Label } from "$lib/components/admin/ui/label";
@@ -638,10 +639,8 @@
       {#if data.productTypes.length > 1}
         <AdminCard title="Product Type" variant="sidebar">
           <SelectNative form="product-form" name="type" bind:value={productType}>
-            {#each data.productTypes as type}
-              <option value={type}>
-                {type.charAt(0).toUpperCase() + type.slice(1)}
-              </option>
+            {#each data.productTypes as type (type.key)}
+              <option value={type.key}>{type.label}</option>
             {/each}
           </SelectNative>
         </AdminCard>
@@ -661,7 +660,7 @@
       {/if}
 
       <!-- Digital File Section (deliverable for digital products) -->
-      {#if productType === "digital"}
+      {#if fulfillmentOf(productType) === "digital"}
         <AdminCard title="Digital File" variant="sidebar">
           {#if data.digitalAsset}
             <div class="flex items-start justify-between gap-2">

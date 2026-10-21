@@ -10,7 +10,7 @@ import { translationService } from "$lib/server/services/translations.js";
 import { relatedProductService } from "$lib/server/services/related-products.js";
 import { sanitizeHtml } from "$lib/server/sanitize.js";
 import { TRANSLATION_LANGUAGES } from "$lib/config/languages.js";
-import { PRODUCT_TYPES } from "$lib/config/products.js";
+import { PRODUCT_TYPES, fulfillmentOf } from "$lib/config/products.js";
 import { dbError } from "$lib/server/db-error.js";
 import type { SelectedImage } from "$lib/admin-upload.js";
 import { error, fail, redirect } from "@sveltejs/kit";
@@ -88,7 +88,7 @@ export const actions: Actions = {
 		const name = formData.get("name") as string;
 		const slug = formData.get("slug") as string;
 		const description = formData.get("description") as string;
-		const type = formData.get("type") as "physical" | "digital" | null;
+		const type = formData.get("type") as string | null;
 		const visibility = formData.get("visibility") as "public" | "private" | "draft";
 
 		// Facet values, categories, and related products
@@ -111,7 +111,7 @@ export const actions: Actions = {
 
 		// A public digital product with no file would take money and deliver
 		// nothing — refuse the combination at the point it is created.
-		if (type === "digital" && visibility === "public") {
+		if (type && fulfillmentOf(type) === "digital" && visibility === "public") {
 			const current = await productService.getById(id);
 			if (!current?.digitalAssetId) {
 				return fail(400, {
@@ -352,7 +352,11 @@ export const actions: Actions = {
 			// Unpublish alongside: a public digital product without a file is
 			// exactly the state that charges customers for nothing.
 			const product = await productService.getById(productId);
-			if (product?.type === "digital" && product.visibility === "public") {
+			if (
+				product &&
+				fulfillmentOf(product.type) === "digital" &&
+				product.visibility === "public"
+			) {
 				await productService.update(productId, { visibility: "draft" });
 			}
 			await productService.setDigitalAsset(productId, null);

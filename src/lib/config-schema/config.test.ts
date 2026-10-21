@@ -105,6 +105,19 @@ describe("defineHoikkaConfig", () => {
 		expect(config.defaultProductType).toBe("digital");
 	});
 
+	it("lets any product type key ship or download", () => {
+		const { productTypes } = defineHoikkaConfig({
+			productTypes: {
+				stockItem: { label: "Stock item", fields: [] },
+				digital: { label: "Digital", fields: [] },
+				ebook: { label: "E-book", fields: [], fulfillment: "digital" }
+			}
+		});
+		expect(productTypes.stockItem.fulfillment).toBe("physical");
+		expect(productTypes.digital.fulfillment).toBe("digital");
+		expect(productTypes.ebook.fulfillment).toBe("digital");
+	});
+
 	it("rejects a default product type that is not declared", () => {
 		expect(() =>
 			defineHoikkaConfig({

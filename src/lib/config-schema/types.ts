@@ -27,9 +27,16 @@ export interface FieldDef {
 	readOnly?: boolean;
 }
 
+export type Fulfillment = "physical" | "digital";
+
 export interface ProductTypeDef {
 	label: string;
 	fields: readonly FieldDef[];
+	/**
+	 * Shipped, or delivered as a download after payment. Default: "digital"
+	 * for a type keyed `digital`, otherwise "physical".
+	 */
+	fulfillment?: Fulfillment;
 }
 
 export interface ContentPageTemplateDef {
@@ -181,7 +188,7 @@ export interface ResolvedHoikkaConfig {
 		pageSize: { storefront: number };
 		edgeCache: { backstopSeconds: number; kvTtlSeconds: number };
 	};
-	productTypes: Record<string, ProductTypeDef>;
+	productTypes: Record<string, ProductTypeDef & { fulfillment: Fulfillment }>;
 	defaultProductType: string;
 	contentPages: { templates: Record<string, ContentPageTemplateDef> };
 	collections: { fields: readonly FieldDef[] };
@@ -199,7 +206,9 @@ export type HoikkaConfig<I extends HoikkaConfigInput = HoikkaConfigInput> = Omit
 	"productTypes" | "contentPages" | "collections" | "customers"
 > & {
 	productTypes: ResolvedHoikkaConfig["productTypes"] &
-		(I extends { productTypes: infer P } ? P : unknown);
+		(I extends { productTypes: infer P }
+			? { [K in keyof P]: P[K] & { fulfillment: Fulfillment } }
+			: unknown);
 	contentPages: {
 		templates: ResolvedHoikkaConfig["contentPages"]["templates"] &
 			(I extends { contentPages: { templates: infer T } } ? T : unknown);

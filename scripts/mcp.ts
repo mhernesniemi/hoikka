@@ -18,6 +18,7 @@ import { createNodeDb } from "../src/lib/server/db/node.js";
 import { resolveDatabaseUrl } from "../src/lib/server/db/config.js";
 import * as schema from "../src/lib/server/db/schema.js";
 import { reindexProduct, reindexAll } from "../src/lib/server/services/reindex.js";
+import config from "../hoikka.config.js";
 
 const db = createNodeDb(resolveDatabaseUrl());
 
@@ -115,7 +116,13 @@ server.registerTool(
 			name: z.string().min(1),
 			slug: z.string().min(1),
 			description: z.string().optional(),
-			type: z.enum(["physical", "digital"]).default("physical"),
+			type: z
+				.string()
+				.default(config.defaultProductType)
+				.refine(
+					(type) => type in config.productTypes,
+					"Not a product type in hoikka.config.ts"
+				),
 			variants: z
 				.array(
 					z.object({

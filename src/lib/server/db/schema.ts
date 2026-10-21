@@ -106,9 +106,8 @@ export const products = sqliteTable(
 		name: text("name").default("").notNull(),
 		slug: text("slug").default("").notNull(),
 		description: text("description"),
-		type: text("type", { enum: ["physical", "digital"] })
-			.default("physical")
-			.notNull(),
+		// A key of productTypes in hoikka.config.ts
+		type: text("type").default("physical").notNull(),
 		visibility: text("visibility", { enum: ["public", "private", "draft"] })
 			.default("public")
 			.notNull(),
