@@ -11,17 +11,7 @@
   import { initTheme, isDark, setTheme, getTheme } from "$lib/stores/admin-theme.svelte";
   import { cn } from "$lib/utils";
   import type { LayoutData } from "./$types";
-  import LayoutGrid from "@lucide/svelte/icons/layout-grid";
-  import Filter from "@lucide/svelte/icons/filter";
-  import FolderOpen from "@lucide/svelte/icons/folder-open";
-  import ShoppingCart from "@lucide/svelte/icons/shopping-cart";
-  import Users from "@lucide/svelte/icons/users";
-  import Star from "@lucide/svelte/icons/star";
-  import Tag from "@lucide/svelte/icons/tag";
-  import FileText from "@lucide/svelte/icons/file-text";
-  import Clock from "@lucide/svelte/icons/clock";
-  import { Percent as PercentIcon } from "@lucide/svelte";
-  import ImageIcon from "@lucide/svelte/icons/image";
+  import { adminNav } from "$lib/admin-nav";
   import ExternalLink from "@lucide/svelte/icons/external-link";
   import ChevronsUpDown from "@lucide/svelte/icons/chevrons-up-down";
   import LogOut from "@lucide/svelte/icons/log-out";
@@ -57,26 +47,6 @@
     document.documentElement.style.backgroundColor = dark ? "oklch(0.175 0.014 265)" : "";
   });
 
-  interface NavItem {
-    href: string;
-    label: string;
-    icon: string;
-  }
-
-  const navItems: NavItem[] = [
-    { href: "/admin/orders", label: "Orders", icon: "shopping-cart" },
-    { href: "/admin/products", label: "Products", icon: "tag" },
-    { href: "/admin/collections", label: "Collections", icon: "folder" },
-    { href: "/admin/facets", label: "Facets", icon: "filter" },
-    { href: "/admin/categories", label: "Categories", icon: "category" },
-    { href: "/admin/customers", label: "Customers", icon: "users" },
-    { href: "/admin/reviews", label: "Reviews", icon: "star" },
-    { href: "/admin/promotions", label: "Promotions", icon: "percent" },
-    { href: "/admin/assets", label: "Assets", icon: "image" },
-    { href: "/admin/content-pages", label: "Pages", icon: "file-text" },
-    { href: "/admin/tasks", label: "Tasks", icon: "clock" }
-  ];
-
   function isActive(href: string): boolean {
     return page.url.pathname.startsWith(href);
   }
@@ -111,7 +81,7 @@
     </div>
 
     <nav class="mt-6 flex-1 overflow-y-auto">
-      {#each navItems as item}
+      {#each adminNav as item (item.href)}
         <a
           href={item.href}
           class={cn(
@@ -126,29 +96,7 @@
           )}
         >
           <span class="h-5 w-5 opacity-60">
-            {#if item.icon === "shopping-cart"}
-              <ShoppingCart class="h-5 w-5" strokeWidth={1.6} />
-            {:else if item.icon === "users"}
-              <Users class="h-5 w-5" strokeWidth={1.6} />
-            {:else if item.icon === "category"}
-              <LayoutGrid class="h-5 w-5" strokeWidth={1.6} />
-            {:else if item.icon === "filter"}
-              <Filter class="h-5 w-5" strokeWidth={1.6} />
-            {:else if item.icon === "tag"}
-              <Tag class="h-5 w-5" strokeWidth={1.6} />
-            {:else if item.icon === "folder"}
-              <FolderOpen class="h-5 w-5" strokeWidth={1.6} />
-            {:else if item.icon === "star"}
-              <Star class="h-5 w-5" strokeWidth={1.6} />
-            {:else if item.icon === "percent"}
-              <PercentIcon class="h-5 w-5" strokeWidth={1.6} />
-            {:else if item.icon === "image"}
-              <ImageIcon class="h-5 w-5" strokeWidth={1.6} />
-            {:else if item.icon === "file-text"}
-              <FileText class="h-5 w-5" strokeWidth={1.6} />
-            {:else if item.icon === "clock"}
-              <Clock class="h-5 w-5" strokeWidth={1.6} />
-            {/if}
+            <item.icon class="h-5 w-5" strokeWidth={1.6} />
           </span>
           {item.label}
         </a>

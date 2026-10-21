@@ -1,6 +1,7 @@
 import { redirect } from "@sveltejs/kit";
+import { adminNav } from "$lib/admin-nav";
 import type { PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async () => {
-	throw redirect(303, "/admin/orders");
+	throw redirect(303, adminNav[0].href);
 };
