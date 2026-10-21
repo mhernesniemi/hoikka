@@ -23,20 +23,7 @@ import {
 	index,
 	uniqueIndex
 } from "drizzle-orm/sqlite-core";
-
-// Helpers keep the schema terse and consistent.
-const pk = () => integer("id").primaryKey({ autoIncrement: true });
-const now = () =>
-	integer({ mode: "timestamp_ms" })
-		.$defaultFn(() => new Date())
-		.notNull();
-const updatedNow = () =>
-	integer({ mode: "timestamp_ms" })
-		.$defaultFn(() => new Date())
-		.$onUpdate(() => new Date())
-		.notNull();
-const ts = (name: string) => integer(name, { mode: "timestamp_ms" });
-const bool = (name: string) => integer(name, { mode: "boolean" });
+import { pk, now, updatedNow, ts, bool } from "./columns.js";
 
 // ============================================================================
 // AUTH (Better Auth)
