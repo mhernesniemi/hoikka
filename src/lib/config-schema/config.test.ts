@@ -3,8 +3,9 @@
  * must be a complete, working store, and misconfigurations must fail at
  * import time with a message that names the problem.
  */
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, expectTypeOf } from "vitest";
 import { defineHoikkaConfig } from "./index.js";
+import { customFields } from "$lib/fields/index.js";
 import { stripe, flatRate, entraId } from "./providers.js";
 
 describe("defineHoikkaConfig", () => {
@@ -50,6 +51,36 @@ describe("defineHoikkaConfig", () => {
 				}
 			})
 		).toThrow(/expected admin or staff/);
+	});
+
+	it("keeps the declared fields' types for customFields", () => {
+		const config = defineHoikkaConfig({
+			productTypes: {
+				physical: {
+					label: "Physical",
+					fields: [
+						{ key: "heightMm", label: "Height", type: "number" },
+						{
+							key: "finish",
+							label: "Finish",
+							type: "select",
+							options: ["matt", "gloss"]
+						}
+					]
+				}
+			},
+			collections: { fields: [{ key: "subtitle", label: "Subtitle", type: "text" }] }
+		});
+		const product = { customFields: { heightMm: 40, finish: "matt" } };
+		const fields = customFields(config.productTypes.physical.fields, product);
+		expectTypeOf(fields.heightMm).toEqualTypeOf<number | undefined>();
+		expectTypeOf(fields.finish).toEqualTypeOf<"matt" | "gloss" | undefined>();
+		expect(fields).toEqual({ heightMm: 40, finish: "matt" });
+		expectTypeOf(
+			customFields(config.collections.fields, { customFields: {} }).subtitle
+		).toEqualTypeOf<string | undefined>();
+		const anyType: string = "physical";
+		expectTypeOf(config.productTypes[anyType]).toMatchTypeOf<{ label: string } | undefined>();
 	});
 
 	it("can close the store to new sign-ups", () => {

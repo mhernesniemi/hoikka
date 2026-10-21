@@ -186,3 +186,25 @@ export interface ResolvedHoikkaConfig {
 	customers: { signUp: boolean; requireSignIn: boolean };
 	admin: { sso: (StaffSsoConfig & { passwordLogin: boolean }) | null };
 }
+
+/**
+ * The resolved config with the field lists exactly as hoikka.config.ts wrote
+ * them, so `customFields(config.productTypes.physical.fields, product)` is typed.
+ * Lookups by a runtime key (`productTypes[product.type]`) still work.
+ */
+export type HoikkaConfig<I extends HoikkaConfigInput = HoikkaConfigInput> = Omit<
+	ResolvedHoikkaConfig,
+	"productTypes" | "contentPages" | "collections"
+> & {
+	productTypes: ResolvedHoikkaConfig["productTypes"] &
+		(I extends { productTypes: infer P } ? P : unknown);
+	contentPages: {
+		templates: ResolvedHoikkaConfig["contentPages"]["templates"] &
+			(I extends { contentPages: { templates: infer T } } ? T : unknown);
+	};
+	collections: {
+		fields: I extends { collections: { fields: infer F extends readonly FieldDef[] } }
+			? F
+			: readonly FieldDef[];
+	};
+};

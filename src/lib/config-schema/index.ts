@@ -4,10 +4,15 @@
  * The defaults reproduce the behavior the starter shipped with before the
  * config file existed, so an empty `defineHoikkaConfig({})` is a valid store.
  */
-import type { HoikkaConfigInput, ResolvedHoikkaConfig, StaffSsoConfig } from "./types.js";
+import type {
+	HoikkaConfig,
+	HoikkaConfigInput,
+	ResolvedHoikkaConfig,
+	StaffSsoConfig
+} from "./types.js";
 import { stripe, mockPayment, flatRate } from "./providers.js";
 
-export type { HoikkaConfigInput, ResolvedHoikkaConfig } from "./types.js";
+export type { HoikkaConfig, HoikkaConfigInput, ResolvedHoikkaConfig } from "./types.js";
 export type {
 	FieldDef,
 	FieldType,
@@ -68,7 +73,9 @@ function section<T extends object>(base: T, override: Partial<T> | undefined): T
 	return override ? { ...base, ...override } : base;
 }
 
-export function defineHoikkaConfig(input: HoikkaConfigInput = {}): ResolvedHoikkaConfig {
+export function defineHoikkaConfig<const I extends HoikkaConfigInput = {}>(
+	input: I = {} as I
+): HoikkaConfig<I> {
 	const resolved: ResolvedHoikkaConfig = {
 		store: section(DEFAULTS.store, input.store),
 		locales: section(DEFAULTS.locales, input.locales),
@@ -127,7 +134,7 @@ export function defineHoikkaConfig(input: HoikkaConfigInput = {}): ResolvedHoikk
 
 	if (resolved.admin.sso) validateSso(resolved.admin.sso);
 
-	return resolved;
+	return resolved as HoikkaConfig<I>;
 }
 
 function validateSso(sso: StaffSsoConfig): void {
