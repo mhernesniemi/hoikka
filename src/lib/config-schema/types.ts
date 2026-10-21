@@ -25,6 +25,11 @@ export interface FieldDef {
 	 * value but can't change it, so a save never overwrites what code wrote.
 	 */
 	readOnly?: boolean;
+	/**
+	 * Customer fields only: whether the customer sees the value on their
+	 * account page, or can also edit it there. Default: "hidden".
+	 */
+	storefront?: "hidden" | "read" | "edit";
 }
 
 export type Fulfillment = "physical" | "digital";

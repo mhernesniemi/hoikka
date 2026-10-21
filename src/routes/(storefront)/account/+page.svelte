@@ -10,9 +10,18 @@
 
   let { data, form }: { data: PageData; form: ActionData } = $props();
 
+  const fields = hoikkaConfig.customers.fields;
+  const editableFields = fields.filter((def) => def.storefront === "edit");
   const details = $derived(
-    data.customer ? fieldEntries(hoikkaConfig.customers.fields, data.customer) : []
+    data.customer
+      ? fieldEntries(
+          fields.filter((def) => def.storefront === "read"),
+          data.customer
+        )
+      : []
   );
+  const stored = (key: string) => data.customer?.customFields[key];
+  const inputClass = "w-full rounded-lg border border-gray-300 px-3 py-2";
 </script>
 
 <svelte:head>
@@ -113,6 +122,51 @@
           class="w-full rounded-lg border border-gray-300 px-3 py-2"
         />
       </div>
+
+      {#each editableFields as def (def.key)}
+        {@const id = `cf_${def.key}`}
+        <div>
+          {#if def.type === "boolean"}
+            <label class="flex items-center gap-2 text-sm font-medium text-gray-700">
+              <input type="checkbox" {id} name={id} checked={stored(def.key) === true} />
+              {def.label}
+            </label>
+          {:else}
+            <label for={id} class="mb-1 block text-sm font-medium text-gray-700">
+              {def.label}{def.required ? "" : " (optional)"}
+            </label>
+            {#if def.type === "textarea"}
+              <textarea
+                {id}
+                name={id}
+                rows="3"
+                required={def.required}
+                class={inputClass}
+                value={String(stored(def.key) ?? "")}></textarea>
+            {:else if def.type === "select"}
+              <select {id} name={id} required={def.required} class={inputClass}>
+                <option value="">—</option>
+                {#each def.options ?? [] as option (option)}
+                  <option value={option} selected={stored(def.key) === option}>{option}</option>
+                {/each}
+              </select>
+            {:else}
+              <input
+                type={def.type === "number" ? "number" : def.type === "date" ? "date" : "text"}
+                step={def.type === "number" ? "any" : undefined}
+                {id}
+                name={id}
+                required={def.required}
+                class={inputClass}
+                value={String(stored(def.key) ?? "")}
+              />
+            {/if}
+          {/if}
+          {#if def.help}
+            <p class="mt-1 text-xs text-gray-500">{def.help}</p>
+          {/if}
+        </div>
+      {/each}
 
       <div class="pt-2">
         <Button type="submit">Save Changes</Button>

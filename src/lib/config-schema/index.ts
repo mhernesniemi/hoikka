@@ -145,6 +145,14 @@ export function defineHoikkaConfig<const I extends HoikkaConfigInput = Record<ne
 	}
 
 	if (resolved.admin.sso) validateSso(resolved.admin.sso);
+	for (const def of resolved.customers.fields) {
+		if (def.storefront !== "edit") continue;
+		if (def.readOnly || def.type === "image" || def.type === "richtext") {
+			throw new Error(
+				`hoikka.config.ts: customer field "${def.key}" can't be storefront: "edit" when it is ${def.readOnly ? "readOnly" : `type ${def.type}`}`
+			);
+		}
+	}
 
 	return resolved as HoikkaConfig<I>;
 }

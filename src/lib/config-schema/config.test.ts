@@ -87,6 +87,18 @@ describe("defineHoikkaConfig", () => {
 		expectTypeOf(config.productTypes[anyType]).toMatchTypeOf<{ label: string } | undefined>();
 	});
 
+	it("rejects customer fields the storefront can't edit", () => {
+		const field = (extra: object) =>
+			defineHoikkaConfig({
+				customers: {
+					fields: [{ key: "x", label: "X", type: "text", storefront: "edit", ...extra }]
+				}
+			});
+		expect(() => field({})).not.toThrow();
+		expect(() => field({ readOnly: true })).toThrow(/readOnly/);
+		expect(() => field({ type: "image" })).toThrow(/type image/);
+	});
+
 	it("can close the store to new sign-ups", () => {
 		expect(defineHoikkaConfig({ customers: { signUp: false } }).customers.signUp).toBe(false);
 	});

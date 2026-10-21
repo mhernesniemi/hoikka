@@ -68,11 +68,15 @@ export default defineHoikkaConfig({
 	},
 	// Closed / B2B store: no self-service sign-up (existing accounts still sign
 	// in); requireSignIn also hides the storefront from anonymous visitors.
-	// Customer fields show in the admin and, read-only, on the account page.
+	// Customer fields show in the admin; storefront: "read" or "edit" also puts
+	// them on the customer's account page (default: hidden from the customer).
 	// customers: {
 	// 	signUp: false,
 	// 	requireSignIn: true,
-	// 	fields: [{ key: "erpNumber", label: "ERP customer number", type: "text", readOnly: true }]
+	// 	fields: [
+	// 		{ key: "erpNumber", label: "ERP number", type: "text", readOnly: true, storefront: "read" },
+	// 		{ key: "creditLimit", label: "Credit limit", type: "number", readOnly: true }
+	// 	]
 	// },
 	// Staff sign in with Microsoft Entra ID instead of passwords (import entraId
 	// from providers.js and set SSO_ENTRA_CLIENT_ID / SSO_ENTRA_CLIENT_SECRET):

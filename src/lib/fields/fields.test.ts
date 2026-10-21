@@ -150,4 +150,24 @@ describe("formFields", () => {
 	it("doesn't require a read-only field the form can't send", () => {
 		expect(formFields(defs, new FormData(), null, sanitize)).toEqual({ ok: true, values: {} });
 	});
+
+	it("takes only what the caller lets the form edit, e.g. a customer's own fields", () => {
+		const customerDefs = [
+			{ key: "contact", label: "Contact", type: "text", storefront: "edit" },
+			{ key: "creditLimit", label: "Credit limit", type: "number" }
+		] as const satisfies readonly FieldDef[];
+		const form = new FormData();
+		form.set("cf_contact", "Liisa");
+		form.set("cf_creditLimit", "999999");
+
+		const result = formFields(
+			customerDefs,
+			form,
+			{ creditLimit: 5000 },
+			sanitize,
+			(def) => def.storefront === "edit"
+		);
+
+		expect(result).toEqual({ ok: true, values: { contact: "Liisa", creditLimit: 5000 } });
+	});
 });
