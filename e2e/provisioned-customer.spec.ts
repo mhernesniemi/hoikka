@@ -43,5 +43,9 @@ test("a pre-created customer sets a password and signs in to their record", asyn
 		.prepare("select count(*) as n from customers where email = ? and auth_user_id is not null")
 		.get(email) as { n: number };
 	expect(linked.n).toBe(1);
+	const login = sqlite
+		.prepare("select last_sign_in_at as at from user where email = ?")
+		.get(email) as { at: number | null };
+	expect(login.at).toBeGreaterThanOrEqual(now);
 	sqlite.close();
 });

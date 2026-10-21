@@ -18,15 +18,15 @@ export const load: PageServerLoad = async ({ params }) => {
 		throw error(404, "Customer not found");
 	}
 
-	// Get customer orders
-	const orders = await orderService.listForCustomer(customerId, {
-		limit: 10,
-		offset: 0
-	});
+	const [orders, lastSignInAt] = await Promise.all([
+		orderService.listForCustomer(customerId, { limit: 10, offset: 0 }),
+		customerService.lastSignInAt(customer)
+	]);
 
 	return {
 		customer,
-		orders
+		orders,
+		lastSignInAt
 	};
 };
 

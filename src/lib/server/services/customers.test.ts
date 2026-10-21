@@ -62,3 +62,31 @@ describe("provisionLogin", () => {
 		expect(customer.authUserId).toBeNull();
 	});
 });
+
+describe("last sign-in", () => {
+	beforeEach(async () => {
+		await db.delete(customers);
+		await db.delete(user);
+	});
+
+	it("lists each customer with their login's last sign-in", async () => {
+		const at = new Date("2026-10-01T08:00:00Z");
+		await db.insert(user).values({
+			id: "u1",
+			email: "a@example.com",
+			name: "A",
+			lastSignInAt: at,
+			createdAt: at,
+			updatedAt: at
+		});
+		await db.insert(customers).values([
+			{ email: "a@example.com", firstName: "A", lastName: "A", authUserId: "u1" },
+			{ email: "b@example.com", firstName: "B", lastName: "B" }
+		]);
+
+		const { items } = await customerService.list({ sortBy: "email", sortOrder: "asc" });
+		expect(items.map((c) => c.lastSignInAt)).toEqual([at, null]);
+		expect(await customerService.lastSignInAt(items[0])).toEqual(at);
+		expect(await customerService.lastSignInAt(items[1])).toBeNull();
+	});
+});

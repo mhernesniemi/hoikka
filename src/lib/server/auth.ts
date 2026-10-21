@@ -70,6 +70,18 @@ function createAuth() {
 				}
 			}
 		},
+		databaseHooks: {
+			session: {
+				create: {
+					after: async (session) => {
+						await db
+							.update(schema.user)
+							.set({ lastSignInAt: session.createdAt })
+							.where(eq(schema.user.id, session.userId));
+					}
+				}
+			}
+		},
 		hooks: {
 			before: createAuthMiddleware(async (ctx) => {
 				const email = (ctx.body as { email?: unknown } | undefined)?.email;

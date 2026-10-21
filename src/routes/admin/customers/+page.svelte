@@ -80,6 +80,11 @@
       accessorKey: "createdAt",
       header: "Joined",
       cell: ({ row }) => formatDate(row.original.createdAt)
+    },
+    {
+      accessorKey: "lastSignInAt",
+      header: "Last sign-in",
+      cell: ({ row }) => (row.original.lastSignInAt ? formatDate(row.original.lastSignInAt) : "-")
     }
   ];
 

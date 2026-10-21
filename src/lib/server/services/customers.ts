@@ -2,7 +2,7 @@
  * Customer Service
  * Handles customer management and addresses
  */
-import { eq, and, isNull, sql, type SQL } from "drizzle-orm";
+import { eq, and, isNull, sql, getTableColumns, type SQL } from "drizzle-orm";
 import { atomic, db } from "../db/index.js";
 import { paginationOf, resolveSort } from "../pagination.js";
 import { customers, addresses, user } from "../db/schema.js";
@@ -98,6 +98,15 @@ export class CustomerService {
 		};
 	}
 
+	async lastSignInAt(customer: Customer): Promise<Date | null> {
+		if (!customer.authUserId) return null;
+		const [row] = await db
+			.select({ lastSignInAt: user.lastSignInAt })
+			.from(user)
+			.where(eq(user.id, customer.authUserId));
+		return row?.lastSignInAt ?? null;
+	}
+
 	/**
 	 * Get customer by email
 	 */
@@ -123,7 +132,7 @@ export class CustomerService {
 			sortBy?: string;
 			sortOrder?: "asc" | "desc";
 		} = {}
-	): Promise<PaginatedResult<Customer>> {
+	): Promise<PaginatedResult<Customer & { lastSignInAt: Date | null }>> {
 		const { limit = 20, offset = 0, search, sortBy, sortOrder = "desc" } = options;
 
 		const conditions: SQL[] = [isNull(customers.deletedAt)];
@@ -145,7 +154,8 @@ export class CustomerService {
 				name: sql`${customers.lastName}`,
 				email: sql`${customers.email}`,
 				phone: sql`${customers.phone}`,
-				createdAt: sql`${customers.createdAt}`
+				createdAt: sql`${customers.createdAt}`,
+				lastSignInAt: sql`${user.lastSignInAt}`
 			},
 			sortBy,
 			sortOrder,
@@ -153,8 +163,9 @@ export class CustomerService {
 		);
 
 		const items = await db
-			.select()
+			.select({ ...getTableColumns(customers), lastSignInAt: user.lastSignInAt })
 			.from(customers)
+			.leftJoin(user, eq(user.id, customers.authUserId))
 			.where(and(...conditions))
 			.orderBy(orderByExpr)
 			.limit(limit)

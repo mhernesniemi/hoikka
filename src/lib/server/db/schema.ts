@@ -39,6 +39,7 @@ export const user = sqliteTable("user", {
 	emailVerified: bool("email_verified").default(false).notNull(),
 	image: text("image"),
 	role: text("role").default("customer").notNull(),
+	lastSignInAt: ts("last_sign_in_at"),
 	createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
 	updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull()
 });

@@ -167,6 +167,16 @@
             <span class="text-foreground-secondary">Customer since</span>
             <p class="font-medium">{formatDate(data.customer.createdAt)}</p>
           </div>
+          <div>
+            <span class="text-foreground-secondary">Last sign-in</span>
+            <p class="font-medium">
+              {data.lastSignInAt
+                ? formatDate(data.lastSignInAt)
+                : data.customer.authUserId
+                  ? "Never"
+                  : "No login"}
+            </p>
+          </div>
         </div>
       </AdminCard>
 
