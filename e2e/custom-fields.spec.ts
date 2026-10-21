@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { signInAsAdmin } from "./helpers";
 
 /**
  * The custom-fields round trip: hoikka.config.ts declares fields on the
@@ -8,27 +9,6 @@ import { test, expect, type Page } from "@playwright/test";
  * Requires an admin account — created through the first-run setup if the
  * database has none, signed in via the login form otherwise.
  */
-const ADMIN_EMAIL = "e2e-admin@test.local";
-const ADMIN_PASSWORD = "e2e-password-1";
-
-async function signInAsAdmin(page: Page): Promise<void> {
-	await page.goto("/admin");
-	await page.waitForURL(/\/admin\/(login|setup)/);
-
-	if (page.url().includes("/admin/setup")) {
-		await page.fill("#name", "E2E Admin");
-		await page.fill("#email", ADMIN_EMAIL);
-		await page.fill("#password", ADMIN_PASSWORD);
-		await page.click('button:has-text("Create admin account")');
-	} else {
-		// A prior test in this run already created the admin
-		await page.fill('input[type="email"]', ADMIN_EMAIL);
-		await page.fill('input[type="password"]', ADMIN_PASSWORD);
-		await page.click('button[type="submit"]');
-	}
-	await page.waitForURL(/\/admin(?!\/(login|setup))/, { timeout: 15000 });
-}
-
 test.describe("custom fields", () => {
 	// One signed-in page for the whole describe: the first-run setup signs in
 	// server-side, so no second trip through the login form is needed

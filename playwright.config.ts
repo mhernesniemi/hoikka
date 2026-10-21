@@ -18,9 +18,10 @@ export default defineConfig({
 				// Dedicated port so a dev server on 5173 is never reused by accident,
 				// and a dedicated database — recreated every run — so the suite
 				// neither depends on nor pollutes local dev data, and admin setup
-				// starts from a known state.
+				// starts from a known state. BETTER_AUTH_URL overrides a local .env
+				// one, whose origin would reject sign-ins on this port.
 				command:
-					"rm -f ./data/e2e-test.db ./data/e2e-test.db-wal ./data/e2e-test.db-shm && DATABASE_URL=./data/e2e-test.db pnpm seed && DATABASE_URL=./data/e2e-test.db pnpm dev --port 4573 --strictPort",
+					"rm -f ./data/e2e-test.db ./data/e2e-test.db-wal ./data/e2e-test.db-shm && DATABASE_URL=./data/e2e-test.db pnpm seed && DATABASE_URL=./data/e2e-test.db BETTER_AUTH_URL=http://localhost:4573 pnpm dev --port 4573 --strictPort",
 				url: "http://localhost:4573",
 				reuseExistingServer: false
 			},
