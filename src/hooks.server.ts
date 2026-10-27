@@ -23,11 +23,12 @@ const sessionHandler: Handle = async ({ event, resolve }) => {
 
 	// Most storefront traffic is anonymous — skip the session DB lookup
 	// entirely when no Better Auth session cookie is present. Asset requests
-	// never need locals, so they skip it even for logged-in visitors.
+	// and health checks never need locals, so they skip it even when signed in.
 	const hasSessionCookie = event.request.headers
 		.get("cookie")
 		?.includes("better-auth.session_token");
-	if (!hasSessionCookie || event.url.pathname.startsWith("/uploads/")) {
+	const { pathname } = event.url;
+	if (!hasSessionCookie || pathname.startsWith("/uploads/") || pathname === "/api/health") {
 		event.locals.customer = null;
 		event.locals.adminDark = event.cookies.get("admin-dark") === "1";
 		return resolve(event);
@@ -188,7 +189,8 @@ const SIGN_IN_PUBLIC_PATHS = new Set([
 	"/forgot-password",
 	"/verify-email",
 	"/privacy-policy",
-	"/robots.txt"
+	"/robots.txt",
+	"/api/health"
 ]);
 const SIGN_IN_PUBLIC_PREFIXES = [
 	"/admin",

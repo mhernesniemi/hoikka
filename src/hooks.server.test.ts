@@ -208,7 +208,8 @@ describe("signInGuard", () => {
 			"/api/auth/sign-in/email",
 			"/admin/login",
 			"/api/tasks/run",
-			"/api/webhooks/erp"
+			"/api/webhooks/erp",
+			"/api/health"
 		]) {
 			expect(await run(path, { method: path.startsWith("/api") ? "POST" : "GET" })).toBe(OK);
 		}
