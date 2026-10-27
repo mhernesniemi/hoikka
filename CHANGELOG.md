@@ -4,7 +4,7 @@ Notable changes to the Hoikka template.
 
 Format: [Keep a Changelog](https://keepachangelog.com). `create-hoikka-app` scaffolds from the latest release.
 
-## [Unreleased]
+## [0.5.0] - 2026-10-27
 
 Node target ready for container deploys (e.g. Kamal on a VPS, SQLite on a mounted volume, uploads in object storage), all opt-in through env vars, and every dependency updated.
 
