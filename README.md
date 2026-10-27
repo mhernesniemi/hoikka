@@ -68,6 +68,7 @@ That auto-migration is the node target only. On the Cloudflare target the dev se
 - `DATABASE_URL`, `UPLOADS_DIR`, `CACHE_DIR` and `MIGRATIONS_DIR` move the database, uploads, resized-image cache and migrations folder.
 - `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` (plus `S3_ENDPOINT`, `S3_REGION`, `S3_PREFIX`) keep uploads in any S3-compatible bucket instead. The bucket can stay private.
 - `GET /api/health` answers `200` when the database and schema are in place, `503` otherwise.
+- `DATABASE_MUST_EXIST=1` (set after the first deploy) stops a mistyped `DATABASE_URL` from starting an empty store.
 - The in-process scheduler is safe with overlapping instances during a deploy.
 
 See [Node.js and containers](https://hoikka-docs.vercel.app/getting-started/installation#nodejs-and-containers) for the details.

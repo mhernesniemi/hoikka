@@ -1,16 +1,21 @@
 import Database from "better-sqlite3";
 import { drizzle, type BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
-import { mkdirSync } from "node:fs";
-import { dirname } from "node:path";
+import { existsSync, mkdirSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 import * as schema from "./schema.js";
 import { DEFAULT_MIGRATIONS_DIR } from "./config.js";
 
 export type NodeDb = BetterSQLite3Database<typeof schema>;
 
-export function createNodeDb(url: string, migrationsFolder = DEFAULT_MIGRATIONS_DIR): NodeDb {
-	mkdirSync(dirname(url), { recursive: true });
-	const sqlite = new Database(url);
+/** `mustExist` refuses to create the file, so a mistyped path fails instead of starting empty. */
+export function createNodeDb(
+	url: string,
+	migrationsFolder = DEFAULT_MIGRATIONS_DIR,
+	{ mustExist = false } = {}
+): NodeDb {
+	if (!mustExist) mkdirSync(dirname(url), { recursive: true });
+	const sqlite = openSqlite(url, mustExist);
 	sqlite.pragma("journal_mode = WAL");
 	sqlite.pragma("foreign_keys = ON");
 	applyMigrations(sqlite, migrationsFolder);
@@ -47,6 +52,16 @@ export function applyMigrations(sqlite: Database.Database, migrationsFolder: str
 			.join(", ");
 		throw new Error(`Migrations left ${violations.length} foreign key violation(s): ${sample}`);
 	}
+}
+
+function openSqlite(url: string, mustExist: boolean): Database.Database {
+	if (mustExist && !existsSync(url)) {
+		throw new Error(
+			`No database at ${resolve(url)} and DATABASE_MUST_EXIST is set. Check DATABASE_URL, ` +
+				"or create the database once (start without DATABASE_MUST_EXIST, or `touch` the file)."
+		);
+	}
+	return new Database(url, { fileMustExist: mustExist });
 }
 
 function appliedMigrations(sqlite: Database.Database): number {

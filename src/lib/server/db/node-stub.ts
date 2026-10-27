@@ -8,6 +8,10 @@ import type * as schema from "./schema.js";
 
 export type NodeDb = BetterSQLite3Database<typeof schema>;
 
-export function createNodeDb(_url: string, _migrationsFolder?: string): NodeDb {
+export function createNodeDb(
+	_url: string,
+	_migrationsFolder?: string,
+	_options?: { mustExist?: boolean }
+): NodeDb {
 	throw new Error("The node database is not available on the cloudflare target");
 }

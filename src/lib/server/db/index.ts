@@ -42,7 +42,8 @@ function currentDb(): Db {
 	if (!nodeDb) {
 		nodeDb = createNodeDb(
 			env.DATABASE_URL || DEFAULT_DATABASE_URL,
-			env.MIGRATIONS_DIR || DEFAULT_MIGRATIONS_DIR
+			env.MIGRATIONS_DIR || DEFAULT_MIGRATIONS_DIR,
+			{ mustExist: env.DATABASE_MUST_EXIST === "1" || env.DATABASE_MUST_EXIST === "true" }
 		);
 	}
 	return nodeDb;
