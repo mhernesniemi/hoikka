@@ -61,6 +61,17 @@ Migrations run automatically when the server starts. Create your admin account a
 
 That auto-migration is the node target only. On the Cloudflare target the dev server talks to its own local D1, which nothing migrates on boot, so run `pnpm db:migrate:cf:local` once — `create-hoikka-app` does it for you — otherwise `pnpm dev` answers 500 on its first query. `pnpm db:migrate:cf` is the remote equivalent.
 
+### Deploying with Node.js or containers
+
+`pnpm build && pnpm start` runs a plain Node server, and the same build runs in a container (e.g. Kamal on a VPS) with SQLite on a mounted volume:
+
+- `DATABASE_URL`, `UPLOADS_DIR`, `CACHE_DIR` and `MIGRATIONS_DIR` move the database, uploads, resized-image cache and migrations folder.
+- `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` (plus `S3_ENDPOINT`, `S3_REGION`, `S3_PREFIX`) keep uploads in any S3-compatible bucket instead. The bucket can stay private.
+- `GET /api/health` answers `200` when the database and schema are in place, `503` otherwise.
+- The in-process scheduler is safe with overlapping instances during a deploy.
+
+See [Node.js and containers](https://hoikka-docs.vercel.app/getting-started/installation#nodejs-and-containers) for the details.
+
 ### AI assistant (MCP)
 
 Hoikka ships a local [MCP](https://modelcontextprotocol.io) server (`pnpm mcp`) that lets an AI assistant inspect the schema, browse the catalog, create products (with search indexing handled for you), adjust stock, and read orders. It's registered in `.mcp.json`, so MCP-aware tools (e.g. Claude Code) discover it automatically — no setup beyond `pnpm install`.
