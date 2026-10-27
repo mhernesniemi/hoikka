@@ -13,4 +13,4 @@ The CLI clones the latest Hoikka release, then asks where you want to run it:
 
 Switching targets later is one line: flip `HOIKKA_TARGET` in `.env`.
 
-Requirements: Node >= 20, `pnpm`, `git`. Optional: `gh` (GitHub repo creation), a Cloudflare account (cloudflare target).
+Requirements: Node 22.23.4+, 24.22.1+ or 26.12.1+ (the October 2026 security releases), `pnpm`, `git`. Optional: `gh` (GitHub repo creation), a Cloudflare account (cloudflare target).
