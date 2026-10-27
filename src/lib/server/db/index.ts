@@ -17,7 +17,7 @@ import { env } from "$env/dynamic/private";
 // $lib specifier (not "./node.js") so the cloudflare build can alias this
 // module to node-stub.ts — see resolve.alias in vite.config.ts
 import { createNodeDb, type NodeDb } from "$lib/server/db/node.js";
-import { DEFAULT_DATABASE_URL } from "./config.js";
+import { DEFAULT_DATABASE_URL, DEFAULT_MIGRATIONS_DIR } from "./config.js";
 import { runAtomic } from "./run-atomic.js";
 
 // The shared surface of both drivers. `transaction` is deliberately excluded:
@@ -40,7 +40,10 @@ function currentDb(): Db {
 		// Outside request scope (startup, tests) — fall through to the Node db.
 	}
 	if (!nodeDb) {
-		nodeDb = createNodeDb(env.DATABASE_URL || DEFAULT_DATABASE_URL);
+		nodeDb = createNodeDb(
+			env.DATABASE_URL || DEFAULT_DATABASE_URL,
+			env.MIGRATIONS_DIR || DEFAULT_MIGRATIONS_DIR
+		);
 	}
 	return nodeDb;
 }

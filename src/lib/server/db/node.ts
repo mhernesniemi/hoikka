@@ -4,15 +4,16 @@ import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import * as schema from "./schema.js";
+import { DEFAULT_MIGRATIONS_DIR } from "./config.js";
 
 export type NodeDb = BetterSQLite3Database<typeof schema>;
 
-export function createNodeDb(url: string): NodeDb {
+export function createNodeDb(url: string, migrationsFolder = DEFAULT_MIGRATIONS_DIR): NodeDb {
 	mkdirSync(dirname(url), { recursive: true });
 	const sqlite = new Database(url);
 	sqlite.pragma("journal_mode = WAL");
 	sqlite.pragma("foreign_keys = ON");
-	applyMigrations(sqlite, "drizzle");
+	applyMigrations(sqlite, migrationsFolder);
 	return drizzle(sqlite, { schema });
 }
 

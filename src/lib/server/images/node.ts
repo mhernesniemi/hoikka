@@ -1,6 +1,6 @@
 /**
  * On-demand image resizing for the node target: sharp, with resized variants
- * cached on disk (data/uploads/.cache/<path>/w<w>q<q>.webp). Cache entries are
+ * cached on disk (<CACHE_DIR>/<path>/w<w>q<q>.webp). Cache entries are
  * immutable because upload filenames contain a random id, so a hit never
  * reads the original from storage.
  */
@@ -8,14 +8,13 @@ import sharp from "sharp";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-
-const CACHE_DIR = "data/uploads/.cache";
+import { cacheDir } from "../storage/paths.js";
 
 /** The path comes from the request URL, so it must not climb out of the cache. */
 function variantDir(path: string): string | null {
 	const segments = path.split("/").filter(Boolean);
 	if (segments.length === 0 || segments.some((s) => s === "." || s === "..")) return null;
-	return join(CACHE_DIR, ...segments);
+	return join(cacheDir(), ...segments);
 }
 
 /**

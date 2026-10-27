@@ -8,6 +8,7 @@
 import { readFileSync } from "node:fs";
 
 export const DEFAULT_DATABASE_URL = "./data/hoikka.db";
+export const DEFAULT_MIGRATIONS_DIR = "drizzle";
 
 export function resolveDatabaseUrl(): string {
 	if (process.env.DATABASE_URL) return process.env.DATABASE_URL;

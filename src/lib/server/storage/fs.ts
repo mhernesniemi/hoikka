@@ -1,7 +1,7 @@
 /**
  * Local filesystem storage backend (node target). Files live under
- * `data/uploads/<folder>/` — outside `static/` so they survive builds — and
- * are served by the /uploads/[...path] route.
+ * `<UPLOADS_DIR>/<folder>/` (default data/uploads) — outside `static/` so they
+ * survive builds — and are served by the /uploads/[...path] route.
  */
 import { mkdir, readdir, stat, unlink, writeFile } from "node:fs/promises";
 import { createReadStream, createWriteStream, existsSync } from "node:fs";
@@ -15,34 +15,33 @@ import {
 	storageKey,
 	type StorageBackend
 } from "./types.js";
-
-const BASE_DIR = "data/uploads";
+import { uploadsDir } from "./paths.js";
 
 /** Resolve a storage-relative path to a disk path, rejecting traversal. */
 function diskPath(path: string): string | null {
 	const normalized = normalize(path);
 	if (normalized.startsWith("..") || normalized.startsWith("/")) return null;
-	return join(BASE_DIR, normalized);
+	return join(uploadsDir(), normalized);
 }
 
 export const fsStorage: StorageBackend = {
 	async upload(folder, filename, body) {
 		const { key } = storageKey(folder, filename);
-		await mkdir(join(BASE_DIR, sanitizeFolder(folder)), { recursive: true });
-		await writeFile(join(BASE_DIR, key), body);
+		await mkdir(join(uploadsDir(), sanitizeFolder(folder)), { recursive: true });
+		await writeFile(join(uploadsDir(), key), body);
 
 		return { url: `${PUBLIC_PREFIX}/${key}`, pathname: key };
 	},
 
 	async uploadStream(folder, filename, body) {
 		const { key } = storageKey(folder, filename);
-		await mkdir(join(BASE_DIR, sanitizeFolder(folder)), { recursive: true });
+		await mkdir(join(uploadsDir(), sanitizeFolder(folder)), { recursive: true });
 
 		// Piped rather than buffered, to match the Workers path: a deliverable
 		// can be far larger than anything worth holding in memory.
 		await pipeline(
 			Readable.fromWeb(body as Parameters<typeof Readable.fromWeb>[0]),
-			createWriteStream(join(BASE_DIR, key))
+			createWriteStream(join(uploadsDir(), key))
 		);
 
 		return { url: `${PUBLIC_PREFIX}/${key}`, pathname: key };
@@ -50,7 +49,7 @@ export const fsStorage: StorageBackend = {
 
 	async list(folder) {
 		const safeFolder = sanitizeFolder(folder);
-		const dir = join(BASE_DIR, safeFolder);
+		const dir = join(uploadsDir(), safeFolder);
 		if (!existsSync(dir)) return [];
 
 		const entries = await readdir(dir, { withFileTypes: true });
