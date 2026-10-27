@@ -21,4 +21,4 @@ Node target ready for container deploys (e.g. Kamal on a VPS, SQLite on a mounte
 
 ### Fixed
 
-- **Migrations no longer cascade-delete rows on Node.** Foreign keys are now off while migrations run. Before, a table rebuild (drizzle-kit's create / copy / drop / rename) dropped the old table with foreign keys on, which would delete the rows of child tables with `ON DELETE CASCADE`. The only rebuild so far (`0006`, `digital_downloads`) has no child tables, so no data was lost. A `PRAGMA foreign_key_check` afterwards stops startup if a migration leaves dangling references.
+- **Migrations no longer cascade-delete rows on Node.** Foreign keys are now off while migrations run. Before, a table rebuild (drizzle-kit's create / copy / drop / rename) dropped the old table with foreign keys on, which would delete the rows of child tables with `ON DELETE CASCADE`. The only rebuild so far (`0006`, `digital_downloads`) has no child tables, so no data was lost. When a boot applies migrations, a `PRAGMA foreign_key_check` afterwards stops startup if they left dangling references. Boots with nothing to apply skip the check, which scans the whole database.

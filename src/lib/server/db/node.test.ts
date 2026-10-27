@@ -90,4 +90,25 @@ describe("applyMigrations", () => {
 		).toThrow(/1 foreign key violation/);
 		expect(sqlite.pragma("foreign_keys", { simple: true })).toBe(1);
 	});
+
+	it("only checks foreign keys when a migration was applied", () => {
+		const sqlite = openDb();
+		const created = migrationsFolder({ "0000_create": CREATE });
+		applyMigrations(sqlite, created);
+		sqlite.pragma("foreign_keys = OFF");
+		sqlite.exec("INSERT INTO children (id, parent_id) VALUES (1, 99);");
+		sqlite.pragma("foreign_keys = ON");
+
+		expect(() => applyMigrations(sqlite, created)).not.toThrow();
+		expect(() =>
+			applyMigrations(
+				sqlite,
+				migrationsFolder({
+					"0000_create": CREATE,
+					"0001_index":
+						"CREATE INDEX `children_parent_idx` ON `children` (`parent_id`);\n"
+				})
+			)
+		).toThrow(/1 foreign key violation/);
+	});
 });
