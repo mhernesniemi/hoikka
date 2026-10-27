@@ -31,6 +31,9 @@ jobs:
             - name: Type check
               run: pnpm check
 
+            - name: Check for missing migrations
+              run: pnpm db:check
+
     test:
         name: Unit Tests
         runs-on: ubuntu-latest
