@@ -49,9 +49,9 @@ export function staffPasswordLoginAllowed(
 export type IdTokenClaims = Record<string, unknown>;
 
 /**
- * The ID token arrives straight from the token endpoint over TLS in exchange
- * for the client secret, so OIDC lets the client trust it without verifying
- * the signature; audience and required claims are still checked.
+ * Only reads the claims: better-auth has already verified the signature,
+ * issuer and nonce against the discovery JWKS (requireIdTokenVerification).
+ * Audience and required claims are checked by staffFromClaims.
  */
 export function decodeIdToken(idToken: string): IdTokenClaims {
 	const payload = idToken.split(".")[1];

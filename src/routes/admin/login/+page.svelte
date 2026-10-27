@@ -18,8 +18,8 @@
   async function signInWith(providerId: string) {
     error = null;
     redirectingTo = providerId;
-    const result = await authClient.signIn.oauth2({
-      providerId,
+    const result = await authClient.signIn.social({
+      provider: providerId,
       callbackURL: "/admin",
       errorCallbackURL: "/admin/login?error=sso"
     });

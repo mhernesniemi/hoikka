@@ -6,7 +6,12 @@ Format: [Keep a Changelog](https://keepachangelog.com). `create-hoikka-app` scaf
 
 ## [Unreleased]
 
-Node target ready for container deploys (e.g. Kamal on a VPS, SQLite on a mounted volume, uploads in object storage). All opt-in through env vars; existing projects need no changes.
+Node target ready for container deploys (e.g. Kamal on a VPS, SQLite on a mounted volume, uploads in object storage), all opt-in through env vars, and every dependency updated.
+
+### Upgrade notes
+
+- **Node 22.23.4, 24.22.1 or 26.12.1 is now required** (the [October 2026 security releases](https://nodejs.org/en/blog/vulnerability/october-2026-security-releases)). Node 20 is end-of-life and unpatched, and `engine-strict` makes `pnpm install` refuse older versions. Rebuild container images so they ship a patched runtime.
+- **Staff SSO callback URL changed** to `/api/auth/callback/<id>` (was `/api/auth/oauth2/callback/<id>`) with better-auth 1.7. Update the redirect URI registered at each identity provider before deploying, or staff sign-in fails. Accounts keep matching on the ID token's `sub`, so existing staff accounts carry over.
 
 ### Added
 
@@ -18,6 +23,8 @@ Node target ready for container deploys (e.g. Kamal on a VPS, SQLite on a mounte
 
 ### Changed
 
+- Dependencies updated, including better-auth 1.7, better-sqlite3 13, Stripe 23 (API version `2026-09-30.endive`; Hoikka uses none of its removed parameters), `@stripe/stripe-js` 10, devalue 6 and vitest 5.
+- Staff SSO ID tokens are now verified against the provider's JWKS (signature, issuer and nonce) before their claims are read, and sign-in is refused if the discovery document doesn't publish the keys to do so.
 - Resized images on Node are cached per original (`<CACHE_DIR>/<path>/w<w>q<q>.webp`) and served without reading the original on a cache hit. Deleting an asset drops its cached sizes. The old cache layout is no longer read, so the existing `data/uploads/.cache` can be deleted.
 
 ### Fixed

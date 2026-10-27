@@ -61,7 +61,7 @@ export interface ProviderDescriptor {
 /** An OpenID Connect provider staff sign in with. Pure data; secrets come from env. */
 export interface SsoProvider {
 	/**
-	 * Lowercase id. Used in the callback URL (/api/auth/oauth2/callback/<id>)
+	 * Lowercase id. Used in the callback URL (/api/auth/callback/<id>)
 	 * and the env names: SSO_<ID>_CLIENT_ID, SSO_<ID>_CLIENT_SECRET and the
 	 * optional SSO_<ID>_DISCOVERY_URL override (e.g. a local mock).
 	 */

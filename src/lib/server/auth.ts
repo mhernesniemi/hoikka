@@ -115,7 +115,8 @@ function createAuth() {
 			// input), so it is set here from the ID token the sign-in just stored.
 			// Re-applied on every sign-in: a role removed at the provider is gone.
 			after: createAuthMiddleware(async (ctx) => {
-				const provider = ssoProviders.find((p) => p.id === ctx.params?.providerId);
+				if (ctx.path !== "/callback/:id") return;
+				const provider = ssoProviders.find((p) => p.id === ctx.params?.id);
 				const userId = ctx.context.newSession?.user.id;
 				if (!provider || !userId || !STAFF_SSO) return;
 				const linked = await db.query.account.findFirst({
@@ -148,7 +149,8 @@ function createAuth() {
 								clientId: provider.clientId,
 								clientSecret: provider.clientSecret,
 								scopes: ["openid", "profile", "email"],
-								pkce: true,
+								// Roles come from ID-token claims, so never fall back to unverified decoding
+								requireIdTokenVerification: true,
 								// Re-sync name and email from the provider on every sign-in
 								overrideUserInfo: true,
 								async getUserInfo(tokens) {
@@ -166,7 +168,7 @@ function createAuth() {
 									}
 									const { staff } = result;
 									return {
-										id: staff.id,
+										sub: staff.id,
 										email: staff.email,
 										name: staff.name,
 										emailVerified: true
