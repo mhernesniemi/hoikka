@@ -88,6 +88,7 @@
 		"@tiptap/extension-placeholder": "^3.28.0",
 		"@tiptap/pm": "^3.28.0",
 		"@tiptap/starter-kit": "^3.28.0",
+		"aws4fetch": "^1.0.20",
 		"better-auth": "^1.6.23",
 		"better-sqlite3": "^12.11.1",
 		"bits-ui": "^2.18.1",

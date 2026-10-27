@@ -1,5 +1,5 @@
 /**
- * Serves uploaded assets from the active storage backend (local fs or R2) and
+ * Serves uploaded assets from the active storage backend (local fs, S3 or R2) and
  * resizes them on demand via `?w=<width>&q=<quality>` — sharp on the node
  * target, the Cloudflare Images binding on the cloudflare target (falling
  * back to the original when the binding isn't configured). `/uploads/...`
@@ -12,7 +12,7 @@
  */
 import { error } from "@sveltejs/kit";
 import { get } from "$lib/server/storage/index.js";
-import { VARIANT_PREFIX, isPrivatePath } from "$lib/server/storage/types.js";
+import { VARIANT_PREFIX, contentTypeFor, isPrivatePath } from "$lib/server/storage/types.js";
 // $lib specifier so the cloudflare build can alias sharp away (vite.config.ts)
 import { resizeImage } from "$lib/server/images/node.js";
 import type { RequestHandler } from "./$types.js";
@@ -70,6 +70,22 @@ export const GET: RequestHandler = async ({ params, url, request, platform }) =>
 		}
 	}
 
+	// Node target: sharp with a disk cache, checked before the original is fetched
+	if (width && !platform?.env && RESIZABLE.has(contentTypeFor(params.path))) {
+		const resized = await resizeImage(params.path, width, quality, async () => {
+			const file = await get(params.path);
+			return file ? new Uint8Array(await new Response(file.body).arrayBuffer()) : null;
+		});
+		if (!resized) error(404, "Not found");
+		response = new Response(resized.body as BodyInit, {
+			headers: {
+				"content-type": resized.contentType,
+				"content-length": String(resized.body.byteLength),
+				...CACHE_HEADERS
+			}
+		});
+	}
+
 	if (!response) {
 		const file = await get(params.path);
 		if (!file) throw error(404, "Not found");
@@ -110,24 +126,10 @@ export const GET: RequestHandler = async ({ params, url, request, platform }) =>
 					})
 				);
 			}
-		} else if (platform?.env) {
-			// Cloudflare without an Images binding — serve the original untransformed
+		} else {
+			// No Images binding on Cloudflare — serve the original untransformed
 			response = new Response(file.body, {
 				headers: { "content-type": file.contentType, ...CACHE_HEADERS }
-			});
-		} else {
-			// Node target: sharp with a disk cache
-			const original =
-				file.body instanceof Uint8Array
-					? file.body
-					: new Uint8Array(await new Response(file.body).arrayBuffer());
-			const resized = await resizeImage(params.path, original, width, quality);
-			response = new Response(resized.body as BodyInit, {
-				headers: {
-					"content-type": resized.contentType,
-					"content-length": String(resized.body.byteLength),
-					...CACHE_HEADERS
-				}
 			});
 		}
 	}
