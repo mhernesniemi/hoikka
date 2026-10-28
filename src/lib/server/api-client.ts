@@ -3,9 +3,10 @@
  * tokens, timeouts, retries and OData-style paging. Configuration is passed
  * in, not read from env, so CLI scripts can use it through plain tsx.
  *
- * Retries cover network errors, timeouts and 5xx responses, with backoff, and
+ * Network errors, timeouts and 5xx responses are retried with backoff, but
  * only for idempotent methods: a POST that timed out may have gone through.
- * 4xx responses are never retried; a 401 refreshes the token once.
+ * A 429 is retried for any method, after its Retry-After. Other 4xx responses
+ * are never retried; a 401 refreshes the token once.
  *
  * A server whose certificate comes from a private CA: on the Node target, start
  * the process with NODE_EXTRA_CA_CERTS=/path/to/ca.pem (read once at startup,
@@ -48,6 +49,16 @@ export class ApiError extends Error {
 const IDEMPOTENT = new Set(["GET", "HEAD", "PUT", "DELETE", "OPTIONS"]);
 // Refresh this long before the token's stated expiry, for clock skew and slow requests
 const TOKEN_MARGIN_MS = 60_000;
+// A Retry-After beyond this fails the request instead of stalling the sync
+const MAX_RETRY_AFTER_MS = 60_000;
+
+/** Retry-After in ms (seconds or an HTTP date), or null without one. */
+function retryAfterMs(response: Response): number | null {
+	const value = response.headers.get("retry-after");
+	if (!value) return null;
+	const ms = /^\d+$/.test(value) ? Number(value) * 1000 : Date.parse(value) - Date.now();
+	return Number.isNaN(ms) ? null : Math.max(ms, 0);
+}
 
 export function createApiClient(options: ApiClientOptions) {
 	const fetchFn = options.fetch ?? fetch;
@@ -57,7 +68,7 @@ export function createApiClient(options: ApiClientOptions) {
 	let token: { value: string; expiresAt: number } | null = null;
 	let pendingToken: Promise<string> | null = null;
 
-	async function send(url: string, init: RequestInit, retry: boolean): Promise<Response> {
+	async function send(url: string, init: RequestInit, idempotent: boolean): Promise<Response> {
 		for (let attempt = 0; ; attempt++) {
 			const signal = init.signal
 				? AbortSignal.any([init.signal, AbortSignal.timeout(timeoutMs)])
@@ -70,13 +81,19 @@ export function createApiClient(options: ApiClientOptions) {
 				if (init.signal?.aborted) throw err;
 				error = err;
 			}
-			if (response && response.status < 500) return response;
-			if (!retry || attempt >= retries) {
+			const throttled = response?.status === 429;
+			const failed = !response || response.status >= 500;
+			const waitMs = (response && retryAfterMs(response)) ?? retryDelayMs * 2 ** attempt;
+			const retry =
+				(throttled || (failed && idempotent)) &&
+				attempt < retries &&
+				waitMs <= MAX_RETRY_AFTER_MS;
+			if (!retry) {
 				if (response) return response;
 				throw error;
 			}
 			await response?.body?.cancel();
-			await new Promise((resolve) => setTimeout(resolve, retryDelayMs * 2 ** attempt));
+			await new Promise((resolve) => setTimeout(resolve, waitMs));
 		}
 	}
 

@@ -154,6 +154,31 @@ describe("createApiClient", () => {
 		expect(calls).toHaveLength(1);
 	});
 
+	it("retries a 429 even for a POST, after its Retry-After instead of the backoff", async () => {
+		let attempt = 0;
+		const { api, calls } = client(
+			() =>
+				++attempt === 1
+					? new Response("slow down", { status: 429, headers: { "retry-after": "0" } })
+					: json({ ok: true }),
+			// The backoff alone would stall the test
+			{ retryDelayMs: 60_000 }
+		);
+
+		expect(await api.json("Orders", { method: "POST", body: "{}" })).toEqual({ ok: true });
+		expect(calls).toHaveLength(2);
+	});
+
+	it("fails a 429 whose Retry-After is too long to wait for", async () => {
+		const later = new Date(Date.now() + 10 * 60_000).toUTCString();
+		const { api, calls } = client(
+			() => new Response("", { status: 429, headers: { "retry-after": later } })
+		);
+
+		await expect(api.json("Parts")).rejects.toMatchObject({ status: 429 });
+		expect(calls).toHaveLength(1);
+	});
+
 	it("times out a hung request and retries it", async () => {
 		let attempt = 0;
 		const { api, calls } = client(
