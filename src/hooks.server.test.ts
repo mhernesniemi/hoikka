@@ -18,7 +18,14 @@ vi.mock("$lib/config/customers.js", () => ({
 	}
 }));
 
-import { adminGuard, bodyLimitGuard, signInGuard, signUpGuard } from "./hooks.server.js";
+import { env } from "$env/dynamic/private";
+import {
+	adminGuard,
+	bodyLimitGuard,
+	handleError,
+	signInGuard,
+	signUpGuard
+} from "./hooks.server.js";
 import type { RequestEvent } from "@sveltejs/kit";
 
 const OK = new Response("resolved");
@@ -212,6 +219,43 @@ describe("signInGuard", () => {
 			"/api/health"
 		]) {
 			expect(await run(path, { method: path.startsWith("/api") ? "POST" : "GET" })).toBe(OK);
+		}
+	});
+});
+
+describe("handleError", () => {
+	async function fail(status: number, waitUntil = vi.fn()) {
+		const { event } = makeEvent("/products/1");
+		(event as { platform?: unknown }).platform = { ctx: { waitUntil } };
+		await handleError({
+			error: new Error("db locked"),
+			event,
+			status,
+			message: "Internal Error"
+		});
+		return waitUntil;
+	}
+
+	it("reports server errors to Sentry when SENTRY_DSN is set, and not 404s", async () => {
+		env.SENTRY_DSN = "https://k@o1.ingest.sentry.io/1";
+		const fetch = vi.fn(async () => new Response("{}"));
+		vi.stubGlobal("fetch", fetch);
+		const log = vi.spyOn(console, "error").mockImplementation(() => {});
+
+		try {
+			await fail(404);
+			expect(fetch).not.toHaveBeenCalled();
+
+			const waitUntil = await fail(500);
+			await waitUntil.mock.calls[0][0];
+			const body = String((fetch.mock.calls[0] as unknown as [string, RequestInit])[1].body);
+			expect(JSON.parse(body.split("\n")[2]).message.formatted).toBe(
+				"GET /products/1: db locked"
+			);
+		} finally {
+			delete env.SENTRY_DSN;
+			vi.unstubAllGlobals();
+			log.mockRestore();
 		}
 	});
 });

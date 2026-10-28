@@ -1,18 +1,28 @@
 /**
- * Send one event to Sentry over its envelope endpoint, with plain fetch so it
- * works on both targets without the SDK.
+ * Report to Sentry when SENTRY_DSN is set, over its envelope endpoint with
+ * plain fetch, so it works on both targets without the SDK.
  */
+import { env } from "$env/dynamic/private";
 
 export interface SentryEvent {
 	message: string;
-	level?: "error" | "warning";
 	/** Events with the same fingerprint are grouped into one issue. */
 	fingerprint?: string[];
 	tags?: Record<string, string>;
 	extra?: Record<string, unknown>;
 }
 
-export async function sendToSentry(dsn: string, event: SentryEvent): Promise<void> {
+/** Send an error event, or do nothing without SENTRY_DSN. Never throws. */
+export async function captureEvent(event: SentryEvent): Promise<void> {
+	if (!env.SENTRY_DSN) return;
+	try {
+		await send(env.SENTRY_DSN, event);
+	} catch (err) {
+		console.error("[sentry] could not report:", err);
+	}
+}
+
+async function send(dsn: string, event: SentryEvent): Promise<void> {
 	const url = new URL(dsn);
 	// https://<key>@<host>[/<path>]/<project id>
 	const slash = url.pathname.lastIndexOf("/");
@@ -27,7 +37,7 @@ export async function sendToSentry(dsn: string, event: SentryEvent): Promise<voi
 			event_id: eventId,
 			timestamp: Date.now() / 1000,
 			platform: "javascript",
-			level: event.level ?? "error",
+			level: "error",
 			logger: "hoikka",
 			message: { formatted: event.message },
 			fingerprint: event.fingerprint,

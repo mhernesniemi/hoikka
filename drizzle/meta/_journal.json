@@ -134,13 +134,6 @@
       "when": 1792624853011,
       "tag": "0018_even_ultimo",
       "breakpoints": true
-    },
-    {
-      "idx": 19,
-      "version": "6",
-      "when": 1793216925759,
-      "tag": "0019_task_run_alerts",
-      "breakpoints": true
     }
   ]
 }

@@ -1,1 +1,0 @@
-ALTER TABLE `task_runs` ADD `alerted_at` integer;

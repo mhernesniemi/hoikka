@@ -15,6 +15,7 @@ import { ensureNodeScheduler } from "$lib/server/integrations/scheduler.js";
 import "$lib/server/integrations/project.js";
 import { syncConfiguredMethods } from "$lib/server/services/method-sync.js";
 import { edgeCache } from "$lib/server/edge-cache.js";
+import { captureEvent } from "$lib/server/sentry.js";
 import { SIGN_IN_REQUIRED, SIGN_UP_ENABLED } from "$lib/config/customers.js";
 
 // Session handler — validates session via Better Auth and syncs customer record.
@@ -283,6 +284,16 @@ export const handleError: HandleServerError = async ({ error, event, status, mes
 				? { name: error.name, message: error.message, stack: error.stack }
 				: error
 	});
+
+	if (status >= 500) {
+		const report = captureEvent({
+			message: `${event.request.method} ${event.url.pathname}: ${error instanceof Error ? error.message : message}`,
+			tags: { errorId, status: String(status) },
+			extra: { stack: error instanceof Error ? error.stack : undefined }
+		});
+		// Workers may stop once the response is sent; Node finishes it anyway
+		event.platform?.ctx?.waitUntil(report);
+	}
 
 	return {
 		message: "An unexpected error occurred",
