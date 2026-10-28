@@ -10,6 +10,7 @@ Format: [Keep a Changelog](https://keepachangelog.com). `create-hoikka-app` scaf
 
 - **`mirrorRecords()`** (`$lib/server/integrations/mirror.ts`) mirrors records from an external system (ERP, PIM) into a table keyed by their external id. Unchanged records are skipped by a stored hash; a changed record's rows, outbox events and new hash are written in one atomic batch, so a failure is retried on the next run without losing its notifications. Records missing from a complete pull go to an optional `removed` callback. Returns counts for the task run summary.
 - **`productService.upsertProductsBySku(rows, { productType, hideMissing })`** keeps products owned by an external system in sync, one variant per SKU, so a sync never writes `products` or `productVariants` itself. It writes only the product type's `readOnly` custom fields (the admin's stay untouched), hides inactive products, and with `hideMissing` missing ones, as drafts rather than deleting them, and reindexes search only for products that changed.
+- **`createApiClient()`** (`$lib/server/api-client.ts`) for an external system's API: OAuth2 client-credentials tokens cached until shortly before expiry and refreshed once on a `401`, a per-attempt timeout, retries with backoff on network errors and `5xx` (idempotent methods only, never on `4xx`), a JSON helper, and `collection()` for OData-style `$top`/`$skip` paging that fails rather than return a partial pull past its cap. For a private CA on Node, start the process with `NODE_EXTRA_CA_CERTS`.
 
 ## [0.5.0] - 2026-10-27
 
