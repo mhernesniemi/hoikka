@@ -29,7 +29,7 @@ import { eq, sql } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { products, productVariants } from "../db/schema.js";
 import { productService } from "./products.js";
-import type { ExternalProductRow } from "$lib/types.js";
+import { upsertProductsBySku, type ExternalProductRow } from "./external-products.js";
 
 const part = (sku: string, overrides: Partial<ExternalProductRow> = {}): ExternalProductRow => ({
 	sku,
@@ -41,7 +41,7 @@ const part = (sku: string, overrides: Partial<ExternalProductRow> = {}): Externa
 });
 
 const upsert = (rows: ExternalProductRow[], hideMissing = false) =>
-	productService.upsertProductsBySku(rows, { productType: "part", hideMissing });
+	upsertProductsBySku(rows, { productType: "part", hideMissing });
 
 async function bySku(sku: string) {
 	const [row] = await db
@@ -167,6 +167,18 @@ describe("upsertProductsBySku", () => {
 			deletedAt: null
 		});
 		expect((await bySku("MUG")).product.visibility).toBe("public");
+	});
+
+	it("creates nothing when the variant can't be created", async () => {
+		const old = await productService.create({ name: "Old", slug: "old", type: "part" });
+		// A deleted variant whose SKU was never released still holds the unique index
+		await db
+			.insert(productVariants)
+			.values({ productId: old.id, sku: "P-1", price: 0, deletedAt: new Date() });
+
+		await expect(upsert([part("P-1")])).rejects.toThrow();
+
+		expect(await db.select().from(products)).toHaveLength(1);
 	});
 
 	it("clamps negative stock from the source to zero", async () => {

@@ -358,26 +358,6 @@ export interface UpdateVariantInput {
 	isFeatured?: boolean;
 }
 
-/** A product owned by an external system (ERP, PIM), one variant per SKU. */
-export interface ExternalProductRow {
-	sku: string;
-	name: string;
-	/** Inactive products are hidden as drafts, never deleted. */
-	active: boolean;
-	stock: number;
-	/** In cents. When omitted, an existing price is kept and a new product gets 0. */
-	price?: number;
-	/** Only the product type's readOnly fields; the others belong to the admin. */
-	customFields?: Record<string, unknown>;
-}
-
-export interface UpsertProductsSummary {
-	total: number;
-	created: number;
-	updated: number;
-	hidden: number;
-}
-
 export interface CreateOrderInput {
 	customerId?: number;
 	currencyCode?: string;

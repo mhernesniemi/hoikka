@@ -2,9 +2,8 @@
  * Product Service
  * Handles all product-related business logic and database operations
  */
-import { eq, and, desc, asc, sql, inArray, isNull, ne } from "drizzle-orm";
-import config from "$hoikka/config";
-import { db, atomic } from "../db/index.js";
+import { eq, and, desc, asc, sql, inArray, isNull } from "drizzle-orm";
+import { db } from "../db/index.js";
 import { paginationOf, resolveSort } from "../pagination.js";
 import {
 	products,
@@ -29,19 +28,11 @@ import type {
 	UpdateProductInput,
 	CreateVariantInput,
 	UpdateVariantInput,
-	ExternalProductRow,
-	UpsertProductsSummary,
 	FacetCount,
 	FacetValue,
 	PaginatedResult
 } from "$lib/types.js";
 import { DEFAULT_PRODUCT_TYPE } from "$lib/config/products.js";
-import { parseFields } from "$lib/fields/index.js";
-import { slugify } from "$lib/utils.js";
-import { reindexProduct } from "./reindex.js";
-
-// D1 binds at most 100 parameters per statement
-const CHUNK = 100;
 
 export class ProductService {
 	/**
@@ -309,157 +300,6 @@ export class ProductService {
 		await db.update(products).set({ deletedAt: new Date() }).where(eq(products.id, id));
 
 		return true;
-	}
-
-	/**
-	 * Create or update products owned by an external system (ERP, PIM), one
-	 * variant per SKU. The system owns the name, stock, price, active flag and
-	 * the product type's readOnly fields; the rest stays the admin's. Inactive
-	 * products are hidden as drafts, never deleted, so old order lines can
-	 * still name them; with `hideMissing` (a complete pull) so are products of
-	 * the type whose SKUs are missing. Only changed products are reindexed.
-	 */
-	async upsertProductsBySku(
-		rows: readonly ExternalProductRow[],
-		{ productType, hideMissing = false }: { productType: string; hideMissing?: boolean }
-	): Promise<UpsertProductsSummary> {
-		const defs = config.productTypes[productType]?.fields;
-		if (!defs) throw new Error(`No product type "${productType}" in hoikka.config.ts`);
-		const owned = defs.filter((def) => def.readOnly);
-
-		const fieldsBySku = new Map<string, Record<string, unknown>>();
-		for (const row of rows) {
-			if (fieldsBySku.has(row.sku)) throw new Error(`Duplicate SKU "${row.sku}"`);
-			const raw = row.customFields ?? {};
-			const notOwned = Object.keys(raw).filter(
-				(key) => !owned.some((def) => def.key === key)
-			);
-			if (notOwned.length > 0) {
-				throw new Error(
-					`${row.sku}: ${notOwned.join(", ")} is not a readOnly field of product type "${productType}"`
-				);
-			}
-			const parsed = parseFields(owned, raw);
-			if (!parsed.ok) throw new Error(`${row.sku}: ${parsed.error}`);
-			fieldsBySku.set(row.sku, parsed.values);
-		}
-
-		const skus = [...fieldsBySku.keys()];
-		const existing = new Map<string, { product: Product; variant: ProductVariant }>();
-		for (let i = 0; i < skus.length; i += CHUNK) {
-			const found = await db
-				.select({ product: products, variant: productVariants })
-				.from(productVariants)
-				.innerJoin(products, eq(products.id, productVariants.productId))
-				.where(
-					and(
-						inArray(productVariants.sku, skus.slice(i, i + CHUNK)),
-						isNull(productVariants.deletedAt)
-					)
-				);
-			for (const row of found) existing.set(row.variant.sku, row);
-		}
-
-		const summary: UpsertProductsSummary = {
-			total: rows.length,
-			created: 0,
-			updated: 0,
-			hidden: 0
-		};
-		const reindex = new Set<number>();
-
-		for (const row of rows) {
-			const customFields = fieldsBySku.get(row.sku)!;
-			// The storefront has no use for negative stock, and a trigger refuses it
-			const stock = Math.max(0, row.stock);
-			const found = existing.get(row.sku);
-
-			if (!found) {
-				const [product] = await db
-					.insert(products)
-					.values({
-						name: row.name,
-						slug: slugify(row.name),
-						type: productType,
-						visibility: row.active ? "public" : "draft",
-						customFields
-					})
-					.returning({ id: products.id });
-				await db
-					.insert(productVariants)
-					.values({ productId: product.id, sku: row.sku, price: row.price ?? 0, stock });
-				summary.created++;
-				reindex.add(product.id);
-				continue;
-			}
-
-			const { product, variant } = found;
-			// A private product stays private; only draft and public follow the flag
-			const visibility = !row.active
-				? "draft"
-				: product.visibility === "draft"
-					? "public"
-					: product.visibility;
-			const merged = { ...product.customFields, ...customFields };
-			const productChanged =
-				product.name !== row.name ||
-				product.visibility !== visibility ||
-				JSON.stringify(product.customFields) !== JSON.stringify(merged);
-			const price = row.price ?? variant.price;
-			const variantChanged = variant.stock !== stock || variant.price !== price;
-			if (!productChanged && !variantChanged) continue;
-
-			// Stock and price reach the search index through triggers
-			await atomic([
-				...(productChanged
-					? [
-							db
-								.update(products)
-								.set({ name: row.name, visibility, customFields: merged })
-								.where(eq(products.id, product.id))
-						]
-					: []),
-				...(variantChanged
-					? [
-							db
-								.update(productVariants)
-								.set({ stock, price })
-								.where(eq(productVariants.id, variant.id))
-						]
-					: [])
-			]);
-			summary.updated++;
-			if (productChanged) reindex.add(product.id);
-		}
-
-		if (hideMissing) {
-			const listed = new Set(skus);
-			const shown = await db
-				.select({ id: products.id, sku: productVariants.sku })
-				.from(products)
-				.innerJoin(productVariants, eq(productVariants.productId, products.id))
-				.where(
-					and(
-						eq(products.type, productType),
-						ne(products.visibility, "draft"),
-						isNull(products.deletedAt),
-						isNull(productVariants.deletedAt)
-					)
-				);
-			const kept = new Set(shown.filter((row) => listed.has(row.sku)).map((row) => row.id));
-			const missing = [...new Set(shown.map((row) => row.id))].filter((id) => !kept.has(id));
-			for (let i = 0; i < missing.length; i += CHUNK) {
-				await db
-					.update(products)
-					.set({ visibility: "draft" })
-					.where(inArray(products.id, missing.slice(i, i + CHUNK)));
-			}
-			summary.hidden = missing.length;
-			for (const id of missing) reindex.add(id);
-		}
-
-		for (const id of reindex) await reindexProduct(db, id);
-		return summary;
 	}
 
 	/**
