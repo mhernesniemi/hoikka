@@ -4,6 +4,12 @@ Notable changes to the Hoikka template.
 
 Format: [Keep a Changelog](https://keepachangelog.com). `create-hoikka-app` scaffolds from the latest release.
 
+## [Unreleased]
+
+### Added
+
+- **`mirrorRecords()`** (`$lib/server/integrations/mirror.ts`) mirrors records from an external system (ERP, PIM) into a table keyed by their external id. Unchanged records are skipped by a stored hash; a changed record's rows, outbox events and new hash are written in one atomic batch, so a failure is retried on the next run without losing its notifications. Records missing from a complete pull go to an optional `removed` callback. Returns counts for the task run summary.
+
 ## [0.5.0] - 2026-10-27
 
 Node target ready for container deploys (e.g. Kamal on a VPS, SQLite on a mounted volume, uploads in object storage), all opt-in through env vars, and every dependency updated.
