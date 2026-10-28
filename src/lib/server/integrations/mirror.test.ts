@@ -167,23 +167,22 @@ describe("mirrorRecords", () => {
 
 	it("hands records missing from the pull to the removed callback", async () => {
 		await mirrorRecords(db, options([order("1"), order("2"), order("3")]));
+		const softDelete = options([order("2")], {
+			removed: (row) =>
+				row.deletedAt
+					? []
+					: [db.update(erpOrders).set({ deletedAt: 1 }).where(eq(erpOrders.id, row.id))]
+		});
 
-		const summary = await mirrorRecords(
-			db,
-			options([order("2")], {
-				removed: (rows) =>
-					rows.map((row) =>
-						db.update(erpOrders).set({ deletedAt: 1 }).where(eq(erpOrders.id, row.id))
-					)
-			})
-		);
-
-		expect(summary.removed).toBe(2);
+		expect((await mirrorRecords(db, softDelete)).removed).toBe(2);
 		const rows = await db.select().from(erpOrders);
 		expect(rows.filter((row) => row.deletedAt !== null).map((row) => row.erpId)).toEqual([
 			"1",
 			"3"
 		]);
+
+		// Already retired: nothing to write, nothing counted
+		expect((await mirrorRecords(db, softDelete)).removed).toBe(0);
 	});
 
 	it("leaves missing records alone without a removed callback", async () => {

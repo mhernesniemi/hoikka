@@ -6,16 +6,13 @@ Format: [Keep a Changelog](https://keepachangelog.com). `create-hoikka-app` scaf
 
 ## [Unreleased]
 
-### Upgrade notes
-
-- **Cloudflare target:** run `pnpm db:migrate:cf` for the new `task_runs.alerted_at` column (`0019`). The Node target applies it on start.
-
 ### Added
 
-- **`mirrorRecords()`** (`$lib/server/integrations/mirror.ts`) mirrors records from an external system (ERP, PIM) into a table keyed by their external id. Unchanged records are skipped by a stored hash; a changed record's rows, outbox events and new hash are written in one atomic batch, so a failure is retried on the next run without losing its notifications. Records missing from a complete pull go to an optional `removed` callback. Returns counts for the task run summary.
-- **`productService.upsertProductsBySku(rows, { productType, hideMissing })`** keeps products owned by an external system in sync, one variant per SKU, so a sync never writes `products` or `productVariants` itself. It writes only the product type's `readOnly` custom fields (the admin's stay untouched), hides inactive products, and with `hideMissing` missing ones, as drafts rather than deleting them, and reindexes search only for products that changed.
-- **`createApiClient()`** (`$lib/server/api-client.ts`) for an external system's API: OAuth2 client-credentials tokens cached until shortly before expiry and refreshed once on a `401`, a per-attempt timeout, retries with backoff on network errors and `5xx` (idempotent methods only, never on `4xx`), a JSON helper, and `collection()` for OData-style `$top`/`$skip` paging that fails rather than return a partial pull past its cap. For a private CA on Node, start the process with `NODE_EXTRA_CA_CERTS`.
-- **Task failure alerts.** A scheduled task that starts failing, or goes stale (for example a run that hangs), is reported once per streak: to Sentry when `SENTRY_DSN` is set, otherwise to the error log. A task can set its own `onFailure(alert)` instead; `reportTaskAlert` is the default to call from it.
+- **`mirrorRecords()`** (`$lib/server/integrations/mirror.ts`) mirrors records from an external system (ERP, PIM) into a table keyed by their external id. Unchanged records are skipped by a stored hash; a changed record's rows, outbox events and new hash are written in one atomic batch, so a failure is retried on the next run without losing its notifications. Records missing from a complete pull go one by one to an optional `removed` callback. Returns counts for the task run summary.
+- **`upsertProductsBySku(rows, { productType, hideMissing })`** (`$lib/server/services/external-products.ts`) keeps products owned by an external system in sync, one variant per SKU, so a sync never writes `products` or `productVariants` itself. It writes only the product type's `readOnly` custom fields (the admin's stay untouched), hides inactive products, and with `hideMissing` missing ones, as drafts rather than deleting them, and reindexes search only for products that changed.
+- **`createApiClient()`** (`$lib/server/api-client.ts`) for an external system's API: OAuth2 client-credentials tokens cached until shortly before expiry and refreshed once on a `401`, a per-attempt timeout, retries with backoff on network errors and `5xx` (idempotent methods only), `429` retried after its `Retry-After`, a JSON helper, and `collection()` for OData-style `$top`/`$skip` paging that fails rather than return a partial pull past its cap. For a private CA on Node, start the process with `NODE_EXTRA_CA_CERTS`.
+- **Task failure reports.** A scheduled task that starts failing, including a run that timed out, is reported once until it succeeds again, not on every failed run. A task can set its own `onFailure(failure)`; the default, `reportTaskFailure`, logs it.
+- **`SENTRY_DSN`** also sends server errors (5xx) and task failure reports to Sentry, over plain `fetch` on both targets, without the SDK.
 
 ## [0.5.0] - 2026-10-27
 

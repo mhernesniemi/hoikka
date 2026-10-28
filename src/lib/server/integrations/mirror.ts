@@ -40,10 +40,11 @@ export interface MirrorOptions<Source, Table extends MirrorTable> {
 	/** Outbox events for a changed record, from the row the store showed before. */
 	changes?: (before: Table["$inferSelect"], record: Source) => MirrorEvent[];
 	/**
-	 * Rows whose key is missing from the records. Pass it only for a complete
-	 * pull; return the writes that retire them (usually a soft delete).
+	 * Called for each row whose key is missing from the records. Pass it only
+	 * for a complete pull; return the writes that retire the row (usually a
+	 * soft delete), or none for a row already retired.
 	 */
-	removed?: (rows: Table["$inferSelect"][]) => BatchItem<"sqlite">[];
+	removed?: (row: Table["$inferSelect"]) => BatchItem<"sqlite">[];
 }
 
 export interface MirrorSummary {
@@ -52,6 +53,7 @@ export interface MirrorSummary {
 	changed: number;
 	created: number;
 	events: number;
+	/** Missing rows retired by this run. */
 	removed: number;
 }
 
@@ -176,9 +178,11 @@ export async function mirrorRecords<Source, Table extends MirrorTable>(
 	if (options.removed) {
 		const missing = [...existing].filter(([key]) => !seen.has(key)).map(([, row]) => row.id);
 		if (missing.length > 0) {
-			const rows = await rowsById(db, table, missing);
-			await runAtomic(db, options.removed(rows));
-			summary.removed = rows.length;
+			const writes = (await rowsById(db, table, missing))
+				.map((row) => options.removed!(row))
+				.filter((rowWrites) => rowWrites.length > 0);
+			await runAtomic(db, writes.flat());
+			summary.removed = writes.length;
 		}
 	}
 
