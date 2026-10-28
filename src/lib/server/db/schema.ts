@@ -1152,7 +1152,10 @@ export const taskRuns = sqliteTable(
 		summary: text("summary", { mode: "json" }).$type<Record<string, unknown>>(),
 		error: text("error"),
 		startedAt: ts("started_at").notNull(),
-		finishedAt: ts("finished_at")
+		finishedAt: ts("finished_at"),
+		// Set when the task was reported stale with this as its last run, so a
+		// stale streak is reported once
+		alertedAt: ts("alerted_at")
 	},
 	(table) => [
 		index("task_runs_task_idx").on(table.task, table.startedAt),
