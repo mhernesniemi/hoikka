@@ -6,7 +6,9 @@ Format: [Keep a Changelog](https://keepachangelog.com). `create-hoikka-app` scaf
 
 ## [Unreleased]
 
-SvelteKit 3, with adapter-node 6 and adapter-cloudflare 8.
+## [0.6.0] - 2026-10-29
+
+SvelteKit 3, with adapter-node 6 and adapter-cloudflare 8, and core primitives for mirroring an external system (ERP, PIM) into the store.
 
 ### Upgrade notes
 
