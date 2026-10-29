@@ -2,7 +2,7 @@
  * Asset Service
  * Handles image storage on the local filesystem (static/uploads/).
  */
-import { db } from "$lib/server/db/index.js";
+import { db } from "#lib/server/db/index.js";
 import {
 	assets,
 	digitalDownloads,
@@ -11,11 +11,11 @@ import {
 	products,
 	productVariants,
 	collections
-} from "$lib/server/db/schema.js";
+} from "#lib/server/db/schema.js";
 import { and, eq, asc, desc, isNotNull, isNull, notInArray, notLike } from "drizzle-orm";
-import { remove as removeFile } from "$lib/server/storage/index.js";
-import { dbError } from "$lib/server/db-error.js";
-import { PRIVATE_PREFIX, PUBLIC_PREFIX } from "$lib/server/storage/types.js";
+import { remove as removeFile } from "#lib/server/storage/index.js";
+import { dbError } from "#lib/server/db-error.js";
+import { PRIVATE_PREFIX, PUBLIC_PREFIX } from "#lib/server/storage/types.js";
 
 const MIME_TYPES: Record<string, string> = {
 	".jpg": "image/jpeg",

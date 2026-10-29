@@ -3,13 +3,13 @@ import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-const env = vi.hoisted(() => ({}) as Record<string, string>);
-vi.mock("$env/dynamic/private", () => ({ env }));
+import { testEnv as env } from "#lib/server/test-env.js";
 
 import sharp from "sharp";
 import { purgeResizedImages, resizeImage } from "./node.js";
 
-env.CACHE_DIR = mkdtempSync(join(tmpdir(), "hoikka-cache-"));
+const cacheDir = mkdtempSync(join(tmpdir(), "hoikka-cache-"));
+env.CACHE_DIR = cacheDir;
 const path = "products/photo.png";
 
 const png = async () =>
@@ -19,7 +19,7 @@ const png = async () =>
 			.toBuffer()
 	);
 
-afterAll(() => rmSync(env.CACHE_DIR, { recursive: true, force: true }));
+afterAll(() => rmSync(cacheDir, { recursive: true, force: true }));
 
 describe("resizeImage", () => {
 	it("reads the original only on a cache miss, caching under CACHE_DIR", async () => {
@@ -31,7 +31,7 @@ describe("resizeImage", () => {
 		expect(loadOriginal).toHaveBeenCalledTimes(1);
 		expect(new Uint8Array(second!.body)).toEqual(new Uint8Array(first!.body));
 		expect((await sharp(first!.body).metadata()).width).toBe(32);
-		expect(existsSync(join(env.CACHE_DIR, path, "w32q80.webp"))).toBe(true);
+		expect(existsSync(join(cacheDir, path, "w32q80.webp"))).toBe(true);
 	});
 
 	it("is null when the original is missing", async () => {

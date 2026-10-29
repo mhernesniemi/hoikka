@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { STORE_NAME } from "$lib/config/store.js";
-  import ProductListing from "$lib/components/storefront/ProductListing.svelte";
-  import { stripHtml } from "$lib/utils";
+  import { STORE_NAME } from "#lib/config/store.js";
+  import ProductListing from "#lib/components/storefront/ProductListing.svelte";
+  import { stripHtml } from "#lib/utils.js";
 
   let { data } = $props();
 

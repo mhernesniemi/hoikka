@@ -2,14 +2,14 @@
  * Order Service
  * Handles order lifecycle, line items, and state transitions.
  *
- * The cart itself is a cookie (see $lib/server/cart-cookie.ts). An order row
+ * The cart itself is a cookie (see #lib/server/cart-cookie.ts). An order row
  * is only created when checkout starts (`startCheckout`): the cookie lines are
  * snapshotted into order lines with prices and 15-minute stock reservations.
  * Orders with `active=true, state=created` are draft checkouts, identified by
  * the `checkout_token` cookie; they become real orders at `payment_pending`.
  */
 import { eq, and, desc, lt, sql, inArray, exists } from "drizzle-orm";
-import config from "$hoikka/config";
+import config from "#hoikka/config";
 import { db, atomic } from "../db/index.js";
 import { paginationOf, resolveSort } from "../pagination.js";
 import {
@@ -30,7 +30,7 @@ import type {
 	CreateOrderInput,
 	OrderState,
 	PaginatedResult
-} from "$lib/types.js";
+} from "#lib/types.js";
 import type { BatchItem } from "drizzle-orm/batch";
 import { nanoid } from "nanoid";
 import { reservationService } from "./reservations.js";
@@ -39,7 +39,7 @@ import { isValidTransition, calculateOrderTotals } from "./order-utils.js";
 import { promotionService } from "./promotions.js";
 import { calculateDiscount } from "./promotion-utils.js";
 import { getCartView } from "./cart.js";
-import type { CartLine } from "$lib/server/cart-cookie.js";
+import type { CartLine } from "#lib/server/cart-cookie.js";
 
 // Abandoned checkout drafts are swept after this long. Long enough that a
 // shopper who wanders off mid-checkout still finds their cart, short enough
@@ -693,7 +693,7 @@ export class OrderService {
 
 		// Deliberately no catalog-version bump here. Stock changed, but stock is
 		// read separately from the cached page (see
-		// $lib/server/services/availability.ts) — bumping would orphan every
+		// #lib/server/services/availability.ts) — bumping would orphan every
 		// cached storefront page on every sale, which is exactly backwards
 		// during a burst.
 

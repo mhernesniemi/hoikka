@@ -7,14 +7,14 @@
 </script>
 
 <script lang="ts">
-  import { BASE_CURRENCY } from "$lib/utils";
+  import { BASE_CURRENCY } from "#lib/utils.js";
   import type { Snippet } from "svelte";
-  import { Checkbox } from "$lib/components/admin/ui/checkbox";
-  import { Input } from "$lib/components/admin/ui/input";
-  import { Label } from "$lib/components/admin/ui/label";
-  import { SelectNative } from "$lib/components/admin/ui/select-native";
-  import AdminCard from "$lib/components/admin/AdminCard.svelte";
-  import MultiSelectCombobox from "$lib/components/admin/MultiSelectCombobox.svelte";
+  import { Checkbox } from "#lib/components/admin/ui/checkbox/index.js";
+  import { Input } from "#lib/components/admin/ui/input/index.js";
+  import { Label } from "#lib/components/admin/ui/label/index.js";
+  import { SelectNative } from "#lib/components/admin/ui/select-native/index.js";
+  import AdminCard from "#lib/components/admin/AdminCard.svelte";
+  import MultiSelectCombobox from "#lib/components/admin/MultiSelectCombobox.svelte";
 
   type Item = { id: number; name: string };
 

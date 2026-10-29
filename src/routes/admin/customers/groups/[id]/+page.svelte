@@ -1,23 +1,23 @@
 <script lang="ts">
-  import PageActionsMenu from "$lib/components/admin/PageActionsMenu.svelte";
+  import PageActionsMenu from "#lib/components/admin/PageActionsMenu.svelte";
   import { enhance } from "$app/forms";
-  import { cn } from "$lib/utils";
+  import { cn } from "#lib/utils.js";
   import { page } from "$app/state";
   import { onMount } from "svelte";
   import { toast } from "svelte-sonner";
-  import { Button } from "$lib/components/admin/ui/button";
-  import { Checkbox } from "$lib/components/admin/ui/checkbox";
-  import { Input } from "$lib/components/admin/ui/input";
-  import { Label } from "$lib/components/admin/ui/label";
-  import * as Popover from "$lib/components/admin/ui/popover";
-  import * as Command from "$lib/components/admin/ui/command";
-  import DeleteConfirmDialog from "$lib/components/admin/DeleteConfirmDialog.svelte";
-  import AdminCard from "$lib/components/admin/AdminCard.svelte";
+  import { Button } from "#lib/components/admin/ui/button/index.js";
+  import { Checkbox } from "#lib/components/admin/ui/checkbox/index.js";
+  import { Input } from "#lib/components/admin/ui/input/index.js";
+  import { Label } from "#lib/components/admin/ui/label/index.js";
+  import * as Popover from "#lib/components/admin/ui/popover/index.js";
+  import * as Command from "#lib/components/admin/ui/command/index.js";
+  import DeleteConfirmDialog from "#lib/components/admin/DeleteConfirmDialog.svelte";
+  import AdminCard from "#lib/components/admin/AdminCard.svelte";
   import ChevronsUpDown from "@lucide/svelte/icons/chevrons-up-down";
   import Check from "@lucide/svelte/icons/check";
   import ChevronLeft from "@lucide/svelte/icons/chevron-left";
   import Trash2 from "@lucide/svelte/icons/trash-2";
-  import UnsavedChangesDialog from "$lib/components/admin/UnsavedChangesDialog.svelte";
+  import UnsavedChangesDialog from "#lib/components/admin/UnsavedChangesDialog.svelte";
   import type { PageData, ActionData } from "./$types";
 
   let { data, form }: { data: PageData; form: ActionData } = $props();

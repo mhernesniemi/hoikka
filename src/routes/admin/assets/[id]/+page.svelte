@@ -1,16 +1,16 @@
 <script lang="ts">
-  import PageActionsMenu from "$lib/components/admin/PageActionsMenu.svelte";
+  import PageActionsMenu from "#lib/components/admin/PageActionsMenu.svelte";
   import { enhance } from "$app/forms";
   import { toast } from "svelte-sonner";
-  import { Button } from "$lib/components/admin/ui/button";
-  import { Input } from "$lib/components/admin/ui/input";
-  import { Label } from "$lib/components/admin/ui/label";
-  import AdminCard from "$lib/components/admin/AdminCard.svelte";
-  import FocalPointPicker from "$lib/components/admin/FocalPointPicker.svelte";
-  import TranslationEditor from "$lib/components/admin/TranslationEditor.svelte";
-  import DeleteConfirmDialog from "$lib/components/admin/DeleteConfirmDialog.svelte";
-  import { translationsToMap } from "$lib/config/languages.js";
-  import { formatFileSize } from "$lib/utils";
+  import { Button } from "#lib/components/admin/ui/button/index.js";
+  import { Input } from "#lib/components/admin/ui/input/index.js";
+  import { Label } from "#lib/components/admin/ui/label/index.js";
+  import AdminCard from "#lib/components/admin/AdminCard.svelte";
+  import FocalPointPicker from "#lib/components/admin/FocalPointPicker.svelte";
+  import TranslationEditor from "#lib/components/admin/TranslationEditor.svelte";
+  import DeleteConfirmDialog from "#lib/components/admin/DeleteConfirmDialog.svelte";
+  import { translationsToMap } from "#lib/config/languages.js";
+  import { formatFileSize } from "#lib/utils.js";
   import ChevronLeft from "@lucide/svelte/icons/chevron-left";
   import type { ActionData, PageData } from "./$types";
 

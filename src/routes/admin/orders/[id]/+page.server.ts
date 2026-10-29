@@ -1,9 +1,9 @@
-import { orderService } from "$lib/server/services/orders.js";
-import { shippingService, paymentService } from "$lib/server/services/index.js";
-import { digitalDeliveryService } from "$lib/server/services/digitalDelivery.js";
-import { emitEvent } from "$lib/server/integrations/events.js";
+import { orderService } from "#lib/server/services/orders.js";
+import { shippingService, paymentService } from "#lib/server/services/index.js";
+import { digitalDeliveryService } from "#lib/server/services/digitalDelivery.js";
+import { emitEvent } from "#lib/server/integrations/events.js";
 import { error, fail } from "@sveltejs/kit";
-import type { OrderState } from "$lib/types.js";
+import type { OrderState } from "#lib/types.js";
 import type { Actions, PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ params }) => {

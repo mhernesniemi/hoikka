@@ -5,7 +5,7 @@
 
 // The discount formula itself lives in the client-safe module so the
 // storefront display and the order math can never drift apart.
-export { calculateDiscount } from "$lib/promotion-utils.js";
+export { calculateDiscount } from "#lib/promotion-utils.js";
 
 export interface PromotionData {
 	discountType: "percentage" | "fixed_amount";

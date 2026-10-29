@@ -3,15 +3,15 @@
  * Real Stripe integration using the Stripe SDK
  */
 import type { PaymentProvider, PaymentInfo, PaymentVerification, RefundInfo } from "../types.js";
-import type { OrderWithRelations } from "$lib/types.js";
+import type { OrderWithRelations } from "#lib/types.js";
 import Stripe from "stripe";
-import { env } from "$env/dynamic/private";
+import { STRIPE_SECRET_KEY, STRIPE_MANUAL_CAPTURE } from "$app/env/private";
 
 let stripeInstance: Stripe | null = null;
 
 export function getStripe(): Stripe | null {
 	if (!stripeInstance) {
-		const secretKey = env.STRIPE_SECRET_KEY;
+		const secretKey = STRIPE_SECRET_KEY;
 		if (!secretKey) {
 			console.error("[stripe] STRIPE_SECRET_KEY is not set — payments are disabled");
 			return null;
@@ -52,7 +52,7 @@ export class StripeProvider implements PaymentProvider {
 	constructor(private options: { manualCapture?: boolean } = {}) {}
 
 	isAvailable(): boolean {
-		return !!env.STRIPE_SECRET_KEY;
+		return !!STRIPE_SECRET_KEY;
 	}
 
 	/**
@@ -83,9 +83,10 @@ export class StripeProvider implements PaymentProvider {
 				// handled by an automatic refund instead (see refundDeadSale in
 				// checkout-completion.ts).
 				capture_method:
-					env.STRIPE_MANUAL_CAPTURE === "true" || this.options.manualCapture
+					STRIPE_MANUAL_CAPTURE === "true" || this.options.manualCapture
 						? "manual"
 						: "automatic",
+
 				metadata: {
 					orderId: order.id.toString(),
 					orderCode: order.code,

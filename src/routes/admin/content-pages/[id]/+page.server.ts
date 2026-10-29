@@ -1,13 +1,13 @@
-import config from "$hoikka/config";
-import { formFields } from "$lib/fields/index.js";
+import config from "#hoikka/config";
+import { formFields } from "#lib/fields/index.js";
 import type { PageServerLoad, Actions } from "./$types";
-import { contentPageService } from "$lib/server/services/content-pages.js";
-import { translationService } from "$lib/server/services/translations.js";
-import { TRANSLATION_LANGUAGES } from "$lib/config/languages.js";
-import { dbError } from "$lib/server/db-error.js";
+import { contentPageService } from "#lib/server/services/content-pages.js";
+import { translationService } from "#lib/server/services/translations.js";
+import { TRANSLATION_LANGUAGES } from "#lib/config/languages.js";
+import { dbError } from "#lib/server/db-error.js";
 import { error, fail, redirect, isRedirect } from "@sveltejs/kit";
-import { slugify } from "$lib/utils.js";
-import { sanitizeHtml } from "$lib/server/sanitize.js";
+import { slugify } from "#lib/utils.js";
+import { sanitizeHtml } from "#lib/server/sanitize.js";
 
 export const load: PageServerLoad = async ({ params }) => {
 	const id = Number(params.id);

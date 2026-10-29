@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { withQuantity, withAddedLine } from "./cart-optimistic";
-import type { CartView } from "$lib/server/services/cart";
+import type { CartView } from "#lib/server/services/cart.js";
 
 const line = (variantId: number, quantity: number, unitPrice = 1000) => ({
 	variantId,

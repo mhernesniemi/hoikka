@@ -1,7 +1,7 @@
 /**
  * Cart remote functions.
  *
- * The cart lives in a cookie (see $lib/server/cart-cookie.ts) — these
+ * The cart lives in a cookie (see #lib/server/cart-cookie.ts) — these
  * functions read and mutate that cookie, so shopping never writes to the
  * database. `getCart` is a SvelteKit `query()`; each mutating `command()`
  * updates the cookie and then refreshes the query in the same roundtrip
@@ -12,8 +12,8 @@ import { query, command, getRequestEvent } from "$app/server";
 import { error } from "@sveltejs/kit";
 import * as v from "valibot";
 import { eq, and, isNull } from "drizzle-orm";
-import { db } from "$lib/server/db/index.js";
-import { productVariants } from "$lib/server/db/schema.js";
+import { db } from "#lib/server/db/index.js";
+import { productVariants } from "#lib/server/db/schema.js";
 import {
 	CART_COOKIE,
 	CART_COOKIE_OPTIONS,
@@ -24,10 +24,10 @@ import {
 	setQuantity,
 	removeLine,
 	type CartLine
-} from "$lib/server/cart-cookie.js";
-import { getCartView, clampToAvailable } from "$lib/server/services/cart.js";
-import { reservationService } from "$lib/server/services/reservations.js";
-import { orderService } from "$lib/server/services/orders.js";
+} from "#lib/server/cart-cookie.js";
+import { getCartView, clampToAvailable } from "#lib/server/services/cart.js";
+import { reservationService } from "#lib/server/services/reservations.js";
+import { orderService } from "#lib/server/services/orders.js";
 
 function readLines(): CartLine[] {
 	return parseCartCookie(getRequestEvent().cookies.get(CART_COOKIE));

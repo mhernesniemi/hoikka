@@ -5,8 +5,7 @@
  */
 import { describe, it, expect, vi } from "vitest";
 
-vi.mock("$env/dynamic/private", () => ({ env: { DATABASE_URL: ":memory:" } }));
-vi.mock("$app/environment", () => ({ dev: true, browser: false, building: false }));
+vi.mock("$app/env", () => ({ dev: true, browser: false, building: false }));
 
 import { eq } from "drizzle-orm";
 import { db } from "../db/index.js";

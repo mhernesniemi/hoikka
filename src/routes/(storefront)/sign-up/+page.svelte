@@ -1,12 +1,12 @@
 <script lang="ts">
-  import { STORE_NAME } from "$lib/config/store.js";
+  import { STORE_NAME } from "#lib/config/store.js";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
-  import { authClient } from "$lib/auth-client";
-  import { Button } from "$lib/components/storefront/ui/button";
-  import { Input } from "$lib/components/storefront/ui/input";
-  import { Label } from "$lib/components/storefront/ui/label";
-  import { Separator } from "$lib/components/storefront/ui/separator";
+  import { authClient } from "#lib/auth-client.js";
+  import { Button } from "#lib/components/storefront/ui/button/index.js";
+  import { Input } from "#lib/components/storefront/ui/input/index.js";
+  import { Label } from "#lib/components/storefront/ui/label/index.js";
+  import { Separator } from "#lib/components/storefront/ui/separator/index.js";
 
   let name = $state("");
   let email = $state("");

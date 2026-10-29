@@ -1,10 +1,10 @@
 <script lang="ts">
-  import { STORE_NAME } from "$lib/config/store.js";
-  import { goto, invalidateAll } from "$app/navigation";
-  import { Button } from "$lib/components/admin/ui/button";
-  import { Input } from "$lib/components/admin/ui/input";
-  import { Label } from "$lib/components/admin/ui/label";
-  import { authClient } from "$lib/auth-client";
+  import { STORE_NAME } from "#lib/config/store.js";
+  import { goto, refreshAll } from "$app/navigation";
+  import { Button } from "#lib/components/admin/ui/button/index.js";
+  import { Input } from "#lib/components/admin/ui/input/index.js";
+  import { Label } from "#lib/components/admin/ui/label/index.js";
+  import { authClient } from "#lib/auth-client.js";
 
   let { data } = $props();
 
@@ -40,7 +40,7 @@
         console.error("[admin login]", result.error);
         error = result.error.message ?? "Invalid email or password";
       } else {
-        await invalidateAll();
+        await refreshAll();
         goto("/admin");
       }
     } catch (e) {

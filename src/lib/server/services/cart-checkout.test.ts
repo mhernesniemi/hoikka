@@ -3,13 +3,9 @@
  * startCheckout's draft-order snapshot, against a real migrated in-memory
  * SQLite database (createNodeDb runs the full drizzle/ migration chain,
  * including the FTS table, seed defaults, and stock triggers).
- *
- * $env/dynamic/private is mocked so the db seam connects to ":memory:"
- * instead of the local dev database — vi.mock is hoisted above imports.
  */
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 
-vi.mock("$env/dynamic/private", () => ({ env: { DATABASE_URL: ":memory:" } }));
 import { db } from "../db/index.js";
 import {
 	products,

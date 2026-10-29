@@ -2,7 +2,7 @@
  * Payment Provider Interface and Types
  * Defines the contract for payment providers (Stripe, PayPal, Klarna, etc.)
  */
-import type { OrderWithRelations } from "$lib/types.js";
+import type { OrderWithRelations } from "#lib/types.js";
 
 export interface PaymentProvider {
 	code: string; // unique code like 'stripe', 'paypal'

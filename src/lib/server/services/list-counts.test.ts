@@ -7,9 +7,8 @@
  * The order count is a sum of line quantities, not a row count, to match what
  * "N items" means everywhere else in the app (see calculateCartItemCount).
  */
-import { describe, it, expect, beforeAll, vi } from "vitest";
+import { describe, it, expect, beforeAll } from "vitest";
 
-vi.mock("$env/dynamic/private", () => ({ env: { DATABASE_URL: ":memory:" } }));
 import { db } from "../db/index.js";
 import { products, productVariants, orders, orderLines } from "../db/schema.js";
 import { orderService } from "./orders.js";

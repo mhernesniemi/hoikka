@@ -13,7 +13,7 @@ import { mergeFulfillmentIssue } from "./orders.js";
 import { isFulfillableState } from "./order-utils.js";
 import { digitalDeliveryService } from "./digitalDelivery.js";
 import { pendingEvents } from "../integrations/events.js";
-import { fulfillmentOf } from "$lib/config/products.js";
+import { fulfillmentOf } from "#lib/config/products.js";
 
 /** How long one fulfilment attempt may hold its claim before another may retry. */
 const FULFILMENT_LEASE_MS = 2 * 60_000;

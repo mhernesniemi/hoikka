@@ -9,8 +9,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-vi.mock("$env/dynamic/private", () => ({ env: { DATABASE_URL: ":memory:" } }));
-vi.mock("$app/environment", () => ({ dev: true, browser: false, building: false }));
+vi.mock("$app/env", () => ({ dev: true, browser: false, building: false }));
 
 import { eq, sql } from "drizzle-orm";
 import { db, atomic } from "../db/index.js";

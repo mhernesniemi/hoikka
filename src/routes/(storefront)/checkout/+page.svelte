@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { DEFAULT_COUNTRY, SHIPPING_COUNTRIES } from "$lib/config/countries.js";
-  import { STORE_NAME } from "$lib/config/store.js";
+  import { DEFAULT_COUNTRY, SHIPPING_COUNTRIES } from "#lib/config/countries.js";
+  import { STORE_NAME } from "#lib/config/store.js";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
-  import { commandErrorMessage } from "$lib/utils";
+  import { commandErrorMessage } from "#lib/utils.js";
   import {
     getCheckout,
     setShippingAddress,
@@ -14,14 +14,14 @@
     removePromotion,
     createPayment,
     completeOrder
-  } from "$lib/remote/checkout.remote";
-  import { Button } from "$lib/components/storefront/ui/button";
-  import { Input } from "$lib/components/storefront/ui/input";
-  import { Label } from "$lib/components/storefront/ui/label";
-  import { Alert } from "$lib/components/storefront/ui/alert";
-  import StripePayment from "$lib/components/storefront/StripePayment.svelte";
-  import { formatPrice, cn } from "$lib/utils.js";
-  import { imageUrl } from "$lib/image";
+  } from "#lib/remote/checkout.remote.js";
+  import { Button } from "#lib/components/storefront/ui/button/index.js";
+  import { Input } from "#lib/components/storefront/ui/input/index.js";
+  import { Label } from "#lib/components/storefront/ui/label/index.js";
+  import { Alert } from "#lib/components/storefront/ui/alert/index.js";
+  import StripePayment from "#lib/components/storefront/StripePayment.svelte";
+  import { formatPrice, cn } from "#lib/utils.js";
+  import { imageUrl } from "#lib/image.js";
   import ShoppingCart from "@lucide/svelte/icons/shopping-cart";
   import LoaderCircle from "@lucide/svelte/icons/loader-circle";
   import type { Stripe, StripeElements } from "@stripe/stripe-js";

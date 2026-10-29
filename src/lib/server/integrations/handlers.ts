@@ -36,7 +36,7 @@ export function getHandler(type: string): EventHandler | undefined {
 // ORDER_WEBHOOK_URL (+ optional ORDER_WEBHOOK_SECRET) to enable; otherwise the
 // event is a no-op and completes immediately.
 import { eq } from "drizzle-orm";
-import { env } from "$env/dynamic/private";
+import { ORDER_WEBHOOK_URL, ORDER_WEBHOOK_SECRET } from "$app/env/private";
 import { db } from "../db/index.js";
 import { orders } from "../db/schema.js";
 import { sendEmail } from "../email.js";
@@ -45,7 +45,7 @@ import { orderService } from "../services/orders.js";
 import { signPayload } from "./webhooks.js";
 
 registerHandler("order.paid", async (payload, context) => {
-	const url = env.ORDER_WEBHOOK_URL;
+	const url = ORDER_WEBHOOK_URL;
 	if (!url) return; // not configured — nothing to do
 
 	const body = JSON.stringify({ event: "order.paid", data: payload });
@@ -54,8 +54,8 @@ registerHandler("order.paid", async (payload, context) => {
 		// Stable across retries: the receiver can dedupe on it
 		"idempotency-key": context.idempotencyKey
 	};
-	if (env.ORDER_WEBHOOK_SECRET) {
-		headers["x-hoikka-signature"] = await signPayload(body, env.ORDER_WEBHOOK_SECRET);
+	if (ORDER_WEBHOOK_SECRET) {
+		headers["x-hoikka-signature"] = await signPayload(body, ORDER_WEBHOOK_SECRET);
 	}
 
 	const res = await fetch(url, { method: "POST", headers, body });

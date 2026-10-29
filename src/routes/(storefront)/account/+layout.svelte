@@ -1,9 +1,9 @@
 <script lang="ts">
   import { page } from "$app/state";
   import { goto } from "$app/navigation";
-  import { cn } from "$lib/utils";
-  import { authClient } from "$lib/auth-client";
-  import { buttonVariants } from "$lib/components/storefront/ui/button";
+  import { cn } from "#lib/utils.js";
+  import { authClient } from "#lib/auth-client.js";
+  import { buttonVariants } from "#lib/components/storefront/ui/button/index.js";
 
   let { children } = $props();
 

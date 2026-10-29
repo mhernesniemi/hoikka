@@ -12,9 +12,9 @@ import type {
 	NewCustomerGroup,
 	Customer,
 	PaginatedResult
-} from "$lib/types.js";
+} from "#lib/types.js";
 
-import { slugify } from "$lib/utils.js";
+import { slugify } from "#lib/utils.js";
 
 export class CustomerGroupService {
 	/**

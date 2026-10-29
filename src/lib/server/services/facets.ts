@@ -12,7 +12,7 @@ import type {
 	FacetValue,
 	FacetWithValues,
 	PaginatedResult
-} from "$lib/types.js";
+} from "#lib/types.js";
 
 export class FacetService {
 	/**

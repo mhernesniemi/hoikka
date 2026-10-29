@@ -1,29 +1,29 @@
 <script lang="ts">
-  import PageActionsMenu from "$lib/components/admin/PageActionsMenu.svelte";
-  import hoikkaConfig from "$hoikka/config";
-  import FieldRenderer from "$lib/components/admin/FieldRenderer.svelte";
-  import { SelectNative } from "$lib/components/admin/ui/select-native";
+  import PageActionsMenu from "#lib/components/admin/PageActionsMenu.svelte";
+  import hoikkaConfig from "#hoikka/config";
+  import FieldRenderer from "#lib/components/admin/FieldRenderer.svelte";
+  import { SelectNative } from "#lib/components/admin/ui/select-native/index.js";
   import { enhance } from "$app/forms";
   import { page } from "$app/state";
   import { toast } from "svelte-sonner";
-  import { Button } from "$lib/components/admin/ui/button";
-  import { Checkbox } from "$lib/components/admin/ui/checkbox";
-  import { Input } from "$lib/components/admin/ui/input";
-  import { Label } from "$lib/components/admin/ui/label";
-  import { RichTextEditor } from "$lib/components/admin/ui/rich-text-editor";
-  import AdminCard from "$lib/components/admin/AdminCard.svelte";
-  import DeleteConfirmDialog from "$lib/components/admin/DeleteConfirmDialog.svelte";
+  import { Button } from "#lib/components/admin/ui/button/index.js";
+  import { Checkbox } from "#lib/components/admin/ui/checkbox/index.js";
+  import { Input } from "#lib/components/admin/ui/input/index.js";
+  import { Label } from "#lib/components/admin/ui/label/index.js";
+  import { RichTextEditor } from "#lib/components/admin/ui/rich-text-editor/index.js";
+  import AdminCard from "#lib/components/admin/AdminCard.svelte";
+  import DeleteConfirmDialog from "#lib/components/admin/DeleteConfirmDialog.svelte";
   import {
     translationsToMap,
     LANGUAGES,
     DEFAULT_LANGUAGE,
     TRANSLATION_LANGUAGES
-  } from "$lib/config/languages.js";
-  import { cn } from "$lib/utils";
-  import { imageUrl as imgUrl } from "$lib/image";
-  import UnsavedChangesDialog from "$lib/components/admin/UnsavedChangesDialog.svelte";
+  } from "#lib/config/languages.js";
+  import { cn } from "#lib/utils.js";
+  import { imageUrl as imgUrl } from "#lib/image.js";
+  import UnsavedChangesDialog from "#lib/components/admin/UnsavedChangesDialog.svelte";
   import { onMount, untrack } from "svelte";
-  import ImagePicker from "$lib/components/admin/ImagePicker.svelte";
+  import ImagePicker from "#lib/components/admin/ImagePicker.svelte";
   import Plus from "@lucide/svelte/icons/plus";
   import Trash2 from "@lucide/svelte/icons/trash-2";
   import ChevronLeft from "@lucide/svelte/icons/chevron-left";

@@ -15,13 +15,14 @@
  */
 import { json, error } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
-import { upload, uploadStream } from "$lib/server/storage/index.js";
-import { PRIVATE_PREFIX } from "$lib/server/storage/types.js";
-import { capStream } from "$lib/server/http.js";
-// $lib specifier so the cloudflare build can alias sharp away (vite.config.ts)
-import { optimizeMasterImage } from "$lib/server/images/node.js";
-import { env } from "$env/dynamic/private";
-import config from "$hoikka/config";
+import { upload, uploadStream } from "#lib/server/storage/index.js";
+import { PRIVATE_PREFIX } from "#lib/server/storage/types.js";
+import { capStream } from "#lib/server/http.js";
+// #lib specifiers so each build can swap the other target's module (vite.config.ts)
+import { optimizeMasterImage } from "#lib/server/images/node.js";
+import { bindings, type Bindings } from "#lib/server/cloudflare.js";
+import { DEMO_MODE } from "$app/env/private";
+import config from "#hoikka/config";
 
 const IMAGE_TYPES = new Set([
 	"image/jpeg",
@@ -110,7 +111,7 @@ const MASTER_QUALITY = 85;
 
 async function optimizeMaster(
 	bytes: Uint8Array,
-	images: NonNullable<App.Platform["env"]>["IMAGES"]
+	images: Bindings["IMAGES"]
 ): Promise<Uint8Array | null> {
 	try {
 		if (images) {
@@ -132,8 +133,8 @@ async function optimizeMaster(
 	}
 }
 
-export const POST: RequestHandler = async ({ request, url: requestUrl, locals, platform }) => {
-	if (env.DEMO_MODE === "true") {
+export const POST: RequestHandler = async ({ request, url: requestUrl, locals }) => {
+	if (DEMO_MODE === "true") {
 		throw error(403, "Uploads are disabled in demo mode.");
 	}
 
@@ -163,7 +164,7 @@ export const POST: RequestHandler = async ({ request, url: requestUrl, locals, p
 	let height = Number(formData.get("height")) || 0;
 
 	if (OPTIMIZABLE_TYPES.has(file.type) && bytes.byteLength >= OPTIMIZE_MIN_BYTES) {
-		const optimized = await optimizeMaster(bytes, platform?.env?.IMAGES);
+		const optimized = await optimizeMaster(bytes, bindings?.IMAGES);
 		if (optimized && optimized.byteLength < bytes.byteLength) {
 			bytes = optimized;
 			filename = filename.replace(/\.\w+$/, "") + ".webp";

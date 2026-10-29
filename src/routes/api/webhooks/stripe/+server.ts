@@ -12,13 +12,13 @@
 import { error, json, text } from "@sveltejs/kit";
 import { eq } from "drizzle-orm";
 import type Stripe from "stripe";
-import { env } from "$env/dynamic/private";
-import { db } from "$lib/server/db/index.js";
-import { payments } from "$lib/server/db/schema.js";
-import { orderService, paymentService } from "$lib/server/services/index.js";
-import { completeCheckout } from "$lib/server/services/checkout-completion.js";
-import { getStripe } from "$lib/server/services/payments/providers/stripe.js";
-import { readTextCapped } from "$lib/server/http.js";
+import { STRIPE_WEBHOOK_SECRET } from "$app/env/private";
+import { db } from "#lib/server/db/index.js";
+import { payments } from "#lib/server/db/schema.js";
+import { orderService, paymentService } from "#lib/server/services/index.js";
+import { completeCheckout } from "#lib/server/services/checkout-completion.js";
+import { getStripe } from "#lib/server/services/payments/providers/stripe.js";
+import { readTextCapped } from "#lib/server/http.js";
 import type { RequestHandler } from "./$types.js";
 
 /** Stripe events are kilobytes; this is generous for the largest of them. */
@@ -98,7 +98,7 @@ async function fulfilIntent(intentId: string): Promise<boolean> {
 }
 
 export const POST: RequestHandler = async ({ request }) => {
-	const secret = env.STRIPE_WEBHOOK_SECRET;
+	const secret = STRIPE_WEBHOOK_SECRET;
 	if (!secret) {
 		console.error("[stripe-webhook] STRIPE_WEBHOOK_SECRET is not set — rejecting");
 		error(503, "Stripe webhooks are not configured");

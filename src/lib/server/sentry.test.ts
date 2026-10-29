@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 
-vi.mock("$env/dynamic/private", () => ({ env: {} as Record<string, string | undefined> }));
-import { env } from "$env/dynamic/private";
+import { testEnv as env } from "#lib/server/test-env.js";
 import { captureEvent } from "./sentry.js";
 
 describe("captureEvent", () => {

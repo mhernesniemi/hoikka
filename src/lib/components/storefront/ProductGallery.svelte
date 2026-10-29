@@ -3,12 +3,12 @@
    * Product image gallery: hero + thumbnail strip. Warms the non-hero
    * images at hero size once the browser is idle, so switching is instant.
    */
-  import { browser } from "$app/environment";
-  import { cn } from "$lib/utils";
-  import Img from "$lib/components/storefront/Img.svelte";
-  import { HERO_SIZES, HERO_WIDTH, warmGalleryImages } from "$lib/product-images";
+  import { browser } from "$app/env";
+  import { cn } from "#lib/utils.js";
+  import Img from "#lib/components/storefront/Img.svelte";
+  import { HERO_SIZES, HERO_WIDTH, warmGalleryImages } from "#lib/product-images.js";
   import ImageIcon from "@lucide/svelte/icons/image";
-  import type { ProductWithRelations } from "$lib/types";
+  import type { ProductWithRelations } from "#lib/types.js";
 
   type GalleryImage = ProductWithRelations["assets"][number];
 

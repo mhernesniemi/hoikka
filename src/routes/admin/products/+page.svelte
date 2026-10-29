@@ -1,19 +1,23 @@
 <script lang="ts">
   import { enhance } from "$app/forms";
   import type { ColumnDef } from "@tanstack/table-core";
-  import { DataTable, renderSnippet, renderComponent } from "$lib/components/admin/data-table";
-  import { Badge } from "$lib/components/admin/ui/badge";
-  import { Button } from "$lib/components/admin/ui/button";
-  import DeleteConfirmDialog from "$lib/components/admin/DeleteConfirmDialog.svelte";
-  import CreateDialog from "$lib/components/admin/CreateDialog.svelte";
-  import { Checkbox } from "$lib/components/admin/ui/checkbox";
+  import {
+    DataTable,
+    renderSnippet,
+    renderComponent
+  } from "#lib/components/admin/data-table/index.js";
+  import { Badge } from "#lib/components/admin/ui/badge/index.js";
+  import { Button } from "#lib/components/admin/ui/button/index.js";
+  import DeleteConfirmDialog from "#lib/components/admin/DeleteConfirmDialog.svelte";
+  import CreateDialog from "#lib/components/admin/CreateDialog.svelte";
+  import { Checkbox } from "#lib/components/admin/ui/checkbox/index.js";
   import Package from "@lucide/svelte/icons/package";
   import ImageIcon from "@lucide/svelte/icons/image";
   import PlusIcon from "@lucide/svelte/icons/plus";
   import { toast } from "svelte-sonner";
-  import { formatDate } from "$lib/utils";
-  import { imageUrl } from "$lib/image";
-  import type { ProductListItem } from "$lib/types";
+  import { formatDate } from "#lib/utils.js";
+  import { imageUrl } from "#lib/image.js";
+  import type { ProductListItem } from "#lib/types.js";
   import type { PageData, ActionData } from "./$types";
 
   let { data, form }: { data: PageData; form: ActionData } = $props();

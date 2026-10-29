@@ -6,13 +6,28 @@ Format: [Keep a Changelog](https://keepachangelog.com). `create-hoikka-app` scaf
 
 ## [Unreleased]
 
+SvelteKit 3, with adapter-node 6 and adapter-cloudflare 8.
+
+### Upgrade notes
+
+- **`$lib` is now `#lib`**, a package.json import, and imports need their file extension: `$lib/utils` becomes `#lib/utils.js`, `$lib/components/admin/ui/button` becomes `#lib/components/admin/ui/button/index.js`. `$hoikka/config` is now `#hoikka/config`. CLI scripts run through plain `tsx` can import both. `npx sv migrate sveltekit-3 --tasks lib-alias` rewrites your own files.
+- **Environment variables are declared in `src/env.ts`** and read from `$app/env/private` (or `$app/env/public`) instead of `$env/dynamic/*`. A variable that isn't declared can't be read, so add your own there, including any `WEBHOOK_SECRET_<PROVIDER>`. `SSO_<ID>_*` variables are declared from `hoikka.config.ts`.
+- **`ORIGIN` is gone (Node).** adapter-node now treats requests as HTTPS, which is right behind a TLS-terminating proxy, so remove `ORIGIN` from your deploy. Served over plain HTTP, a production build rejects form posts as cross-site: check builds locally with `pnpm preview`, not `pnpm start`.
+- **Cloudflare bindings come from `cloudflare:workers`**, through `#lib/server/cloudflare.ts`, not `event.platform`. Code reading `platform.env`, `platform.ctx` or `platform.caches` should import `bindings`, `waitUntil` or `defaultCache` from there instead.
+- **`svelte.config.js` and `hoikka-target.js` are gone.** SvelteKit options and the `HOIKKA_TARGET` switch live in `vite.config.ts`.
+
+### Changed
+
+- SvelteKit 3 (`@sveltejs/kit` 3.1, `@sveltejs/adapter-node` 6, `@sveltejs/adapter-cloudflare` 8). `handleError` now only logs and reports unexpected errors; `error(...)`, 404s and invalid remote-function input keep SvelteKit's defaults.
+- Unit tests read env from one shared test env (`vitest.setup.ts`, `#lib/server/test-env.ts`) that starts with an in-memory database, instead of mocking `$env/dynamic/private` per file.
+
 ### Added
 
-- **`mirrorRecords()`** (`$lib/server/integrations/mirror.ts`) mirrors records from an external system (ERP, PIM) into a table keyed by their external id. Unchanged records are skipped by a stored hash; a changed record's rows, outbox events and new hash are written in one atomic batch, so a failure is retried on the next run without losing its notifications. Records missing from a complete pull go one by one to an optional `removed` callback. Returns counts for the task run summary.
-- **`upsertProductsBySku(rows, { productType, hideMissing })`** (`$lib/server/services/external-products.ts`) keeps products owned by an external system in sync, one variant per SKU, so a sync never writes `products` or `productVariants` itself. It writes only the product type's `readOnly` custom fields (the admin's stay untouched), hides inactive products, and with `hideMissing` missing ones, as drafts rather than deleting them, and reindexes search only for products that changed.
-- **`createApiClient()`** (`$lib/server/api-client.ts`) for an external system's API: OAuth2 client-credentials tokens cached until shortly before expiry and refreshed once on a `401`, a per-attempt timeout, retries with backoff on network errors and `5xx` (idempotent methods only), `429` retried after its `Retry-After`, a JSON helper, and `collection()` for OData-style `$top`/`$skip` paging that fails rather than return a partial pull past its cap. For a private CA on Node, start the process with `NODE_EXTRA_CA_CERTS`.
+- **`mirrorRecords()`** (`#lib/server/integrations/mirror.ts`) mirrors records from an external system (ERP, PIM) into a table keyed by their external id. Unchanged records are skipped by a stored hash; a changed record's rows, outbox events and new hash are written in one atomic batch, so a failure is retried on the next run without losing its notifications. Records missing from a complete pull go one by one to an optional `removed` callback. Returns counts for the task run summary.
+- **`upsertProductsBySku(rows, { productType, hideMissing })`** (`#lib/server/services/external-products.ts`) keeps products owned by an external system in sync, one variant per SKU, so a sync never writes `products` or `productVariants` itself. It writes only the product type's `readOnly` custom fields (the admin's stay untouched), hides inactive products, and with `hideMissing` missing ones, as drafts rather than deleting them, and reindexes search only for products that changed.
+- **`createApiClient()`** (`#lib/server/api-client.ts`) for an external system's API: OAuth2 client-credentials tokens cached until shortly before expiry and refreshed once on a `401`, a per-attempt timeout, retries with backoff on network errors and `5xx` (idempotent methods only), `429` retried after its `Retry-After`, a JSON helper, and `collection()` for OData-style `$top`/`$skip` paging that fails rather than return a partial pull past its cap. For a private CA on Node, start the process with `NODE_EXTRA_CA_CERTS`.
 - **Task failure reports.** A scheduled task that starts failing, including a run that timed out, is reported once until it succeeds again, not on every failed run. A task can set its own `onFailure(failure)`; the default, `reportTaskFailure`, logs it.
-- **`SENTRY_DSN`** also sends server errors (5xx) and task failure reports to Sentry, over plain `fetch` on both targets, without the SDK.
+- **`SENTRY_DSN`** also sends unexpected server errors and task failure reports to Sentry, over plain `fetch` on both targets, without the SDK.
 
 ## [0.5.0] - 2026-10-27
 

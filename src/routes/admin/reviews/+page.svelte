@@ -2,13 +2,17 @@
   import { enhance } from "$app/forms";
   import { toast } from "svelte-sonner";
   import type { ColumnDef } from "@tanstack/table-core";
-  import { DataTable, renderSnippet, renderComponent } from "$lib/components/admin/data-table";
-  import { Badge, type BadgeVariant } from "$lib/components/admin/ui/badge";
-  import { Button } from "$lib/components/admin/ui/button";
-  import DeleteConfirmDialog from "$lib/components/admin/DeleteConfirmDialog.svelte";
-  import { Checkbox } from "$lib/components/admin/ui/checkbox";
+  import {
+    DataTable,
+    renderSnippet,
+    renderComponent
+  } from "#lib/components/admin/data-table/index.js";
+  import { Badge, type BadgeVariant } from "#lib/components/admin/ui/badge/index.js";
+  import { Button } from "#lib/components/admin/ui/button/index.js";
+  import DeleteConfirmDialog from "#lib/components/admin/DeleteConfirmDialog.svelte";
+  import { Checkbox } from "#lib/components/admin/ui/checkbox/index.js";
   import type { PageData, ActionData } from "./$types";
-  import { cn, formatDate } from "$lib/utils";
+  import { cn, formatDate } from "#lib/utils.js";
 
   let { data, form }: { data: PageData; form: ActionData } = $props();
 

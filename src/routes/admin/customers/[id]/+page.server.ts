@@ -1,14 +1,14 @@
 /**
  * Admin Customer Detail Page Server
  */
-import config from "$hoikka/config";
-import { formFields } from "$lib/fields/index.js";
-import { sanitizeHtml } from "$lib/server/sanitize.js";
-import { dbError } from "$lib/server/db-error.js";
+import config from "#hoikka/config";
+import { formFields } from "#lib/fields/index.js";
+import { sanitizeHtml } from "#lib/server/sanitize.js";
+import { dbError } from "#lib/server/db-error.js";
 import { error, fail } from "@sveltejs/kit";
 import type { PageServerLoad, Actions } from "./$types";
-import { customerService } from "$lib/server/services/customers";
-import { orderService } from "$lib/server/services/orders";
+import { customerService } from "#lib/server/services/customers.js";
+import { orderService } from "#lib/server/services/orders.js";
 
 export const load: PageServerLoad = async ({ params }) => {
 	const customerId = Number(params.id);

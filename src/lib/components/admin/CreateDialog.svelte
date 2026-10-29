@@ -1,10 +1,10 @@
 <script lang="ts">
   import { enhance } from "$app/forms";
-  import { Button } from "$lib/components/admin/ui/button";
-  import * as Dialog from "$lib/components/admin/ui/dialog";
-  import { Input } from "$lib/components/admin/ui/input";
-  import { Label } from "$lib/components/admin/ui/label";
-  import { slugify } from "$lib/utils";
+  import { Button } from "#lib/components/admin/ui/button/index.js";
+  import * as Dialog from "#lib/components/admin/ui/dialog/index.js";
+  import { Input } from "#lib/components/admin/ui/input/index.js";
+  import { Label } from "#lib/components/admin/ui/label/index.js";
+  import { slugify } from "#lib/utils.js";
 
   let {
     open = $bindable(false),

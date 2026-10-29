@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { cn } from "$lib/utils.js";
+  import { cn } from "#lib/utils.js";
   import type { HTMLTextareaAttributes } from "svelte/elements";
 
   let { class: className, value = $bindable(), ...restProps }: HTMLTextareaAttributes = $props();

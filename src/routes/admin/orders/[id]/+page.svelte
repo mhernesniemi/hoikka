@@ -1,14 +1,14 @@
 <script lang="ts">
   import { toast } from "svelte-sonner";
-  import { Button } from "$lib/components/admin/ui/button";
-  import { Badge } from "$lib/components/admin/ui/badge";
-  import AdminCard from "$lib/components/admin/AdminCard.svelte";
+  import { Button } from "#lib/components/admin/ui/button/index.js";
+  import { Badge } from "#lib/components/admin/ui/badge/index.js";
+  import AdminCard from "#lib/components/admin/AdminCard.svelte";
   import ChevronLeft from "@lucide/svelte/icons/chevron-left";
   import ImageIcon from "@lucide/svelte/icons/image";
   import TriangleAlert from "@lucide/svelte/icons/triangle-alert";
   import type { ActionData, PageData } from "./$types";
-  import { BASE_CURRENCY, formatDateTime, orderStateLabel } from "$lib/utils";
-  import { imageUrl } from "$lib/image";
+  import { BASE_CURRENCY, formatDateTime, orderStateLabel } from "#lib/utils.js";
+  import { imageUrl } from "#lib/image.js";
 
   function formatPrice(cents: number): string {
     return (cents / 100).toFixed(2);

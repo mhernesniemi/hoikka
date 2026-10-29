@@ -4,9 +4,8 @@
  * concurrent completions (payment webhook racing the browser return) must
  * deduct stock exactly once.
  */
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 
-vi.mock("$env/dynamic/private", () => ({ env: { DATABASE_URL: ":memory:" } }));
 import { db } from "../db/index.js";
 import { products, productVariants, orders, orderLines } from "../db/schema.js";
 import { eq } from "drizzle-orm";

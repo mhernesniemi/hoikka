@@ -10,7 +10,7 @@
  * authoritative values, dimmed, until the refresh lands. Line totals are the
  * exception: unitPrice × qty is exact.
  */
-import type { CartView, CartViewLine } from "$lib/server/services/cart";
+import type { CartView, CartViewLine } from "#lib/server/services/cart.js";
 
 /** What the client knows about a product when optimistically adding it */
 export interface OptimisticLineSeed {

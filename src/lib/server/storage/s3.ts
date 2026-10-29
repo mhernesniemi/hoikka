@@ -6,7 +6,7 @@
  * stay private.
  */
 import { AwsClient } from "aws4fetch";
-import { env } from "$env/dynamic/private";
+import * as env from "$app/env/private";
 import {
 	PUBLIC_PREFIX,
 	contentTypeFor,
@@ -23,16 +23,16 @@ type S3Config = { client: AwsClient; baseUrl: string; prefix: string };
 let cached: { key: string; config: S3Config } | null = null;
 
 function getConfig(): S3Config {
-	const read = (name: string) => env[name]?.trim() || undefined;
-	const bucket = read("S3_BUCKET");
-	const accessKeyId = read("S3_ACCESS_KEY_ID");
-	const secretAccessKey = read("S3_SECRET_ACCESS_KEY");
+	const read = (value: string | undefined) => value?.trim() || undefined;
+	const bucket = read(env.S3_BUCKET);
+	const accessKeyId = read(env.S3_ACCESS_KEY_ID);
+	const secretAccessKey = read(env.S3_SECRET_ACCESS_KEY);
 	if (!bucket || !accessKeyId || !secretAccessKey) {
 		throw new Error("S3 storage needs S3_BUCKET, S3_ACCESS_KEY_ID and S3_SECRET_ACCESS_KEY.");
 	}
-	const region = read("S3_REGION") ?? "us-east-1";
-	const endpoint = read("S3_ENDPOINT")?.replace(/\/+$/, "");
-	const prefix = (read("S3_PREFIX") ?? "").replace(/^\/+|\/+$/g, "");
+	const region = read(env.S3_REGION) ?? "us-east-1";
+	const endpoint = read(env.S3_ENDPOINT)?.replace(/\/+$/, "");
+	const prefix = (read(env.S3_PREFIX) ?? "").replace(/^\/+|\/+$/g, "");
 
 	const key = [bucket, accessKeyId, secretAccessKey, region, endpoint, prefix].join("\0");
 	if (cached?.key === key) return cached.config;

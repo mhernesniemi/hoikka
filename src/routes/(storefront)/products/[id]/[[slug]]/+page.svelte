@@ -1,22 +1,22 @@
 <script lang="ts">
-  import hoikkaConfig from "$hoikka/config";
-  import { fieldEntries } from "$lib/fields/index.js";
-  import { STORE_NAME } from "$lib/config/store.js";
-  import { browser } from "$app/environment";
-  import { cn, formatPrice, stripHtml, commandErrorMessage } from "$lib/utils";
-  import { imageUrl, imageSrcset } from "$lib/image";
-  import { galleryImages, HERO_SIZES, HERO_WIDTH } from "$lib/product-images";
-  import { productJsonLd } from "$lib/seo";
-  import { addVariantToCart, optimisticSeed } from "$lib/cart-actions";
-  import { toggleWishlist, isProductWishlisted } from "$lib/remote/wishlist.remote";
-  import { productAvailability } from "$lib/remote/availability.remote";
-  import { cartStore } from "$lib/stores/cart.svelte";
-  import { findBestDiscount, getDiscountedPrice } from "$lib/promotion-utils";
-  import ProductGallery from "$lib/components/storefront/ProductGallery.svelte";
-  import ProductReviews from "$lib/components/storefront/ProductReviews.svelte";
-  import ProductCard from "$lib/components/storefront/ProductCard.svelte";
-  import { Button, buttonVariants } from "$lib/components/storefront/ui/button";
-  import { Alert } from "$lib/components/storefront/ui/alert";
+  import hoikkaConfig from "#hoikka/config";
+  import { fieldEntries } from "#lib/fields/index.js";
+  import { STORE_NAME } from "#lib/config/store.js";
+  import { browser } from "$app/env";
+  import { cn, formatPrice, stripHtml, commandErrorMessage } from "#lib/utils.js";
+  import { imageUrl, imageSrcset } from "#lib/image.js";
+  import { galleryImages, HERO_SIZES, HERO_WIDTH } from "#lib/product-images.js";
+  import { productJsonLd } from "#lib/seo.js";
+  import { addVariantToCart, optimisticSeed } from "#lib/cart-actions.js";
+  import { toggleWishlist, isProductWishlisted } from "#lib/remote/wishlist.remote.js";
+  import { productAvailability } from "#lib/remote/availability.remote.js";
+  import { cartStore } from "#lib/stores/cart.svelte.js";
+  import { findBestDiscount, getDiscountedPrice } from "#lib/promotion-utils.js";
+  import ProductGallery from "#lib/components/storefront/ProductGallery.svelte";
+  import ProductReviews from "#lib/components/storefront/ProductReviews.svelte";
+  import ProductCard from "#lib/components/storefront/ProductCard.svelte";
+  import { Button, buttonVariants } from "#lib/components/storefront/ui/button/index.js";
+  import { Alert } from "#lib/components/storefront/ui/alert/index.js";
   import Heart from "@lucide/svelte/icons/heart";
   import CheckIcon from "@lucide/svelte/icons/check";
   import ChevronRight from "@lucide/svelte/icons/chevron-right";
@@ -93,7 +93,7 @@
   // Stock is queried client-side for a related reason: this page is edge-cached
   // for guests, and a purchase must not invalidate that cache. The SSR value is
   // the snapshot taken when the page rendered; this query corrects it, and
-  // checkout stays the authority (see $lib/server/services/availability.ts).
+  // checkout stays the authority (see #lib/server/services/availability.ts).
   const availabilityQuery = $derived(browser ? productAvailability(product.id) : null);
   const liveVariantStock = $derived(
     new Map(availabilityQuery?.current?.variants.map((v) => [v.id, v.inStock]) ?? [])

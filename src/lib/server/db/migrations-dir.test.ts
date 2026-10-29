@@ -1,10 +1,9 @@
-import { describe, it, expect, vi, afterAll } from "vitest";
+import { describe, it, expect, afterAll } from "vitest";
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-const env = vi.hoisted(() => ({ DATABASE_URL: ":memory:" }) as Record<string, string>);
-vi.mock("$env/dynamic/private", () => ({ env }));
+import { testEnv as env } from "#lib/server/test-env.js";
 
 import { sql } from "drizzle-orm";
 import { db } from "./index.js";

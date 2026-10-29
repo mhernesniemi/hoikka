@@ -6,7 +6,7 @@ import { eq, asc } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { relatedProducts } from "../db/schema.js";
 import { productService } from "./products.js";
-import type { ProductWithRelations } from "$lib/types.js";
+import type { ProductWithRelations } from "#lib/types.js";
 
 export class RelatedProductService {
 	/**

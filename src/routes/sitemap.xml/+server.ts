@@ -1,11 +1,11 @@
-import { productService } from "$lib/server/services/products.js";
-import { collectionService } from "$lib/server/services/collections.js";
-import { categoryService } from "$lib/server/services/categories.js";
-import { env } from "$env/dynamic/public";
+import { productService } from "#lib/server/services/products.js";
+import { collectionService } from "#lib/server/services/collections.js";
+import { categoryService } from "#lib/server/services/categories.js";
+import { PUBLIC_SITE_URL } from "$app/env/public";
 import type { RequestHandler } from "./$types";
 
 export const GET: RequestHandler = async ({ url }) => {
-	const SITE_URL = env.PUBLIC_SITE_URL || url.origin;
+	const SITE_URL = PUBLIC_SITE_URL || url.origin;
 	const [products, collections, categories] = await Promise.all([
 		productService.list({ visibility: "public", limit: 1000 }),
 		collectionService.list(),

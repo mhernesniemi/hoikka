@@ -5,12 +5,12 @@ import { APIError, createAuthMiddleware } from "better-auth/api";
 import { and, eq } from "drizzle-orm";
 import { sveltekitCookies } from "better-auth/svelte-kit";
 import { getRequestEvent } from "$app/server";
-import { dev } from "$app/environment";
-import { env } from "$env/dynamic/private";
+import { dev } from "$app/env";
+import * as env from "$app/env/private";
 import { db } from "./db/index.js";
 import * as schema from "./db/schema.js";
-import { SIGN_UP_ENABLED } from "$lib/config/customers.js";
-import { STAFF_SSO } from "$lib/config/admin.js";
+import { SIGN_UP_ENABLED } from "#lib/config/customers.js";
+import { STAFF_SSO } from "#lib/config/admin.js";
 import { sendEmail } from "./email.js";
 import { customerService } from "./services/customers.js";
 import {
@@ -225,7 +225,7 @@ export type Auth = ReturnType<typeof createAuth>;
 
 // Lazily constructed on first use. Better Auth throws on a missing secret at
 // construction time, so building it at module scope would break SvelteKit's
-// build-time route analysis (where $env/dynamic/private is empty). The proxy
+// build-time route analysis (where $app/env/private is empty). The proxy
 // defers construction to the first real request, when env vars are present.
 let instance: Auth | null = null;
 

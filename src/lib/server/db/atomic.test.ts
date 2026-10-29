@@ -4,9 +4,7 @@
  * "nothing else ends up inside the transaction" — a batch that yields mid-way
  * can swallow an unrelated write and commit or discard it by accident.
  */
-import { describe, it, expect, vi } from "vitest";
-
-vi.mock("$env/dynamic/private", () => ({ env: { DATABASE_URL: ":memory:" } }));
+import { describe, it, expect } from "vitest";
 
 import { eq } from "drizzle-orm";
 import { db, atomic } from "./index.js";

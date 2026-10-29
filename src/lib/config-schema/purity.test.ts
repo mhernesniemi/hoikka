@@ -1,8 +1,8 @@
 /**
  * The config module is imported by server code, client bundles, and CLI tools
- * (via plain tsx, where $lib/$env/$app aliases do not exist). It must stay
+ * (via plain tsx, where the $env/$app modules do not exist). It must stay
  * dependency-free: this test fails the moment someone adds a framework or SDK
- * import to it — or a $hoikka/config import to a module that CLI scripts load.
+ * import to it.
  */
 import { describe, it, expect } from "vitest";
 import { readFileSync, readdirSync } from "node:fs";
@@ -11,7 +11,7 @@ import { join } from "node:path";
 const FORBIDDEN = [
 	/from "\$app\//,
 	/from "\$env\//,
-	/from "\$lib\//,
+	/from "#lib\//,
 	/from "stripe"/,
 	/from "resend"/,
 	/from "better-auth"/,
@@ -27,22 +27,6 @@ describe("config module purity", () => {
 			for (const pattern of FORBIDDEN) {
 				expect(body, `${name} matches ${pattern}`).not.toMatch(pattern);
 			}
-		}
-	});
-
-	it("modules on the CLI import chain do not read $hoikka/config", () => {
-		// scripts/seed.ts and scripts/mcp.ts load these through plain tsx,
-		// which cannot resolve the alias.
-		const cliSafe = [
-			"src/lib/server/db/config.ts",
-			"src/lib/server/db/node.ts",
-			"src/lib/server/db/schema.ts",
-			"src/lib/server/services/reindex.ts",
-			"src/lib/server/services/product-search.ts"
-		];
-		for (const path of cliSafe) {
-			const body = readFileSync(path, "utf8");
-			expect(body, `${path} must stay CLI-loadable`).not.toContain("$hoikka/config");
 		}
 	});
 });

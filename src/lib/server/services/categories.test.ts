@@ -3,9 +3,8 @@
  * chain). getBreadcrumbs runs a raw recursive CTE, so it needs coverage on
  * the node driver in addition to D1.
  */
-import { describe, it, expect, beforeAll, vi } from "vitest";
+import { describe, it, expect, beforeAll } from "vitest";
 
-vi.mock("$env/dynamic/private", () => ({ env: { DATABASE_URL: ":memory:" } }));
 import { categoryService } from "./categories.js";
 
 describe("category breadcrumbs", () => {

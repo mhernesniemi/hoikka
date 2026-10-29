@@ -8,9 +8,9 @@
  * write, so removing a field from config quietly retires its data.
  */
 import * as v from "valibot";
-import type { FieldDef } from "$lib/config-schema/types.js";
+import type { FieldDef } from "#lib/config-schema/types.js";
 
-export type { FieldDef, FieldType } from "$lib/config-schema/types.js";
+export type { FieldDef, FieldType } from "#lib/config-schema/types.js";
 
 /** The TypeScript value type for one field definition. */
 type FieldValue<F extends FieldDef> = F["type"] extends "number"

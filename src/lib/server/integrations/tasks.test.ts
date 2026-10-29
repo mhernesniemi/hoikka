@@ -4,8 +4,7 @@
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
-vi.mock("$env/dynamic/private", () => ({ env: { DATABASE_URL: ":memory:" } }));
-import { env } from "$env/dynamic/private";
+import { testEnv as env } from "#lib/server/test-env.js";
 import { db } from "../db/index.js";
 import { taskRuns } from "../db/schema.js";
 import { registerTask, runDueTasks, runTask, taskStatuses } from "./tasks.js";

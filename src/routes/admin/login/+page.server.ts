@@ -1,9 +1,9 @@
 import { redirect } from "@sveltejs/kit";
-import { env } from "$env/dynamic/private";
-import { db } from "$lib/server/db/index.js";
-import { user } from "$lib/server/db/schema.js";
-import { enabledSsoProviders, staffPasswordLoginAllowed } from "$lib/server/sso.js";
-import { STAFF_SSO } from "$lib/config/admin.js";
+import * as env from "$app/env/private";
+import { db } from "#lib/server/db/index.js";
+import { user } from "#lib/server/db/schema.js";
+import { enabledSsoProviders, staffPasswordLoginAllowed } from "#lib/server/sso.js";
+import { STAFF_SSO } from "#lib/config/admin.js";
 import { eq } from "drizzle-orm";
 import type { PageServerLoad } from "./$types";
 

@@ -1,22 +1,24 @@
+import { redirect } from "@sveltejs/kit";
+
 /**
  * Server hooks for authentication and customer sync.
  * Uses Better Auth for authentication.
  */
-import { sequence } from "@sveltejs/kit/hooks";
-import { redirect } from "@sveltejs/kit";
-import type { Handle, HandleServerError } from "@sveltejs/kit";
-import { auth } from "$lib/server/auth.js";
-import { db } from "$lib/server/db/index.js";
-import { customers } from "$lib/server/db/schema.js";
+import { sequence, type Handle, type HandleServerError } from "@sveltejs/kit/hooks";
+
+import { auth } from "#lib/server/auth.js";
+import { db } from "#lib/server/db/index.js";
+import { customers } from "#lib/server/db/schema.js";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { stringify } from "devalue";
-import { env } from "$env/dynamic/private";
-import { ensureNodeScheduler } from "$lib/server/integrations/scheduler.js";
-import "$lib/server/integrations/project.js";
-import { syncConfiguredMethods } from "$lib/server/services/method-sync.js";
-import { edgeCache } from "$lib/server/edge-cache.js";
-import { captureEvent } from "$lib/server/sentry.js";
-import { SIGN_IN_REQUIRED, SIGN_UP_ENABLED } from "$lib/config/customers.js";
+import { DEMO_MODE } from "$app/env/private";
+import { ensureNodeScheduler } from "#lib/server/integrations/scheduler.js";
+import "#lib/server/integrations/project.js";
+import { syncConfiguredMethods } from "#lib/server/services/method-sync.js";
+import { edgeCache } from "#lib/server/edge-cache.js";
+import { captureEvent } from "#lib/server/sentry.js";
+import { waitUntil } from "#lib/server/cloudflare.js";
+import { SIGN_IN_REQUIRED, SIGN_UP_ENABLED } from "#lib/config/customers.js";
 
 // Session handler — validates session via Better Auth and syncs customer record.
 const sessionHandler: Handle = async ({ event, resolve }) => {
@@ -240,7 +242,7 @@ const tasksInit: Handle = async ({ event, resolve }) => {
 
 const demoGuard: Handle = async ({ event, resolve }) => {
 	if (
-		env.DEMO_MODE === "true" &&
+		DEMO_MODE === "true" &&
 		event.request.method === "POST" &&
 		event.url.pathname.startsWith("/admin") &&
 		event.url.searchParams.get("/preview") === null
@@ -270,30 +272,31 @@ export const handle = sequence(
 	signInGuard
 );
 
-export const handleError: HandleServerError = async ({ error, event, status, message }) => {
+export const handleError: HandleServerError = async ({ kind, error, event }) => {
+	// error(...), 404s and invalid remote-function input keep SvelteKit's defaults
+	if (kind !== "unknown") return;
+
 	const errorId = crypto.randomUUID();
+	const { name, message, stack } =
+		error instanceof Error
+			? error
+			: { name: "Error", message: String(error), stack: undefined };
 
 	console.error("[error]", {
 		id: errorId,
-		status,
-		message,
 		url: event.url.pathname,
 		method: event.request.method,
-		error:
-			error instanceof Error
-				? { name: error.name, message: error.message, stack: error.stack }
-				: error
+		error: { name, message, stack }
 	});
 
-	if (status >= 500) {
-		const report = captureEvent({
-			message: `${event.request.method} ${event.url.pathname}: ${error instanceof Error ? error.message : message}`,
-			tags: { errorId, status: String(status) },
-			extra: { stack: error instanceof Error ? error.stack : undefined }
-		});
-		// Workers may stop once the response is sent; Node finishes it anyway
-		event.platform?.ctx?.waitUntil(report);
-	}
+	// Workers may stop once the response is sent; Node finishes it anyway
+	waitUntil(
+		captureEvent({
+			message: `${event.request.method} ${event.url.pathname}: ${message}`,
+			tags: { errorId },
+			extra: { stack }
+		})
+	);
 
 	return {
 		message: "An unexpected error occurred",

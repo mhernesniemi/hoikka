@@ -7,7 +7,7 @@
  * the DB boundary; all business logic below works with decimals.
  */
 import { eq, and } from "drizzle-orm";
-import config from "$hoikka/config";
+import config from "#hoikka/config";
 import { db } from "../db/index.js";
 import { taxRates, customerGroupMembers, customerGroups } from "../db/schema.js";
 import {

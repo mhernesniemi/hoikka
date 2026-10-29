@@ -1,5 +1,5 @@
 import { fail } from "@sveltejs/kit";
-import { getTask, recentTaskRuns, runTask, taskStatuses } from "$lib/server/integrations/tasks.js";
+import { getTask, recentTaskRuns, runTask, taskStatuses } from "#lib/server/integrations/tasks.js";
 import type { Actions, PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async () => {

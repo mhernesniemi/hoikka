@@ -1,10 +1,10 @@
-import config from "$hoikka/config";
-import { categoryService } from "$lib/server/services/categories.js";
-import { taxService } from "$lib/server/services/tax.js";
-import { translationService } from "$lib/server/services/translations.js";
-import { TRANSLATION_LANGUAGES } from "$lib/config/languages.js";
-import { slugify } from "$lib/utils.js";
-import { dbError } from "$lib/server/db-error.js";
+import config from "#hoikka/config";
+import { categoryService } from "#lib/server/services/categories.js";
+import { taxService } from "#lib/server/services/tax.js";
+import { translationService } from "#lib/server/services/translations.js";
+import { TRANSLATION_LANGUAGES } from "#lib/config/languages.js";
+import { slugify } from "#lib/utils.js";
+import { dbError } from "#lib/server/db-error.js";
 import { fail } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
 

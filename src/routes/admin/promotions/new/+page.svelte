@@ -1,19 +1,19 @@
 <script lang="ts">
   import { enhance } from "$app/forms";
-  import { cn } from "$lib/utils";
-  import { Button, buttonVariants } from "$lib/components/admin/ui/button";
-  import { Input } from "$lib/components/admin/ui/input";
-  import { Label } from "$lib/components/admin/ui/label";
-  import { Badge } from "$lib/components/admin/ui/badge";
-  import AdminCard from "$lib/components/admin/AdminCard.svelte";
-  import PromotionForm, { typeLabels } from "$lib/components/admin/PromotionForm.svelte";
+  import { cn } from "#lib/utils.js";
+  import { Button, buttonVariants } from "#lib/components/admin/ui/button/index.js";
+  import { Input } from "#lib/components/admin/ui/input/index.js";
+  import { Label } from "#lib/components/admin/ui/label/index.js";
+  import { Badge } from "#lib/components/admin/ui/badge/index.js";
+  import AdminCard from "#lib/components/admin/AdminCard.svelte";
+  import PromotionForm, { typeLabels } from "#lib/components/admin/PromotionForm.svelte";
   import type { PageData, ActionData } from "./$types";
   import ShoppingCart from "@lucide/svelte/icons/shopping-cart";
   import Tag from "@lucide/svelte/icons/tag";
   import Truck from "@lucide/svelte/icons/truck";
   import ChevronLeft from "@lucide/svelte/icons/chevron-left";
   import { toast } from "svelte-sonner";
-  import UnsavedChangesDialog from "$lib/components/admin/UnsavedChangesDialog.svelte";
+  import UnsavedChangesDialog from "#lib/components/admin/UnsavedChangesDialog.svelte";
 
   let { data, form }: { data: PageData; form: ActionData } = $props();
 

@@ -8,11 +8,11 @@
     TableRow,
     TableHead,
     TableCell
-  } from "$lib/components/admin/ui/table";
-  import { Badge, type BadgeVariant } from "$lib/components/admin/ui/badge";
-  import { Button } from "$lib/components/admin/ui/button";
-  import AdminCard from "$lib/components/admin/AdminCard.svelte";
-  import { formatDateTime } from "$lib/utils";
+  } from "#lib/components/admin/ui/table/index.js";
+  import { Badge, type BadgeVariant } from "#lib/components/admin/ui/badge/index.js";
+  import { Button } from "#lib/components/admin/ui/button/index.js";
+  import AdminCard from "#lib/components/admin/AdminCard.svelte";
+  import { formatDateTime } from "#lib/utils.js";
   import type { PageData, ActionData } from "./$types";
 
   let { data, form }: { data: PageData; form: ActionData } = $props();

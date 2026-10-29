@@ -161,7 +161,7 @@ Component receives result, updates UI
 
 4. Back in component (CLIENT)
    └── cartSheet.open()  ← Opens the cart sheet
-   └── invalidateAll()   ← Refreshes page data in background
+   └── refreshAll()     ← Refreshes page data in background
 ```
 
 ### Flow 2: Order Checkout (Cart to Paid)
@@ -274,7 +274,7 @@ export const orderService = new OrderService();
 This ensures:
 
 - Single database connection pool usage
-- Easy to import anywhere: `import { orderService } from "$lib/server/services/orders.js"`
+- Easy to import anywhere: `import { orderService } from "#lib/server/services/orders.js"`
 - Testable (can mock the export)
 
 ### Translation Resolution

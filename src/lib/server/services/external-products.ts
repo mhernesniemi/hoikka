@@ -9,12 +9,12 @@
  * missing. Only changed products are reindexed.
  */
 import { and, eq, inArray, isNull, ne, sql } from "drizzle-orm";
-import config from "$hoikka/config";
+import config from "#hoikka/config";
 import { db, atomic } from "../db/index.js";
 import { products, productVariants } from "../db/schema.js";
-import { parseFields } from "$lib/fields/index.js";
-import { slugify } from "$lib/utils.js";
-import type { Product, ProductVariant } from "$lib/types.js";
+import { parseFields } from "#lib/fields/index.js";
+import { slugify } from "#lib/utils.js";
+import type { Product, ProductVariant } from "#lib/types.js";
 import { reindexProduct } from "./reindex.js";
 
 export interface ExternalProductRow {

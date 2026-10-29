@@ -1,7 +1,7 @@
-import { parsePaginationParams } from "$lib/server/pagination.js";
-import { customerService } from "$lib/server/services/customers.js";
-import { customerGroupService } from "$lib/server/services/customerGroups.js";
-import { dbError } from "$lib/server/db-error.js";
+import { parsePaginationParams } from "#lib/server/pagination.js";
+import { customerService } from "#lib/server/services/customers.js";
+import { customerGroupService } from "#lib/server/services/customerGroups.js";
+import { dbError } from "#lib/server/db-error.js";
 import { fail, redirect, isRedirect } from "@sveltejs/kit";
 import type { PageServerLoad, Actions } from "./$types";
 

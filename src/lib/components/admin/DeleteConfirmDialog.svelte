@@ -1,7 +1,7 @@
 <script lang="ts">
   import { enhance } from "$app/forms";
-  import { Button } from "$lib/components/admin/ui/button";
-  import * as Dialog from "$lib/components/admin/ui/dialog";
+  import { Button } from "#lib/components/admin/ui/button/index.js";
+  import * as Dialog from "#lib/components/admin/ui/dialog/index.js";
   import type { Snippet } from "svelte";
 
   let {

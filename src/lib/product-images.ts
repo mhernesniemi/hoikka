@@ -2,8 +2,8 @@
  * Product gallery image helpers — kept out of the page component so the
  * .svelte files stay composition-only.
  */
-import { imageUrl, imageSrcset } from "$lib/image";
-import type { ProductWithRelations } from "$lib/types";
+import { imageUrl, imageSrcset } from "#lib/image.js";
+import type { ProductWithRelations } from "#lib/types.js";
 
 type GalleryImage = ProductWithRelations["assets"][number];
 

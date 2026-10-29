@@ -157,6 +157,14 @@ export function defineHoikkaConfig<const I extends HoikkaConfigInput = Record<ne
 	return resolved as HoikkaConfig<I>;
 }
 
+/** The env var for an SSO provider setting, e.g. SSO_ENTRA_CLIENT_ID. */
+export function ssoEnvName(
+	id: string,
+	setting: "CLIENT_ID" | "CLIENT_SECRET" | "DISCOVERY_URL"
+): string {
+	return `SSO_${id.toUpperCase().replace(/-/g, "_")}_${setting}`;
+}
+
 function validateSso(sso: StaffSsoConfig): void {
 	const ids = new Set<string>();
 	for (const provider of sso.providers) {

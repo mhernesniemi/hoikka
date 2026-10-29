@@ -4,9 +4,9 @@
  * skipped and logged instead of failing the calling flow.
  */
 import { Resend } from "resend";
-import { dev } from "$app/environment";
-import { env } from "$env/dynamic/private";
-import config from "$hoikka/config";
+import { dev } from "$app/env";
+import { RESEND_API_KEY, RESEND_FROM_EMAIL } from "$app/env/private";
+import config from "#hoikka/config";
 
 /**
  * Send one email. Returns { sent: false } when RESEND_API_KEY is missing. In
@@ -20,10 +20,8 @@ export async function sendEmail(
 	to: string,
 	subject: string,
 	html: string
-): Promise<{
-	sent: boolean;
-}> {
-	if (!env.RESEND_API_KEY) {
+): Promise<{ sent: boolean }> {
+	if (!RESEND_API_KEY) {
 		if (dev) {
 			console.log(`[email] RESEND_API_KEY not set — skipping "${subject}" to ${to}\n${html}`);
 		} else {
@@ -31,9 +29,9 @@ export async function sendEmail(
 		}
 		return { sent: false };
 	}
-	const resend = new Resend(env.RESEND_API_KEY);
+	const resend = new Resend(RESEND_API_KEY);
 	const { error } = await resend.emails.send({
-		from: env.RESEND_FROM_EMAIL || config.store.emailFrom,
+		from: RESEND_FROM_EMAIL || config.store.emailFrom,
 		to,
 		subject,
 		html

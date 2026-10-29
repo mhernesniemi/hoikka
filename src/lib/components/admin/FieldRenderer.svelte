@@ -7,13 +7,13 @@
   Read-only fields render disabled, so the form doesn't send them.
 -->
 <script lang="ts">
-  import type { FieldDef } from "$lib/fields/index.js";
-  import { Input } from "$lib/components/admin/ui/input";
-  import { Label } from "$lib/components/admin/ui/label";
-  import { Textarea } from "$lib/components/admin/ui/textarea";
-  import { Checkbox } from "$lib/components/admin/ui/checkbox";
-  import { SelectNative } from "$lib/components/admin/ui/select-native";
-  import { RichTextEditor } from "$lib/components/admin/ui/rich-text-editor";
+  import type { FieldDef } from "#lib/fields/index.js";
+  import { Input } from "#lib/components/admin/ui/input/index.js";
+  import { Label } from "#lib/components/admin/ui/label/index.js";
+  import { Textarea } from "#lib/components/admin/ui/textarea/index.js";
+  import { Checkbox } from "#lib/components/admin/ui/checkbox/index.js";
+  import { SelectNative } from "#lib/components/admin/ui/select-native/index.js";
+  import { RichTextEditor } from "#lib/components/admin/ui/rich-text-editor/index.js";
 
   let {
     defs,

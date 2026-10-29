@@ -9,7 +9,7 @@
  */
 import { db } from "../db/index.js";
 import { paymentMethods, shippingMethods } from "../db/schema.js";
-import config from "$hoikka/config";
+import config from "#hoikka/config";
 
 let synced = false;
 

@@ -14,7 +14,7 @@
  * the thank-you page.
  */
 import { query, command, getRequestEvent } from "$app/server";
-import config from "$hoikka/config";
+import config from "#hoikka/config";
 import { error } from "@sveltejs/kit";
 import * as v from "valibot";
 import {
@@ -22,18 +22,18 @@ import {
 	shippingService,
 	paymentService,
 	customerService
-} from "$lib/server/services/index.js";
+} from "#lib/server/services/index.js";
 import {
 	completeCheckout as completeCheckoutShared,
 	finishCompletedOrder,
 	type CompletionResult
-} from "$lib/server/services/checkout-completion.js";
-import { isOrderDigitalOnly } from "$lib/server/services/fulfillment.js";
-import { isSettledState } from "$lib/server/services/order-utils.js";
-import { digitalDeliveryService } from "$lib/server/services/digitalDelivery.js";
-import { CHECKOUT_COOKIE } from "$lib/server/cart-cookie.js";
+} from "#lib/server/services/checkout-completion.js";
+import { isOrderDigitalOnly } from "#lib/server/services/fulfillment.js";
+import { isSettledState } from "#lib/server/services/order-utils.js";
+import { digitalDeliveryService } from "#lib/server/services/digitalDelivery.js";
+import { CHECKOUT_COOKIE } from "#lib/server/cart-cookie.js";
 import type { RequestEvent } from "@sveltejs/kit";
-import type { OrderWithRelations, Payment, Address } from "$lib/types.js";
+import type { OrderWithRelations, Payment, Address } from "#lib/types.js";
 
 export type CheckoutPaymentInfo = {
 	providerTransactionId: string;

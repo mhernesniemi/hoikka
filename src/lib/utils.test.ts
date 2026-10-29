@@ -10,7 +10,7 @@ import {
 } from "./utils";
 
 // Date assertions below are fi-FI; keep them independent of the store's configured dateLocale
-vi.mock("$lib/config/locale.js", () => ({ DATE_LOCALE: "fi-FI" }));
+vi.mock("#lib/config/locale.js", () => ({ DATE_LOCALE: "fi-FI" }));
 
 describe("formatPrice", () => {
 	it("formats EUR price with Finnish locale", () => {

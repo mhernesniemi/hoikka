@@ -1,9 +1,9 @@
 import type { PageServerLoad, Actions } from "./$types";
-import { parsePaginationParams } from "$lib/server/pagination.js";
-import { reviewService } from "$lib/server/services/reviews.js";
-import { dbError } from "$lib/server/db-error.js";
+import { parsePaginationParams } from "#lib/server/pagination.js";
+import { reviewService } from "#lib/server/services/reviews.js";
+import { dbError } from "#lib/server/db-error.js";
 import { fail } from "@sveltejs/kit";
-import type { ReviewStatus } from "$lib/types.js";
+import type { ReviewStatus } from "#lib/types.js";
 
 export const load: PageServerLoad = async ({ url }) => {
 	const status = url.searchParams.get("status") as ReviewStatus | null;

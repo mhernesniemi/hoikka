@@ -3,8 +3,8 @@
  */
 import { json, error } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
-import { list } from "$lib/server/storage/index.js";
-import { isPrivatePath } from "$lib/server/storage/types.js";
+import { list } from "#lib/server/storage/index.js";
+import { isPrivatePath } from "#lib/server/storage/types.js";
 
 export const GET: RequestHandler = async ({ url, locals }) => {
 	if (!locals.user || !["admin", "staff"].includes(locals.user.role ?? "")) {

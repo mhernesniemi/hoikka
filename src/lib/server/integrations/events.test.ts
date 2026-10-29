@@ -1,10 +1,8 @@
 /**
  * Outbox runner tests against a real in-memory SQLite (full migration chain).
- * Mirrors cart-checkout.test.ts: $env/dynamic/private is mocked to ":memory:".
  */
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 
-vi.mock("$env/dynamic/private", () => ({ env: { DATABASE_URL: ":memory:" } }));
 import { db } from "../db/index.js";
 import { outbox } from "../db/schema.js";
 import { eq } from "drizzle-orm";

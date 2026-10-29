@@ -1,9 +1,9 @@
 /**
  * Structured-data builders for <svelte:head>.
  */
-import { stripHtml } from "$lib/utils";
-import config from "$hoikka/config";
-import type { ProductWithRelations } from "$lib/types";
+import { stripHtml } from "#lib/utils.js";
+import config from "#hoikka/config";
+import type { ProductWithRelations } from "#lib/types.js";
 
 /**
  * Escape a JSON payload for embedding inside a <script> block. Product names

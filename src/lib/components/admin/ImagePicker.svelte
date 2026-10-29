@@ -1,10 +1,10 @@
 <script lang="ts">
-  import { cn } from "$lib/utils";
-  import { imageUrl } from "$lib/image";
-  import * as Dialog from "$lib/components/admin/ui/dialog";
-  import { Button } from "$lib/components/admin/ui/button";
-  import { Input } from "$lib/components/admin/ui/input";
-  import { Label } from "$lib/components/admin/ui/label";
+  import { cn } from "#lib/utils.js";
+  import { imageUrl } from "#lib/image.js";
+  import * as Dialog from "#lib/components/admin/ui/dialog/index.js";
+  import { Button } from "#lib/components/admin/ui/button/index.js";
+  import { Input } from "#lib/components/admin/ui/input/index.js";
+  import { Label } from "#lib/components/admin/ui/label/index.js";
   import Upload from "@lucide/svelte/icons/upload";
   import ImageIcon from "@lucide/svelte/icons/image";
   import Check from "@lucide/svelte/icons/check";

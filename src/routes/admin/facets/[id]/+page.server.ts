@@ -1,7 +1,7 @@
-import { facetService } from "$lib/server/services/facets.js";
-import { translationService } from "$lib/server/services/translations.js";
-import { TRANSLATION_LANGUAGES } from "$lib/config/languages.js";
-import { dbError } from "$lib/server/db-error.js";
+import { facetService } from "#lib/server/services/facets.js";
+import { translationService } from "#lib/server/services/translations.js";
+import { TRANSLATION_LANGUAGES } from "#lib/config/languages.js";
+import { dbError } from "#lib/server/db-error.js";
 import { error, fail, redirect, isRedirect } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
 

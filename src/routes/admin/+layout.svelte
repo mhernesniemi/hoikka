@@ -1,17 +1,17 @@
 <script lang="ts">
-  import { STORE_NAME } from "$lib/config/store.js";
+  import { STORE_NAME } from "#lib/config/store.js";
   import "./admin.css";
   import { onMount, type Snippet } from "svelte";
   import { page } from "$app/state";
   import { beforeNavigate } from "$app/navigation";
   import { goto } from "$app/navigation";
-  import { authClient } from "$lib/auth-client";
-  import { Toaster } from "$lib/components/admin/ui/sonner";
-  import * as DropdownMenu from "$lib/components/admin/ui/dropdown-menu";
-  import { initTheme, isDark, setTheme, getTheme } from "$lib/stores/admin-theme.svelte";
-  import { cn } from "$lib/utils";
+  import { authClient } from "#lib/auth-client.js";
+  import { Toaster } from "#lib/components/admin/ui/sonner/index.js";
+  import * as DropdownMenu from "#lib/components/admin/ui/dropdown-menu/index.js";
+  import { initTheme, isDark, setTheme, getTheme } from "#lib/stores/admin-theme.svelte.js";
+  import { cn } from "#lib/utils.js";
   import type { LayoutData } from "./$types";
-  import { adminNav } from "$lib/admin-nav";
+  import { adminNav } from "#lib/admin-nav.js";
   import ExternalLink from "@lucide/svelte/icons/external-link";
   import ChevronsUpDown from "@lucide/svelte/icons/chevrons-up-down";
   import LogOut from "@lucide/svelte/icons/log-out";

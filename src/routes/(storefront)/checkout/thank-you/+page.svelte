@@ -1,11 +1,11 @@
 <script lang="ts">
-  import { STORE_NAME } from "$lib/config/store.js";
+  import { STORE_NAME } from "#lib/config/store.js";
   import type { PageData } from "./$types.js";
   import Check from "@lucide/svelte/icons/check";
   import Download from "@lucide/svelte/icons/download";
-  import { formatPrice } from "$lib/utils.js";
-  import { getCart } from "$lib/remote/cart.remote";
-  import { browser } from "$app/environment";
+  import { formatPrice } from "#lib/utils.js";
+  import { getCart } from "#lib/remote/cart.remote.js";
+  import { browser } from "$app/env";
 
   let { data }: { data: PageData } = $props();
 

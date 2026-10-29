@@ -1,21 +1,21 @@
 <script lang="ts">
-  import { BASE_CURRENCY } from "$lib/utils";
-  import { browser } from "$app/environment";
-  import { invalidateAll, goto } from "$app/navigation";
+  import { BASE_CURRENCY } from "#lib/utils.js";
+  import { browser } from "$app/env";
+  import { refreshAll, goto } from "$app/navigation";
   import { page } from "$app/state";
-  import { getCart, setCartQuantity, removeCartLine } from "$lib/remote/cart.remote";
-  import { getCheckout } from "$lib/remote/checkout.remote";
-  import { withQuantity } from "$lib/cart-optimistic";
-  import Img from "$lib/components/storefront/Img.svelte";
-  import { cartStore } from "$lib/stores/cart.svelte";
+  import { getCart, setCartQuantity, removeCartLine } from "#lib/remote/cart.remote.js";
+  import { getCheckout } from "#lib/remote/checkout.remote.js";
+  import { withQuantity } from "#lib/cart-optimistic.js";
+  import Img from "#lib/components/storefront/Img.svelte";
+  import { cartStore } from "#lib/stores/cart.svelte.js";
   import {
     Sheet,
     SheetContent,
     SheetHeader,
     SheetTitle,
     SheetFooter
-  } from "$lib/components/storefront/ui/sheet";
-  import { Button, buttonVariants } from "$lib/components/storefront/ui/button";
+  } from "#lib/components/storefront/ui/sheet/index.js";
+  import { Button, buttonVariants } from "#lib/components/storefront/ui/button/index.js";
   import ShoppingCart from "@lucide/svelte/icons/shopping-cart";
   import Minus from "@lucide/svelte/icons/minus";
   import Plus from "@lucide/svelte/icons/plus";
@@ -46,7 +46,7 @@
 
   async function refreshCheckoutView() {
     if (!isOnCheckout) return;
-    await invalidateAll();
+    await refreshAll();
     await getCheckout().refresh();
   }
 
@@ -78,7 +78,7 @@
 
   // Optimistic stepper: lines and counts change in the same frame as the
   // click, then the command's single-flight refresh replaces the override
-  // (or rolls it back on error) — see $lib/cart-optimistic for the policy.
+  // (or rolls it back on error) — see #lib/cart-optimistic for the policy.
   const updateQuantity = (variantId: number, quantity: number) =>
     mutate(() =>
       setCartQuantity({ variantId, quantity }).updates(

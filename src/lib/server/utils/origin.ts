@@ -4,7 +4,7 @@
  * configuration for background work such as outbox handlers.
  */
 import { getRequestEvent } from "$app/server";
-import { env } from "$env/dynamic/private";
+import { PUBLIC_STORE_URL, BETTER_AUTH_URL } from "$app/env/private";
 
 export function storeOrigin(): string {
 	try {
@@ -12,8 +12,6 @@ export function storeOrigin(): string {
 	} catch {
 		// Outside request scope (outbox drain, cron) — fall back to config.
 	}
-	return (env.PUBLIC_STORE_URL || env.BETTER_AUTH_URL || "http://localhost:5173").replace(
-		/\/+$/,
-		""
-	);
+
+	return (PUBLIC_STORE_URL || BETTER_AUTH_URL || "http://localhost:5173").replace(/\/+$/, "");
 }

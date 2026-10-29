@@ -1,8 +1,8 @@
 import type { PageServerLoad, Actions } from "./$types";
-import { assetService, assetDeleteError } from "$lib/server/services/assets.js";
-import { translationService } from "$lib/server/services/translations.js";
-import { TRANSLATION_LANGUAGES } from "$lib/config/languages.js";
-import { dbError } from "$lib/server/db-error.js";
+import { assetService, assetDeleteError } from "#lib/server/services/assets.js";
+import { translationService } from "#lib/server/services/translations.js";
+import { TRANSLATION_LANGUAGES } from "#lib/config/languages.js";
+import { dbError } from "#lib/server/db-error.js";
 import { error, fail, redirect, isRedirect } from "@sveltejs/kit";
 
 export const load: PageServerLoad = async ({ params }) => {

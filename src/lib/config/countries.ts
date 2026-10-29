@@ -1,5 +1,5 @@
 /** Country settings, derived from hoikka.config.ts — edit the config, not this file. */
-import config from "$hoikka/config";
+import config from "#hoikka/config";
 
 export const DEFAULT_COUNTRY = config.countries.default;
 

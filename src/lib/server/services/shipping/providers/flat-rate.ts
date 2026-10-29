@@ -3,7 +3,7 @@
  * Simple flat-rate shipping for demo/development use
  */
 import type { ShippingProvider, ShippingRate, ShipmentInfo, ShipmentStatus } from "../types.js";
-import type { OrderWithRelations } from "$lib/types.js";
+import type { OrderWithRelations } from "#lib/types.js";
 import { generateTrackingNumber } from "../shipping-utils.js";
 
 export class FlatRateProvider implements ShippingProvider {

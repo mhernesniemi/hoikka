@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { SHIPPING_COUNTRIES } from "$lib/config/countries.js";
-  import { STORE_NAME } from "$lib/config/store.js";
+  import { SHIPPING_COUNTRIES } from "#lib/config/countries.js";
+  import { STORE_NAME } from "#lib/config/store.js";
   import { enhance } from "$app/forms";
-  import { Button } from "$lib/components/storefront/ui/button";
+  import { Button } from "#lib/components/storefront/ui/button/index.js";
   import type { PageData, ActionData } from "./$types";
   import MapPin from "@lucide/svelte/icons/map-pin";
 

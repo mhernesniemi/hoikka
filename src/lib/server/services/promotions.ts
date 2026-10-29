@@ -20,7 +20,7 @@ import type {
 	UpdatePromotionInput,
 	PromotionWithRelations,
 	PaginatedResult
-} from "$lib/types.js";
+} from "#lib/types.js";
 import { canCombinePromotions } from "./promotion-utils.js";
 import { collectionService } from "./collections.js";
 

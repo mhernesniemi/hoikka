@@ -1,9 +1,9 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
-  import { formatPrice } from "$lib/utils";
-  import { imageUrl } from "$lib/image";
-  import { quickSearch } from "$lib/remote/search.remote";
-  import * as Command from "$lib/components/storefront/ui/command/index.js";
+  import { formatPrice } from "#lib/utils.js";
+  import { imageUrl } from "#lib/image.js";
+  import { quickSearch } from "#lib/remote/search.remote.js";
+  import * as Command from "#lib/components/storefront/ui/command/index.js";
 
   let searchQuery = $state("");
   let debouncedQuery = $state("");

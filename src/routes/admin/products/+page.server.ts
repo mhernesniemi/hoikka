@@ -1,7 +1,7 @@
-import { parsePaginationParams } from "$lib/server/pagination.js";
-import { productService } from "$lib/server/services/products.js";
-import { reindexProduct, removeFromIndex } from "$lib/server/services/product-search.js";
-import { dbError } from "$lib/server/db-error.js";
+import { parsePaginationParams } from "#lib/server/pagination.js";
+import { productService } from "#lib/server/services/products.js";
+import { reindexProduct, removeFromIndex } from "#lib/server/services/product-search.js";
+import { dbError } from "#lib/server/db-error.js";
 import { fail, redirect, isRedirect } from "@sveltejs/kit";
 import type { PageServerLoad, Actions } from "./$types";
 

@@ -23,7 +23,7 @@ import type {
 	collectionFilters,
 	reviews,
 	contentPages
-} from "$lib/server/db/schema.js";
+} from "#lib/server/db/schema.js";
 
 // ============================================================================
 // PRODUCT TYPES

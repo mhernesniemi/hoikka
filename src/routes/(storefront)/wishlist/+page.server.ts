@@ -1,10 +1,10 @@
-import { productService } from "$lib/server/services/products.js";
+import { productService } from "#lib/server/services/products.js";
 import {
 	WISHLIST_COOKIE,
 	WISHLIST_COOKIE_OPTIONS,
 	parseWishlistCookie,
 	serializeWishlistCookie
-} from "$lib/server/wishlist-cookie.js";
+} from "#lib/server/wishlist-cookie.js";
 import { fail } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
 

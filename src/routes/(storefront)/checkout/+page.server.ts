@@ -6,14 +6,14 @@
  * from the cookie lines and reserves stock for 15 minutes. The load stays
  * here (queries can't set cookies) and only reconciles + sets the
  * `checkout_token` cookie — everything the page renders comes from the
- * `getCheckout` query and its commands in `$lib/remote/checkout.remote.ts`.
+ * `getCheckout` query and its commands in `#lib/remote/checkout.remote.ts`.
  */
 import { error, redirect } from "@sveltejs/kit";
-import { orderService } from "$lib/server/services/index.js";
-import { isSettledState } from "$lib/server/services/order-utils.js";
-import { grantReceipt } from "$lib/server/cart-cookie.js";
-import { rateLimit } from "$lib/server/rate-limit.js";
-import config from "$hoikka/config";
+import { orderService } from "#lib/server/services/index.js";
+import { isSettledState } from "#lib/server/services/order-utils.js";
+import { grantReceipt } from "#lib/server/cart-cookie.js";
+import { rateLimit } from "#lib/server/rate-limit.js";
+import config from "#hoikka/config";
 import {
 	CART_COOKIE,
 	CART_COOKIE_OPTIONS,
@@ -21,7 +21,7 @@ import {
 	CHECKOUT_COOKIE_OPTIONS,
 	parseCartCookie,
 	serializeCartCookie
-} from "$lib/server/cart-cookie.js";
+} from "#lib/server/cart-cookie.js";
 import type { PageServerLoad } from "./$types.js";
 
 // Entering checkout without a *resolvable* draft writes a new order row, and

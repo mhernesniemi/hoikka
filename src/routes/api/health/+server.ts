@@ -4,7 +4,7 @@
  * a wrong DATABASE_URL path, and that must fail too.
  */
 import { sql } from "drizzle-orm";
-import { db } from "$lib/server/db/index.js";
+import { db } from "#lib/server/db/index.js";
 import type { RequestHandler } from "./$types.js";
 
 const headers = { "cache-control": "no-store" };

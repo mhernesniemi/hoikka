@@ -1,9 +1,9 @@
 import { fail } from "@sveltejs/kit";
 import type { Actions } from "./$types";
-import config from "$hoikka/config";
-import { formFields } from "$lib/fields/index.js";
-import { sanitizeHtml } from "$lib/server/sanitize.js";
-import { customerService } from "$lib/server/services/customers.js";
+import config from "#hoikka/config";
+import { formFields } from "#lib/fields/index.js";
+import { sanitizeHtml } from "#lib/server/sanitize.js";
+import { customerService } from "#lib/server/services/customers.js";
 
 export const actions: Actions = {
 	updateProfile: async ({ request, locals }) => {

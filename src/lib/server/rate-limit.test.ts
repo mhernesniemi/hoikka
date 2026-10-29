@@ -2,9 +2,7 @@
  * The checkout draft limiter is the only thing between an unauthenticated
  * client and unbounded order rows, so its window behaviour matters.
  */
-import { describe, it, expect, vi } from "vitest";
-
-vi.mock("$env/dynamic/private", () => ({ env: { DATABASE_URL: ":memory:" } }));
+import { describe, it, expect } from "vitest";
 
 import { rateLimit, pruneRateLimits } from "./rate-limit.js";
 import { eq } from "drizzle-orm";

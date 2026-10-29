@@ -25,7 +25,7 @@ import type {
 	UpdateCollectionInput,
 	ProductWithRelations,
 	PaginatedResult
-} from "$lib/types.js";
+} from "#lib/types.js";
 import { productService } from "./products.js";
 
 // Type for filter handler functions. Handlers only read field/operator/value,

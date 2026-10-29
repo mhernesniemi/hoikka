@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { Button } from "$lib/components/admin/ui/button";
-  import * as Dialog from "$lib/components/admin/ui/dialog";
-  import { useUnsavedChanges } from "$lib/unsaved-changes.svelte";
+  import { Button } from "#lib/components/admin/ui/button/index.js";
+  import * as Dialog from "#lib/components/admin/ui/dialog/index.js";
+  import { useUnsavedChanges } from "#lib/unsaved-changes.svelte.js";
 
   let {
     isDirty,

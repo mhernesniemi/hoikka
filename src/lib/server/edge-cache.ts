@@ -23,17 +23,17 @@
  * Stock moves with every paid or cancelled order, and bumping on those would
  * orphan the whole storefront on every sale, forcing cold renders for everyone
  * else precisely when traffic is highest. Stock is read out of band instead
- * ($lib/server/services/availability.ts) and re-validated at checkout, so many
+ * (#lib/server/services/availability.ts) and re-validated at checkout, so many
  * visitors share one cached product page while only the small stock query
  * reaches the database.
  *
  * Logged-in visitors always bypass the cache — previews, group prices, and
  * anything else session-dependent stays live by construction.
  */
-import { version as buildVersion } from "$app/environment";
-import config from "$hoikka/config";
-import { getRequestEvent } from "$app/server";
-import type { Handle } from "@sveltejs/kit";
+import { version as buildVersion } from "$app/env";
+import config from "#hoikka/config";
+import type { Handle } from "@sveltejs/kit/hooks";
+import { bindings, defaultCache, waitUntil } from "#lib/server/cloudflare.js";
 
 const VERSION_KEY = "catalog-version";
 const AUTH_COOKIE = "better-auth.session_token";
@@ -45,8 +45,6 @@ const KV_TTL_SECONDS = config.limits.edgeCache.kvTtlSeconds;
 /** GET routes rendered identically for every guest */
 const CACHEABLE =
 	/^\/(?:$|products(?:\/|$)|category(?:\/|$)|collections(?:\/|$)|pages(?:\/|$)|privacy-policy\/?$|sitemap\.xml$)/;
-
-type CacheKv = NonNullable<App.Platform["env"]>["CACHE_KV"];
 
 /** SvelteKit data requests cache under the page route they belong to */
 function routePath(pathname: string): string {
@@ -81,26 +79,17 @@ export function invalidatesCatalog(pathname: string): boolean {
 }
 
 /**
- * Invalidate all cached storefront pages. Callable from services (uses the
- * request event's KV binding); a no-op outside the cloudflare target.
+ * Invalidate all cached storefront pages. Callable from services; a no-op
+ * outside the cloudflare target.
  */
-export async function bumpCatalogVersion(kv?: CacheKv): Promise<void> {
-	let namespace = kv ?? null;
-	if (!namespace) {
-		try {
-			namespace = getRequestEvent().platform?.env?.CACHE_KV ?? null;
-		} catch {
-			namespace = null;
-		}
-	}
-	if (!namespace) return;
-	await namespace.put(VERSION_KEY, Date.now().toString(36));
+export async function bumpCatalogVersion(): Promise<void> {
+	await bindings?.CACHE_KV?.put(VERSION_KEY, Date.now().toString(36));
 }
 
 export const edgeCache: Handle = async ({ event, resolve }) => {
-	const { request, url, platform } = event;
-	const cache = platform?.caches?.default;
-	const kv = platform?.env?.CACHE_KV;
+	const { request, url } = event;
+	const cache = defaultCache();
+	const kv = bindings?.CACHE_KV;
 	// A login-only store has no guest pages to cache
 	if (!cache || !kv || config.customers.requireSignIn) return resolve(event);
 
@@ -110,7 +99,7 @@ export const edgeCache: Handle = async ({ event, resolve }) => {
 	if (request.method !== "GET") {
 		const response = await resolve(event);
 		if (response.ok && invalidatesCatalog(url.pathname)) {
-			platform.ctx?.waitUntil(bumpCatalogVersion(kv));
+			waitUntil(bumpCatalogVersion());
 		}
 		return response;
 	}
@@ -145,7 +134,7 @@ export const edgeCache: Handle = async ({ event, resolve }) => {
 	const mirrored = await kv.getWithMetadata<{ ct: string }>(kvKey, { type: "arrayBuffer" });
 	if (mirrored?.value) {
 		const contentType = mirrored.metadata?.ct ?? "text/html";
-		platform.ctx?.waitUntil(
+		waitUntil(
 			cache.put(
 				cacheKey,
 				new Response(mirrored.value.slice(0), {
@@ -177,6 +166,7 @@ export const edgeCache: Handle = async ({ event, resolve }) => {
 	const isDataRequest = raw.pathname.endsWith("/__data.json");
 	const responseCacheControl = response.headers.get("cache-control") ?? "";
 	const markedPrivate = /private|no-store|no-cache/.test(responseCacheControl);
+
 	if (
 		response.status === 200 &&
 		!response.headers.has("set-cookie") &&
@@ -186,7 +176,7 @@ export const edgeCache: Handle = async ({ event, resolve }) => {
 		const contentType = response.headers.get("content-type") ?? "text/html";
 		const storeHeaders = new Headers(response.headers);
 		storeHeaders.set("cache-control", `public, max-age=${BACKSTOP_SECONDS}`);
-		platform.ctx?.waitUntil(
+		waitUntil(
 			(async () => {
 				const body = await clone.arrayBuffer();
 				await Promise.all([

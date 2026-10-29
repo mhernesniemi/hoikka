@@ -1,6 +1,6 @@
 /**
  * Wishlist remote functions. The wishlist is a cookie (see
- * $lib/server/wishlist-cookie.ts) — toggling rewrites the cookie and
+ * #lib/server/wishlist-cookie.ts) — toggling rewrites the cookie and
  * refreshes the count query in the same roundtrip.
  */
 import { query, command, getRequestEvent } from "$app/server";
@@ -11,7 +11,7 @@ import {
 	parseWishlistCookie,
 	serializeWishlistCookie,
 	toggleId
-} from "$lib/server/wishlist-cookie.js";
+} from "#lib/server/wishlist-cookie.js";
 
 export const getWishlistCount = query(async () => {
 	const { cookies } = getRequestEvent();

@@ -2,9 +2,8 @@
  * Search ranking tests against a real in-memory SQLite (full migration chain).
  * FTS rows are inserted directly — this tests ranking, not reindexing.
  */
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 
-vi.mock("$env/dynamic/private", () => ({ env: { DATABASE_URL: ":memory:" } }));
 import { sql } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { quickSearchProducts, listProducts } from "./product-search.js";

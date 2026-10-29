@@ -1,15 +1,15 @@
 <script lang="ts">
-  import PageActionsMenu from "$lib/components/admin/PageActionsMenu.svelte";
+  import PageActionsMenu from "#lib/components/admin/PageActionsMenu.svelte";
   import { enhance } from "$app/forms";
-  import { cn } from "$lib/utils";
+  import { cn } from "#lib/utils.js";
   import { toast } from "svelte-sonner";
-  import { Badge, type BadgeVariant } from "$lib/components/admin/ui/badge";
-  import { Button } from "$lib/components/admin/ui/button";
-  import AdminCard from "$lib/components/admin/AdminCard.svelte";
-  import DeleteConfirmDialog from "$lib/components/admin/DeleteConfirmDialog.svelte";
+  import { Badge, type BadgeVariant } from "#lib/components/admin/ui/badge/index.js";
+  import { Button } from "#lib/components/admin/ui/button/index.js";
+  import AdminCard from "#lib/components/admin/AdminCard.svelte";
+  import DeleteConfirmDialog from "#lib/components/admin/DeleteConfirmDialog.svelte";
   import ChevronLeft from "@lucide/svelte/icons/chevron-left";
   import type { PageData, ActionData } from "./$types";
-  import { formatDate } from "$lib/utils";
+  import { formatDate } from "#lib/utils.js";
 
   let { data, form }: { data: PageData; form: ActionData } = $props();
 

@@ -1,9 +1,9 @@
 <script lang="ts">
-  import hoikkaConfig from "$hoikka/config";
-  import { STORE_NAME } from "$lib/config/store.js";
-  import { fieldEntries } from "$lib/fields/index.js";
-  import { formatDate, stripHtml } from "$lib/utils";
-  import { imageUrl } from "$lib/image";
+  import hoikkaConfig from "#hoikka/config";
+  import { STORE_NAME } from "#lib/config/store.js";
+  import { fieldEntries } from "#lib/fields/index.js";
+  import { formatDate, stripHtml } from "#lib/utils.js";
+  import { imageUrl } from "#lib/image.js";
 
   let { data } = $props();
 

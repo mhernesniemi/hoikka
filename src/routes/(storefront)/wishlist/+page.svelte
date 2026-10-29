@@ -1,13 +1,13 @@
 <script lang="ts">
-  import { STORE_NAME } from "$lib/config/store.js";
+  import { STORE_NAME } from "#lib/config/store.js";
   import { enhance } from "$app/forms";
-  import { Button } from "$lib/components/storefront/ui/button";
-  import { Alert } from "$lib/components/storefront/ui/alert";
-  import { BASE_CURRENCY, cn } from "$lib/utils";
-  import { imageUrl } from "$lib/image";
-  import { cartStore } from "$lib/stores/cart.svelte";
-  import { addVariantToCart, optimisticSeed } from "$lib/cart-actions";
-  import { getWishlistCount } from "$lib/remote/wishlist.remote";
+  import { Button } from "#lib/components/storefront/ui/button/index.js";
+  import { Alert } from "#lib/components/storefront/ui/alert/index.js";
+  import { BASE_CURRENCY, cn } from "#lib/utils.js";
+  import { imageUrl } from "#lib/image.js";
+  import { cartStore } from "#lib/stores/cart.svelte.js";
+  import { addVariantToCart, optimisticSeed } from "#lib/cart-actions.js";
+  import { getWishlistCount } from "#lib/remote/wishlist.remote.js";
   import type { PageData } from "./$types";
   import Heart from "@lucide/svelte/icons/heart";
   import ImageIcon from "@lucide/svelte/icons/image";

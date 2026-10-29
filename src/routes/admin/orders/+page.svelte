@@ -1,11 +1,11 @@
 <script lang="ts">
   import type { ColumnDef } from "@tanstack/table-core";
-  import { DataTable, renderSnippet } from "$lib/components/admin/data-table";
-  import { Badge, type BadgeVariant } from "$lib/components/admin/ui/badge";
-  import { buttonVariants } from "$lib/components/admin/ui/button";
+  import { DataTable, renderSnippet } from "#lib/components/admin/data-table/index.js";
+  import { Badge, type BadgeVariant } from "#lib/components/admin/ui/badge/index.js";
+  import { buttonVariants } from "#lib/components/admin/ui/button/index.js";
   import DownloadIcon from "@lucide/svelte/icons/download";
-  import { cn, formatDateTime, orderStateLabel } from "$lib/utils";
-  import type { OrderListItem } from "$lib/types";
+  import { cn, formatDateTime, orderStateLabel } from "#lib/utils.js";
+  import type { OrderListItem } from "#lib/types.js";
   import type { PageData } from "./$types";
 
   let { data }: { data: PageData } = $props();

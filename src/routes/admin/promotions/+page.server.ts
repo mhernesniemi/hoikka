@@ -1,5 +1,5 @@
-import { parsePaginationParams } from "$lib/server/pagination.js";
-import { promotionService } from "$lib/server/services/promotions.js";
+import { parsePaginationParams } from "#lib/server/pagination.js";
+import { promotionService } from "#lib/server/services/promotions.js";
 import { fail } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
 

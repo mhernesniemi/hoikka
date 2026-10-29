@@ -1,21 +1,21 @@
 <script lang="ts">
-  import PageActionsMenu from "$lib/components/admin/PageActionsMenu.svelte";
-  import hoikkaConfig from "$hoikka/config";
-  import FieldRenderer from "$lib/components/admin/FieldRenderer.svelte";
+  import PageActionsMenu from "#lib/components/admin/PageActionsMenu.svelte";
+  import hoikkaConfig from "#hoikka/config";
+  import FieldRenderer from "#lib/components/admin/FieldRenderer.svelte";
   import { enhance } from "$app/forms";
-  import { goto, invalidateAll } from "$app/navigation";
+  import { goto, refreshAll } from "$app/navigation";
   import { page } from "$app/state";
   import { onMount, untrack } from "svelte";
   import { toast } from "svelte-sonner";
-  import { Button } from "$lib/components/admin/ui/button";
-  import { Checkbox } from "$lib/components/admin/ui/checkbox";
-  import DeleteConfirmDialog from "$lib/components/admin/DeleteConfirmDialog.svelte";
-  import CreateDialog from "$lib/components/admin/CreateDialog.svelte";
-  import { fulfillmentOf } from "$lib/config/products.js";
-  import AdminCard from "$lib/components/admin/AdminCard.svelte";
-  import { Input } from "$lib/components/admin/ui/input";
-  import { Label } from "$lib/components/admin/ui/label";
-  import { SelectNative } from "$lib/components/admin/ui/select-native";
+  import { Button } from "#lib/components/admin/ui/button/index.js";
+  import { Checkbox } from "#lib/components/admin/ui/checkbox/index.js";
+  import DeleteConfirmDialog from "#lib/components/admin/DeleteConfirmDialog.svelte";
+  import CreateDialog from "#lib/components/admin/CreateDialog.svelte";
+  import { fulfillmentOf } from "#lib/config/products.js";
+  import AdminCard from "#lib/components/admin/AdminCard.svelte";
+  import { Input } from "#lib/components/admin/ui/input/index.js";
+  import { Label } from "#lib/components/admin/ui/label/index.js";
+  import { SelectNative } from "#lib/components/admin/ui/select-native/index.js";
   import {
     Table,
     TableHeader,
@@ -23,28 +23,28 @@
     TableRow,
     TableHead,
     TableCell
-  } from "$lib/components/admin/ui/table";
-  import * as Dialog from "$lib/components/admin/ui/dialog";
-  import { Badge } from "$lib/components/admin/ui/badge";
-  import IconButton from "$lib/components/admin/IconButton.svelte";
-  import ImagePicker from "$lib/components/admin/ImagePicker.svelte";
-  import MultiSelectCombobox from "$lib/components/admin/MultiSelectCombobox.svelte";
-  import TranslationEditor from "$lib/components/admin/TranslationEditor.svelte";
-  import { RichTextEditor } from "$lib/components/admin/ui/rich-text-editor";
-  import { translationsToMap, TRANSLATION_LANGUAGES } from "$lib/config/languages.js";
-  import { saveImages, type SelectedImage } from "$lib/admin-upload";
+  } from "#lib/components/admin/ui/table/index.js";
+  import * as Dialog from "#lib/components/admin/ui/dialog/index.js";
+  import { Badge } from "#lib/components/admin/ui/badge/index.js";
+  import IconButton from "#lib/components/admin/IconButton.svelte";
+  import ImagePicker from "#lib/components/admin/ImagePicker.svelte";
+  import MultiSelectCombobox from "#lib/components/admin/MultiSelectCombobox.svelte";
+  import TranslationEditor from "#lib/components/admin/TranslationEditor.svelte";
+  import { RichTextEditor } from "#lib/components/admin/ui/rich-text-editor/index.js";
+  import { translationsToMap, TRANSLATION_LANGUAGES } from "#lib/config/languages.js";
+  import { saveImages, type SelectedImage } from "#lib/admin-upload.js";
   import X from "@lucide/svelte/icons/x";
   import Plus from "@lucide/svelte/icons/plus";
   import Pencil from "@lucide/svelte/icons/pencil";
   import Trash2 from "@lucide/svelte/icons/trash-2";
   import ChevronLeft from "@lucide/svelte/icons/chevron-left";
   import ExternalLink from "@lucide/svelte/icons/external-link";
-  import { BASE_CURRENCY, cn } from "$lib/utils";
-  import { imageUrl } from "$lib/image";
+  import { BASE_CURRENCY, cn } from "#lib/utils.js";
+  import { imageUrl } from "#lib/image.js";
   import ImageIcon from "@lucide/svelte/icons/image";
-  import CategoryCombobox from "$lib/components/admin/CategoryCombobox.svelte";
-  import ProductPicker from "$lib/components/admin/ProductPicker.svelte";
-  import UnsavedChangesDialog from "$lib/components/admin/UnsavedChangesDialog.svelte";
+  import CategoryCombobox from "#lib/components/admin/CategoryCombobox.svelte";
+  import ProductPicker from "#lib/components/admin/ProductPicker.svelte";
+  import UnsavedChangesDialog from "#lib/components/admin/UnsavedChangesDialog.svelte";
   import type { ActionData, PageData } from "./$types";
 
   let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -108,7 +108,7 @@
       });
       if (!result.ok) throw new Error("Failed to attach the file to this product");
 
-      await invalidateAll();
+      await refreshAll();
       toast.success("Digital file saved");
     } catch (e) {
       digitalError = e instanceof Error ? e.message : "Upload failed";

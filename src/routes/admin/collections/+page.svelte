@@ -1,14 +1,18 @@
 <script lang="ts">
   import type { ColumnDef } from "@tanstack/table-core";
-  import { DataTable, renderSnippet, renderComponent } from "$lib/components/admin/data-table";
-  import { Badge } from "$lib/components/admin/ui/badge";
-  import { Button } from "$lib/components/admin/ui/button";
-  import DeleteConfirmDialog from "$lib/components/admin/DeleteConfirmDialog.svelte";
-  import CreateDialog from "$lib/components/admin/CreateDialog.svelte";
-  import { Checkbox } from "$lib/components/admin/ui/checkbox";
+  import {
+    DataTable,
+    renderSnippet,
+    renderComponent
+  } from "#lib/components/admin/data-table/index.js";
+  import { Badge } from "#lib/components/admin/ui/badge/index.js";
+  import { Button } from "#lib/components/admin/ui/button/index.js";
+  import DeleteConfirmDialog from "#lib/components/admin/DeleteConfirmDialog.svelte";
+  import CreateDialog from "#lib/components/admin/CreateDialog.svelte";
+  import { Checkbox } from "#lib/components/admin/ui/checkbox/index.js";
   import FolderOpen from "@lucide/svelte/icons/folder-open";
   import PlusIcon from "@lucide/svelte/icons/plus";
-  import { formatDate } from "$lib/utils";
+  import { formatDate } from "#lib/utils.js";
 
   let { data } = $props();
 

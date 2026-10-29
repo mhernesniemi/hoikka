@@ -2,10 +2,10 @@
  * Client-side cart actions: one call per user intent, optimistic UI wired
  * in. Pages stay thin — they call these and render the outcome.
  */
-import { addToCart, getCart } from "$lib/remote/cart.remote";
-import { cartStore } from "$lib/stores/cart.svelte";
-import { withAddedLine, type OptimisticLineSeed } from "$lib/cart-optimistic";
-import type { ProductWithRelations } from "$lib/types";
+import { addToCart, getCart } from "#lib/remote/cart.remote.js";
+import { cartStore } from "#lib/stores/cart.svelte.js";
+import { withAddedLine, type OptimisticLineSeed } from "#lib/cart-optimistic.js";
+import type { ProductWithRelations } from "#lib/types.js";
 
 type Variant = ProductWithRelations["variants"][number];
 

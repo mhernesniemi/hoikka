@@ -6,12 +6,12 @@
    * Every tab stays mounted (hidden) so all languages submit with the form.
    */
   import { untrack, type Snippet } from "svelte";
-  import { RichTextEditor } from "$lib/components/admin/ui/rich-text-editor";
-  import { Input } from "$lib/components/admin/ui/input";
-  import { Label } from "$lib/components/admin/ui/label";
-  import { Textarea } from "$lib/components/admin/ui/textarea";
-  import { cn } from "$lib/utils";
-  import { TRANSLATION_LANGUAGES, DEFAULT_LANGUAGE, LANGUAGES } from "$lib/config/languages.js";
+  import { RichTextEditor } from "#lib/components/admin/ui/rich-text-editor/index.js";
+  import { Input } from "#lib/components/admin/ui/input/index.js";
+  import { Label } from "#lib/components/admin/ui/label/index.js";
+  import { Textarea } from "#lib/components/admin/ui/textarea/index.js";
+  import { cn } from "#lib/utils.js";
+  import { TRANSLATION_LANGUAGES, DEFAULT_LANGUAGE, LANGUAGES } from "#lib/config/languages.js";
   import Globe from "@lucide/svelte/icons/globe";
 
   interface Field {

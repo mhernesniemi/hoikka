@@ -2,7 +2,7 @@
  * Language settings, derived from hoikka.config.ts — edit the config, not this
  * file. Kept at this path so existing imports stay stable.
  */
-import config from "$hoikka/config";
+import config from "#hoikka/config";
 
 /** Default language — stored directly on entity tables */
 export const DEFAULT_LANGUAGE = config.locales.defaultLanguage;

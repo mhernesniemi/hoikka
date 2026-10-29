@@ -1,10 +1,8 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 
-vi.mock("$env/dynamic/private", () => ({ env: { DATABASE_URL: ":memory:" } }));
-
 const broken = vi.hoisted(() => ({ value: false }));
-vi.mock("$lib/server/db/index.js", async (importOriginal) => {
-	const { db } = await importOriginal<typeof import("$lib/server/db/index.js")>();
+vi.mock("#lib/server/db/index.js", async (importOriginal) => {
+	const { db } = await importOriginal<typeof import("#lib/server/db/index.js")>();
 	return {
 		db: {
 			all: (query: Parameters<typeof db.all>[0]) =>

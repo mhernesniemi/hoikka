@@ -1,11 +1,11 @@
 <script lang="ts">
-  import { STORE_NAME } from "$lib/config/store.js";
+  import { STORE_NAME } from "#lib/config/store.js";
   import { enhance } from "$app/forms";
-  import { Button } from "$lib/components/storefront/ui/button";
-  import hoikkaConfig from "$hoikka/config";
-  import { fieldEntries } from "$lib/fields/index.js";
-  import { formatDate } from "$lib/utils";
-  import { imageUrl } from "$lib/image";
+  import { Button } from "#lib/components/storefront/ui/button/index.js";
+  import hoikkaConfig from "#hoikka/config";
+  import { fieldEntries } from "#lib/fields/index.js";
+  import { formatDate } from "#lib/utils.js";
+  import { imageUrl } from "#lib/image.js";
   import type { PageData, ActionData } from "./$types";
 
   let { data, form }: { data: PageData; form: ActionData } = $props();

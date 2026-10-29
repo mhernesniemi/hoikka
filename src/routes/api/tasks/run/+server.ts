@@ -11,15 +11,15 @@
  * wide open in production on Cloudflare.
  */
 import { json, error } from "@sveltejs/kit";
-import { dev } from "$app/environment";
-import { env } from "$env/dynamic/private";
-import { secretMatches } from "$lib/server/secrets.js";
-import { drainOutbox } from "$lib/server/integrations/events.js";
-import { runDueTasks } from "$lib/server/integrations/tasks.js";
+import { dev } from "$app/env";
+import { TASKS_SECRET } from "$app/env/private";
+import { secretMatches } from "#lib/server/secrets.js";
+import { drainOutbox } from "#lib/server/integrations/events.js";
+import { runDueTasks } from "#lib/server/integrations/tasks.js";
 import type { RequestHandler } from "./$types.js";
 
 function authorized(request: Request): boolean {
-	const secret = env.TASKS_SECRET;
+	const secret = TASKS_SECRET;
 	if (!secret) {
 		if (!dev) {
 			console.error("[tasks] TASKS_SECRET is not set — refusing to run");

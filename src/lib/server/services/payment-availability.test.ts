@@ -5,8 +5,7 @@
  */
 import { describe, it, expect, vi } from "vitest";
 
-vi.mock("$env/dynamic/private", () => ({ env: { DATABASE_URL: ":memory:" } }));
-vi.mock("$app/environment", () => ({ dev: false, browser: false, building: false }));
+vi.mock("$app/env", () => ({ dev: false, browser: false, building: false }));
 
 import { db } from "../db/index.js";
 import { paymentMethods, products, productVariants } from "../db/schema.js";

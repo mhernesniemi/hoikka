@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { STORE_NAME } from "$lib/config/store.js";
-  import ProductListing from "$lib/components/storefront/ProductListing.svelte";
+  import { STORE_NAME } from "#lib/config/store.js";
+  import ProductListing from "#lib/components/storefront/ProductListing.svelte";
   import type { PageData } from "./$types";
 
   let { data }: { data: PageData } = $props();

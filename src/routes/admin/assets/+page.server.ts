@@ -1,6 +1,6 @@
-import { assetService, assetDeleteError } from "$lib/server/services/assets.js";
-import { dbError } from "$lib/server/db-error.js";
-import type { SelectedImage } from "$lib/admin-upload.js";
+import { assetService, assetDeleteError } from "#lib/server/services/assets.js";
+import { dbError } from "#lib/server/db-error.js";
+import type { SelectedImage } from "#lib/admin-upload.js";
 import { fail } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
 

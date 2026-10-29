@@ -1,8 +1,8 @@
 <script lang="ts">
   import { page } from "$app/state";
-  import { buttonVariants } from "$lib/components/admin/ui/button";
+  import { buttonVariants } from "#lib/components/admin/ui/button/index.js";
   import ChevronLeft from "@lucide/svelte/icons/chevron-left";
-  import { cn } from "$lib/utils";
+  import { cn } from "#lib/utils.js";
 </script>
 
 <div class="flex min-h-[60vh] flex-col items-center justify-center text-center">

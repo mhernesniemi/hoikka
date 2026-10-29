@@ -7,8 +7,7 @@ import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-const env = vi.hoisted(() => ({}) as Record<string, string | undefined>);
-vi.mock("$env/dynamic/private", () => ({ env }));
+import { testEnv as env } from "#lib/server/test-env.js";
 
 import { sql } from "drizzle-orm";
 import { createNodeDb } from "./node.js";

@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { STORE_NAME } from "$lib/config/store.js";
+  import { STORE_NAME } from "#lib/config/store.js";
   import type { PageData } from "./$types";
-  import ProductCard from "$lib/components/storefront/ProductCard.svelte";
+  import ProductCard from "#lib/components/storefront/ProductCard.svelte";
   import ArrowRightIcon from "@lucide/svelte/icons/arrow-right";
 
   let { data }: { data: PageData } = $props();

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { STORE_NAME } from "$lib/config/store.js";
+  import { STORE_NAME } from "#lib/config/store.js";
   import FolderOpen from "@lucide/svelte/icons/folder-open";
 
   let { data } = $props();

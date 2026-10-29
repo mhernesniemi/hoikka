@@ -2,7 +2,7 @@
  * Cart sheet UI state (client-side only).
  *
  * Cart data itself comes from the `getCart` remote query in
- * $lib/remote/cart.remote.ts — this store tracks whether the sheet is open
+ * #lib/remote/cart.remote.ts — this store tracks whether the sheet is open
  * and whether a cart mutation is in flight, so the sheet can hold steady UI
  * (last known totals, no empty-state flash) while commands run.
  * The `.svelte.ts` extension enables Svelte 5 runes.

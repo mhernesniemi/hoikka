@@ -2,7 +2,7 @@
  * Report to Sentry when SENTRY_DSN is set, over its envelope endpoint with
  * plain fetch, so it works on both targets without the SDK.
  */
-import { env } from "$env/dynamic/private";
+import { SENTRY_DSN } from "$app/env/private";
 
 export interface SentryEvent {
 	message: string;
@@ -14,9 +14,9 @@ export interface SentryEvent {
 
 /** Send an error event, or do nothing without SENTRY_DSN. Never throws. */
 export async function captureEvent(event: SentryEvent): Promise<void> {
-	if (!env.SENTRY_DSN) return;
+	if (!SENTRY_DSN) return;
 	try {
-		await send(env.SENTRY_DSN, event);
+		await send(SENTRY_DSN, event);
 	} catch (err) {
 		console.error("[sentry] could not report:", err);
 	}

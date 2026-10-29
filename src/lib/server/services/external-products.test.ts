@@ -4,9 +4,8 @@
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
-vi.mock("$env/dynamic/private", () => ({ env: { DATABASE_URL: ":memory:" } }));
-vi.mock("$hoikka/config", async (importOriginal) => {
-	const { default: config } = await importOriginal<typeof import("$hoikka/config")>();
+vi.mock("#hoikka/config", async (importOriginal) => {
+	const { default: config } = await importOriginal<typeof import("#hoikka/config")>();
 	return {
 		default: {
 			...config,

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { STORE_NAME, SUPPORT_EMAIL } from "$lib/config/store.js";
+  import { STORE_NAME, SUPPORT_EMAIL } from "#lib/config/store.js";
 </script>
 
 <svelte:head>

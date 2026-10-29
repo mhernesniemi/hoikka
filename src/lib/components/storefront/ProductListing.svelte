@@ -1,18 +1,18 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
-  import { cn, getCurrencySymbol } from "$lib/utils";
-  import { SelectNative } from "$lib/components/storefront/ui/select-native";
-  import ProductCard from "$lib/components/storefront/ProductCard.svelte";
-  import type { ListingResult } from "$lib/server/services/product-search";
+  import { cn, getCurrencySymbol } from "#lib/utils.js";
+  import { SelectNative } from "#lib/components/storefront/ui/select-native/index.js";
+  import ProductCard from "#lib/components/storefront/ProductCard.svelte";
+  import type { ListingResult } from "#lib/server/services/product-search.js";
   import {
     PRODUCT_SORT_OPTIONS,
     type CachedProduct,
     type FacetWithValues,
     type ProductSortKey,
     type ProductWithRelations
-  } from "$lib/types";
-  import type { ActiveDiscount } from "$lib/promotion-utils";
+  } from "#lib/types.js";
+  import type { ActiveDiscount } from "#lib/promotion-utils.js";
   import Check from "@lucide/svelte/icons/check";
   import SlidersHorizontal from "@lucide/svelte/icons/sliders-horizontal";
   import X from "@lucide/svelte/icons/x";
@@ -146,7 +146,7 @@
   }
 
   function getFilterUrl(facetCode: string, valueCode: string, add: boolean): string {
-    const params = new URLSearchParams(page.url.searchParams);
+    const params = new URLSearchParams(page.url.search);
 
     if (add) {
       params.append(`facet_${facetCode}`, valueCode);
@@ -175,7 +175,7 @@
     const data = new FormData(form);
     const min = (data.get("price_min") as string)?.trim();
     const max = (data.get("price_max") as string)?.trim();
-    const params = new URLSearchParams(page.url.searchParams);
+    const params = new URLSearchParams(page.url.search);
 
     if (min && Number(min) > 0) {
       params.set("price_min", min);
@@ -190,11 +190,11 @@
     params.delete("page");
 
     const paramString = params.toString();
-    goto(paramString ? `?${paramString}` : basePath, { keepFocus: true, noScroll: true });
+    goto(paramString ? `?${paramString}` : basePath, { reset: false });
   }
 
   function getSortUrl(sort: string): string {
-    const params = new URLSearchParams(page.url.searchParams);
+    const params = new URLSearchParams(page.url.search);
     if (sort === "newest") {
       params.delete("sort");
     } else {
@@ -206,7 +206,7 @@
   }
 
   function getPageUrl(pageNum: number): string {
-    const params = new URLSearchParams(page.url.searchParams);
+    const params = new URLSearchParams(page.url.search);
     if (pageNum <= 1) {
       params.delete("page");
     } else {
@@ -248,7 +248,7 @@
   <SelectNative
     value={sortKey}
     onchange={(e) => {
-      goto(getSortUrl(e.currentTarget.value), { keepFocus: true, noScroll: true });
+      goto(getSortUrl(e.currentTarget.value), { reset: false });
     }}
   >
     {#each PRODUCT_SORT_OPTIONS as option}

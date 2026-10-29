@@ -7,7 +7,8 @@
  * the required claims must match, and the roles claim must map to a Hoikka
  * role. Customers are not affected; they keep their own sign-in.
  */
-import type { SsoProvider, StaffRole, StaffSsoConfig } from "$lib/config-schema/types.js";
+import { ssoEnvName } from "#lib/config-schema/index.js";
+import type { SsoProvider, StaffRole, StaffSsoConfig } from "#lib/config-schema/types.js";
 
 type Env = Record<string, string | undefined>;
 
@@ -16,20 +17,17 @@ export interface EnabledSsoProvider extends SsoProvider {
 	clientSecret: string;
 }
 
-function envName(id: string, suffix: string): string {
-	return `SSO_${id.toUpperCase().replace(/-/g, "_")}_${suffix}`;
-}
-
 export function enabledSsoProviders(sso: StaffSsoConfig | null, env: Env): EnabledSsoProvider[] {
 	if (!sso) return [];
 	return sso.providers.flatMap((provider) => {
-		const clientId = env[envName(provider.id, "CLIENT_ID")];
-		const clientSecret = env[envName(provider.id, "CLIENT_SECRET")];
+		const clientId = env[ssoEnvName(provider.id, "CLIENT_ID")];
+		const clientSecret = env[ssoEnvName(provider.id, "CLIENT_SECRET")];
 		if (!clientId || !clientSecret) return [];
 		return [
 			{
 				...provider,
-				discoveryUrl: env[envName(provider.id, "DISCOVERY_URL")] || provider.discoveryUrl,
+				discoveryUrl:
+					env[ssoEnvName(provider.id, "DISCOVERY_URL")] || provider.discoveryUrl,
 				clientId,
 				clientSecret
 			}

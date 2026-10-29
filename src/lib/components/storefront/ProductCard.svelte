@@ -1,8 +1,12 @@
 <script lang="ts">
-  import type { ProductWithRelations } from "$lib/types";
-  import { formatPrice, cn } from "$lib/utils";
-  import Img from "$lib/components/storefront/Img.svelte";
-  import { findBestDiscount, getDiscountedPrice, type ActiveDiscount } from "$lib/promotion-utils";
+  import type { ProductWithRelations } from "#lib/types.js";
+  import { formatPrice, cn } from "#lib/utils.js";
+  import Img from "#lib/components/storefront/Img.svelte";
+  import {
+    findBestDiscount,
+    getDiscountedPrice,
+    type ActiveDiscount
+  } from "#lib/promotion-utils.js";
   import ImageIcon from "@lucide/svelte/icons/image";
 
   let {

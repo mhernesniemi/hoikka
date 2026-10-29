@@ -6,16 +6,16 @@
  * ENABLE_MOCK_PAYMENTS=true (used by the e2e suite against a built app).
  */
 import type { PaymentProvider, PaymentInfo, PaymentVerification, RefundInfo } from "../types.js";
-import type { OrderWithRelations } from "$lib/types.js";
-import { dev } from "$app/environment";
-import { env } from "$env/dynamic/private";
+import type { OrderWithRelations } from "#lib/types.js";
+import { dev } from "$app/env";
+import { ENABLE_MOCK_PAYMENTS } from "$app/env/private";
 import { nanoid } from "nanoid";
 
 export class MockProvider implements PaymentProvider {
 	code = "mock";
 
 	isAvailable(): boolean {
-		return dev || env.ENABLE_MOCK_PAYMENTS === "true";
+		return dev || ENABLE_MOCK_PAYMENTS === "true";
 	}
 
 	/**

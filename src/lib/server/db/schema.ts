@@ -119,7 +119,7 @@ export const products = sqliteTable(
 		digitalAssetId: integer("digital_asset_id"),
 		// Values for the custom fields declared on this product's type in
 		// hoikka.config.ts. One JSON object keyed by field key — the config is
-		// the schema, valibot validates on write (see $lib/fields).
+		// the schema, valibot validates on write (see #lib/fields).
 		customFields: text("custom_fields", { mode: "json" })
 			.$type<Record<string, unknown>>()
 			.default({})
@@ -1106,7 +1106,7 @@ export const contentPages = sqliteTable("content_pages", {
 	// Which template from hoikka.config.ts this page uses. Templates declare
 	// the page's custom fields; "default" is always available.
 	template: text("template").default("default").notNull(),
-	// Values for the template's custom fields — see $lib/fields.
+	// Values for the template's custom fields — see #lib/fields.
 	customFields: text("custom_fields", { mode: "json" })
 		.$type<Record<string, unknown>>()
 		.default({})

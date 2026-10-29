@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { cn } from "$lib/utils.js";
+  import { cn } from "#lib/utils.js";
   import { Dialog as DialogPrimitive } from "bits-ui";
   import DialogOverlay from "./dialog-overlay.svelte";
 

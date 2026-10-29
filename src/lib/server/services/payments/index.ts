@@ -6,7 +6,7 @@
 import { eq, and, desc, inArray } from "drizzle-orm";
 import { db } from "../../db/index.js";
 import { paymentMethods, payments } from "../../db/schema.js";
-import type { PaymentMethod, Payment, OrderWithRelations } from "$lib/types.js";
+import type { PaymentMethod, Payment, OrderWithRelations } from "#lib/types.js";
 import type {
 	PaymentProvider,
 	PaymentInfo,
@@ -15,7 +15,7 @@ import type {
 	RefundInfo
 } from "./types.js";
 import { MockProvider, StripeProvider } from "./providers/index.js";
-import config from "$hoikka/config";
+import config from "#hoikka/config";
 
 /**
  * Provider registry, built from hoikka.config.ts. A descriptor's `code` maps

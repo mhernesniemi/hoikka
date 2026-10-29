@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { entraId, keycloak } from "$lib/config-schema/providers.js";
-import type { StaffSsoConfig } from "$lib/config-schema/types.js";
+import { entraId, keycloak } from "#lib/config-schema/providers.js";
+import type { StaffSsoConfig } from "#lib/config-schema/types.js";
 import {
 	decodeIdToken,
 	enabledSsoProviders,

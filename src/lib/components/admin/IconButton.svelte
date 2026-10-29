@@ -1,7 +1,7 @@
 <script lang="ts">
-  import * as Tooltip from "$lib/components/admin/ui/tooltip";
-  import { buttonVariants } from "$lib/components/admin/ui/button";
-  import { cn } from "$lib/utils";
+  import * as Tooltip from "#lib/components/admin/ui/tooltip/index.js";
+  import { buttonVariants } from "#lib/components/admin/ui/button/index.js";
+  import { cn } from "#lib/utils.js";
   import type { Component } from "svelte";
 
   let {

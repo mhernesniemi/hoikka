@@ -2,7 +2,7 @@
  * Cloudflare R2 storage backend. Object keys mirror the fs layout
  * (`<folder>/<filename>`), so public URLs are identical on both targets.
  */
-import { getRequestEvent } from "$app/server";
+import { bindings } from "#lib/server/cloudflare.js";
 import {
 	PUBLIC_PREFIX,
 	contentTypeFor,
@@ -13,7 +13,7 @@ import {
 } from "./types.js";
 
 function bucket() {
-	const bucket = getRequestEvent().platform?.env?.ASSETS_BUCKET;
+	const bucket = bindings?.ASSETS_BUCKET;
 	if (!bucket) throw new Error("R2 bucket binding ASSETS_BUCKET is not available");
 	return bucket;
 }

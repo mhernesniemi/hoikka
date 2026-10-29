@@ -2,9 +2,8 @@
  * Logins for customers created ahead of them (imports, ERP syncs), against a
  * real in-memory SQLite.
  */
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 
-vi.mock("$env/dynamic/private", () => ({ env: { DATABASE_URL: ":memory:" } }));
 import { eq } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { customers, user } from "../db/schema.js";

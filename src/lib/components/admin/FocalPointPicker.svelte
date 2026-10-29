@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { cn } from "$lib/utils";
-  import { imageUrl } from "$lib/image";
+  import { cn } from "#lib/utils.js";
+  import { imageUrl } from "#lib/image.js";
   import Crosshair from "@lucide/svelte/icons/crosshair";
 
   interface Props {

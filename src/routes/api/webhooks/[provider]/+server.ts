@@ -4,17 +4,21 @@
  * out-of-band processing.
  *
  * Secret per provider via env: WEBHOOK_SECRET_<PROVIDER> (uppercased), e.g.
- * WEBHOOK_SECRET_ERP. Signature header: x-hoikka-signature (hex or sha256=hex).
+ * WEBHOOK_SECRET_ERP, declared in src/env.ts. Signature header:
+ * x-hoikka-signature (hex or sha256=hex).
  */
 import { json, error } from "@sveltejs/kit";
-import { env } from "$env/dynamic/private";
-import { verifySignature } from "$lib/server/integrations/webhooks.js";
-import { emitEvent } from "$lib/server/integrations/events.js";
+import * as env from "$app/env/private";
+import { verifySignature } from "#lib/server/integrations/webhooks.js";
+import { emitEvent } from "#lib/server/integrations/events.js";
 import type { RequestHandler } from "./$types.js";
 
 export const POST: RequestHandler = async ({ request, params }) => {
 	const provider = params.provider.replace(/[^a-zA-Z0-9_-]/g, "");
-	const secret = env[`WEBHOOK_SECRET_${provider.toUpperCase()}`];
+
+	const secret = (env as Record<string, string | undefined>)[
+		`WEBHOOK_SECRET_${provider.toUpperCase()}`
+	];
 	if (!secret) throw error(404, "Unknown webhook provider");
 
 	const body = await request.text();

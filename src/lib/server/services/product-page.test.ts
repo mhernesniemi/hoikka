@@ -3,9 +3,8 @@
  * migration chain). The composed services have their own coverage — this
  * checks the aggregate returns a coherent shape for found/missing products.
  */
-import { describe, it, expect, beforeAll, vi } from "vitest";
+import { describe, it, expect, beforeAll } from "vitest";
 
-vi.mock("$env/dynamic/private", () => ({ env: { DATABASE_URL: ":memory:" } }));
 import { productService } from "./products.js";
 import { loadProductPageData } from "./product-page.js";
 

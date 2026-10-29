@@ -12,7 +12,7 @@
     getFilteredRowModel,
     getPaginationRowModel
   } from "@tanstack/table-core";
-  import { createSvelteTable, FlexRender } from "$lib/components/admin/ui/data-table/index.js";
+  import { createSvelteTable, FlexRender } from "#lib/components/admin/ui/data-table/index.js";
   import {
     Table as TableRoot,
     TableHeader,
@@ -20,11 +20,11 @@
     TableRow,
     TableHead,
     TableCell
-  } from "$lib/components/admin/ui/table/index.js";
-  import { Input } from "$lib/components/admin/ui/input/index.js";
-  import { Button } from "$lib/components/admin/ui/button/index.js";
+  } from "#lib/components/admin/ui/table/index.js";
+  import { Input } from "#lib/components/admin/ui/input/index.js";
+  import { Button } from "#lib/components/admin/ui/button/index.js";
   import DataTableColumnHeader from "./DataTableColumnHeader.svelte";
-  import { cn } from "$lib/utils";
+  import { cn } from "#lib/utils.js";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import Search from "@lucide/svelte/icons/search";
@@ -73,14 +73,14 @@
     serverSearchValue = value;
     clearTimeout(searchDebounceTimer);
     searchDebounceTimer = setTimeout(() => {
-      const url = new URL(page.url);
+      const url = new URL(page.url.href);
       if (value) {
         url.searchParams.set("search", value);
       } else {
         url.searchParams.delete("search");
       }
       url.searchParams.delete("page");
-      goto(url.toString(), { keepFocus: true });
+      goto(url.toString(), { reset: false });
     }, 300);
   }
 
@@ -91,10 +91,10 @@
     if (serverPagination) {
       serverSearchValue = "";
       clearTimeout(searchDebounceTimer);
-      const url = new URL(page.url);
+      const url = new URL(page.url.href);
       url.searchParams.delete("search");
       url.searchParams.delete("page");
-      goto(url.toString(), { keepFocus: true });
+      goto(url.toString(), { reset: false });
     } else {
       table.setGlobalFilter("");
     }
@@ -125,7 +125,7 @@
       const newSorting = typeof updater === "function" ? updater(sorting) : updater;
       sorting = newSorting;
       if (serverPagination) {
-        const url = new URL(page.url);
+        const url = new URL(page.url.href);
         if (newSorting.length > 0) {
           url.searchParams.set("sort", newSorting[0].id);
           url.searchParams.set("order", newSorting[0].desc ? "desc" : "asc");
@@ -187,7 +187,7 @@
   );
 
   function goToServerPage(newPage: number) {
-    const url = new URL(page.url);
+    const url = new URL(page.url.href);
     if (newPage <= 1) {
       url.searchParams.delete("page");
     } else {

@@ -5,7 +5,7 @@
  */
 import { describe, it, expect, expectTypeOf } from "vitest";
 import { defineHoikkaConfig } from "./index.js";
-import { customFields } from "$lib/fields/index.js";
+import { customFields } from "#lib/fields/index.js";
 import { stripe, flatRate, entraId } from "./providers.js";
 
 describe("defineHoikkaConfig", () => {

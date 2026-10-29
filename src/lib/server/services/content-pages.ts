@@ -6,7 +6,7 @@ import { eq, and, desc, sql, type SQL } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { paginationOf, resolveSort } from "../pagination.js";
 import { contentPages } from "../db/schema.js";
-import type { ContentPage, PaginatedResult } from "$lib/types.js";
+import type { ContentPage, PaginatedResult } from "#lib/types.js";
 
 export class ContentPageService {
 	async list(): Promise<ContentPage[]> {

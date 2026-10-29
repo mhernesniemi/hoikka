@@ -1,10 +1,9 @@
-import { describe, it, expect, vi, afterAll } from "vitest";
+import { describe, it, expect, afterAll } from "vitest";
 import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-const env = vi.hoisted(() => ({}) as Record<string, string | undefined>);
-vi.mock("$env/dynamic/private", () => ({ env }));
+import { testEnv as env } from "#lib/server/test-env.js";
 
 import { fsStorage } from "./fs.js";
 import { cacheDir } from "./paths.js";

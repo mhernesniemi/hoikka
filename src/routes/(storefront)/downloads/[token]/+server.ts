@@ -6,8 +6,8 @@
  * cache between here and the buyer keeps a copy.
  */
 import { error } from "@sveltejs/kit";
-import { digitalDeliveryService } from "$lib/server/services/digitalDelivery.js";
-import { get } from "$lib/server/storage/index.js";
+import { digitalDeliveryService } from "#lib/server/services/digitalDelivery.js";
+import { get } from "#lib/server/storage/index.js";
 import type { RequestHandler } from "./$types.js";
 
 /** Strip the public `/uploads/` prefix to get the storage key. */

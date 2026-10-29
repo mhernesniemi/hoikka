@@ -15,7 +15,7 @@ import {
 	removeFromIndex as removeFromIndexCore,
 	reindexAll as reindexAllCore
 } from "./reindex.js";
-import type { CachedProduct, PaginatedResult, ProductSortKey } from "$lib/types.js";
+import type { CachedProduct, PaginatedResult, ProductSortKey } from "#lib/types.js";
 
 // reindex.ts takes an explicit db so the standalone seed script can pass its
 // own connection; these wrappers bind the app db for route/service callers.

@@ -6,7 +6,7 @@
  * long-lived process, so a Cron Trigger drives the same tick through
  * /api/tasks/run instead (see workers/cron.ts).
  */
-import { env } from "$env/dynamic/private";
+import { HOIKKA_TARGET } from "$app/env/private";
 import { drainOutbox } from "./events.js";
 import { runDueTasks } from "./tasks.js";
 
@@ -15,7 +15,7 @@ let started = false;
 
 export function ensureNodeScheduler(): void {
 	if (started) return;
-	if (env.HOIKKA_TARGET === "cloudflare") return; // CF uses a cron trigger
+	if (HOIKKA_TARGET === "cloudflare") return; // CF uses a cron trigger
 	started = true;
 
 	// Not awaited together: a long task must not hold up event delivery, and

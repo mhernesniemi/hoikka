@@ -5,8 +5,7 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-const env = vi.hoisted(() => ({}) as Record<string, string | undefined>);
-vi.mock("$env/dynamic/private", () => ({ env }));
+import { testEnv as env } from "#lib/server/test-env.js";
 
 import { PART_SIZE, s3Storage } from "./s3.js";
 import * as storage from "./index.js";

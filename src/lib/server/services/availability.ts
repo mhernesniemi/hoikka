@@ -4,7 +4,7 @@
  *
  * Names, descriptions, prices and images change when an editor saves; stock
  * changes with every paid or cancelled order. Storefront pages are edge-cached
- * per catalog version (see $lib/server/edge-cache.ts), so folding purchases
+ * per catalog version (see #lib/server/edge-cache.ts), so folding purchases
  * into that version would orphan every cached page on every sale — worst
  * exactly during a burst, where each purchase forces cold renders for everyone
  * else. Availability is read through this small query instead: cached HTML

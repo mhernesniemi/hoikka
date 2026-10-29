@@ -6,9 +6,7 @@
  * stop it. A rebuild of order_lines would silently delete live stock
  * reservations and paid download grants.
  */
-import { describe, it, expect, vi } from "vitest";
-
-vi.mock("$env/dynamic/private", () => ({ env: { DATABASE_URL: ":memory:" } }));
+import { describe, it, expect } from "vitest";
 
 import { readFileSync, readdirSync } from "node:fs";
 import { sql } from "drizzle-orm";

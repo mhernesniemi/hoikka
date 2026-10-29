@@ -1,7 +1,7 @@
-import { reviewService } from "$lib/server/services/reviews.js";
-import { productService } from "$lib/server/services/products.js";
-import { customerService } from "$lib/server/services/customers.js";
-import { dbError } from "$lib/server/db-error.js";
+import { reviewService } from "#lib/server/services/reviews.js";
+import { productService } from "#lib/server/services/products.js";
+import { customerService } from "#lib/server/services/customers.js";
+import { dbError } from "#lib/server/db-error.js";
 import { error, fail, redirect, isRedirect } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
 

@@ -1,5 +1,5 @@
 import { deserialize } from "$app/forms";
-import { invalidateAll } from "$app/navigation";
+import { refreshAll } from "$app/navigation";
 
 /** Image metadata emitted by ImagePicker once files are uploaded to storage. */
 export type SelectedImage = {
@@ -16,7 +16,7 @@ export type SelectedImage = {
  * Each file is serialized as one "files" form entry; the action reads them
  * with formData.getAll("files").
  *
- * On success the server data is refreshed via invalidateAll() and null is
+ * On success the server data is refreshed via refreshAll() and null is
  * returned. On failure an error message is returned for the page to toast.
  */
 export async function saveImages(action: string, files: SelectedImage[]): Promise<string | null> {
@@ -34,7 +34,7 @@ export async function saveImages(action: string, files: SelectedImage[]): Promis
 		const result = deserialize(await response.text());
 
 		if (result.type === "success") {
-			await invalidateAll();
+			await refreshAll();
 			return null;
 		}
 

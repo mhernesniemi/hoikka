@@ -6,9 +6,9 @@
    * so state resets per product.
    */
   import { enhance } from "$app/forms";
-  import { cn } from "$lib/utils";
-  import { Button } from "$lib/components/storefront/ui/button";
-  import { Alert } from "$lib/components/storefront/ui/alert";
+  import { cn } from "#lib/utils.js";
+  import { Button } from "#lib/components/storefront/ui/button/index.js";
+  import { Alert } from "#lib/components/storefront/ui/alert/index.js";
 
   interface ReviewItem {
     nickname: string;

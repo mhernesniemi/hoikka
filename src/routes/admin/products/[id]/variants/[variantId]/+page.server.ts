@@ -1,11 +1,11 @@
-import { productService } from "$lib/server/services/products.js";
-import { reindexProduct } from "$lib/server/services/product-search.js";
-import { assetService } from "$lib/server/services/assets.js";
-import { facetService } from "$lib/server/services/facets.js";
-import { customerGroupService } from "$lib/server/services/customerGroups.js";
-import { translationService } from "$lib/server/services/translations.js";
-import { TRANSLATION_LANGUAGES } from "$lib/config/languages.js";
-import { dbError } from "$lib/server/db-error.js";
+import { productService } from "#lib/server/services/products.js";
+import { reindexProduct } from "#lib/server/services/product-search.js";
+import { assetService } from "#lib/server/services/assets.js";
+import { facetService } from "#lib/server/services/facets.js";
+import { customerGroupService } from "#lib/server/services/customerGroups.js";
+import { translationService } from "#lib/server/services/translations.js";
+import { TRANSLATION_LANGUAGES } from "#lib/config/languages.js";
+import { dbError } from "#lib/server/db-error.js";
 import { error, fail, redirect } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
 

@@ -1,7 +1,7 @@
 /**
  * Cart read model.
  *
- * The cart itself is a cookie (see $lib/server/cart-cookie.ts); this service
+ * The cart itself is a cookie (see #lib/server/cart-cookie.ts); this service
  * turns cookie lines into a priced view in a handful of batched queries.
  * Nothing here writes to the database — the first write happens at checkout
  * (orderService.startCheckout).

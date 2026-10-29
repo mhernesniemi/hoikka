@@ -4,9 +4,8 @@
  * it must report what the storefront needs — addable or not — without leaking
  * inventory levels or resurrecting deleted variants.
  */
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 
-vi.mock("$env/dynamic/private", () => ({ env: { DATABASE_URL: ":memory:" } }));
 import { db } from "../db/index.js";
 import { products, productVariants } from "../db/schema.js";
 import { getProductAvailability } from "./availability.js";

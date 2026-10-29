@@ -1,4 +1,4 @@
-import { reindexAll } from "$lib/server/services/product-search.js";
+import { reindexAll } from "#lib/server/services/product-search.js";
 import { json, error } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 

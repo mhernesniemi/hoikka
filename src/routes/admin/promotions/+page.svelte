@@ -1,15 +1,19 @@
 <script lang="ts">
   import { enhance } from "$app/forms";
   import type { ColumnDef } from "@tanstack/table-core";
-  import { DataTable, renderSnippet, renderComponent } from "$lib/components/admin/data-table";
-  import { Badge } from "$lib/components/admin/ui/badge";
-  import { Button, buttonVariants } from "$lib/components/admin/ui/button";
-  import DeleteConfirmDialog from "$lib/components/admin/DeleteConfirmDialog.svelte";
-  import { Checkbox } from "$lib/components/admin/ui/checkbox";
+  import {
+    DataTable,
+    renderSnippet,
+    renderComponent
+  } from "#lib/components/admin/data-table/index.js";
+  import { Badge } from "#lib/components/admin/ui/badge/index.js";
+  import { Button, buttonVariants } from "#lib/components/admin/ui/button/index.js";
+  import DeleteConfirmDialog from "#lib/components/admin/DeleteConfirmDialog.svelte";
+  import { Checkbox } from "#lib/components/admin/ui/checkbox/index.js";
   import type { PageData } from "./$types";
   import { Percent as PercentIcon } from "@lucide/svelte";
   import PlusIcon from "@lucide/svelte/icons/plus";
-  import { BASE_CURRENCY, formatDate } from "$lib/utils";
+  import { BASE_CURRENCY, formatDate } from "#lib/utils.js";
 
   let { data }: { data: PageData } = $props();
 

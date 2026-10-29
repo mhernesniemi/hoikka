@@ -1,11 +1,11 @@
 <script lang="ts">
-  import { STORE_NAME } from "$lib/config/store.js";
-  import { browser } from "$app/environment";
-  import { invalidateAll, onNavigate } from "$app/navigation";
-  import { cn } from "$lib/utils";
-  import SearchBar from "$lib/components/storefront/SearchBar.svelte";
-  import CartSheet from "$lib/components/storefront/CartSheet.svelte";
-  import { getWishlistCount } from "$lib/remote/wishlist.remote";
+  import { STORE_NAME } from "#lib/config/store.js";
+  import { browser } from "$app/env";
+  import { refreshAll, onNavigate } from "$app/navigation";
+  import { cn } from "#lib/utils.js";
+  import SearchBar from "#lib/components/storefront/SearchBar.svelte";
+  import CartSheet from "#lib/components/storefront/CartSheet.svelte";
+  import { getWishlistCount } from "#lib/remote/wishlist.remote.js";
   import type { Snippet } from "svelte";
   import type { LayoutData } from "./$types";
   import Heart from "@lucide/svelte/icons/heart";
@@ -37,7 +37,7 @@
   $effect(() => {
     const currentUserId = data.user?.id ?? null;
     if (previousUserId !== undefined && previousUserId !== currentUserId) {
-      invalidateAll();
+      refreshAll();
     }
     previousUserId = currentUserId;
   });

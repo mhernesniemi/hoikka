@@ -1,6 +1,6 @@
-import { customerGroupService } from "$lib/server/services/customerGroups.js";
-import { customerService } from "$lib/server/services/customers.js";
-import { dbError } from "$lib/server/db-error.js";
+import { customerGroupService } from "#lib/server/services/customerGroups.js";
+import { customerService } from "#lib/server/services/customers.js";
+import { dbError } from "#lib/server/db-error.js";
 import { error, fail, redirect, isRedirect } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
 

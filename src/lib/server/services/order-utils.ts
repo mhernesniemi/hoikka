@@ -3,7 +3,7 @@
  * No database or environment dependencies
  */
 
-import type { OrderState } from "$lib/types.js";
+import type { OrderState } from "#lib/types.js";
 
 // Valid state transitions
 export const STATE_TRANSITIONS: Record<OrderState, OrderState[]> = {

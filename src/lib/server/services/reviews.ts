@@ -18,7 +18,7 @@ import type {
 	ReviewStatus,
 	CreateReviewInput,
 	PaginatedResult
-} from "$lib/types.js";
+} from "#lib/types.js";
 
 export class ReviewService {
 	/**

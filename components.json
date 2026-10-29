@@ -7,9 +7,9 @@
 		"baseColor": "slate"
 	},
 	"aliases": {
-		"components": "$lib/components",
-		"utils": "$lib/utils",
-		"ui": "$lib/components/storefront/ui"
+		"components": "#lib/components",
+		"utils": "#lib/utils",
+		"ui": "#lib/components/storefront/ui"
 	},
 	"typescript": true,
 	"registry": "https://shadcn-svelte.com/registry"

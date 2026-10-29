@@ -1,6 +1,6 @@
-import config from "$hoikka/config";
-import { facetService } from "$lib/server/services/facets.js";
-import { listProducts, parseListingParams } from "$lib/server/services/product-search.js";
+import config from "#hoikka/config";
+import { facetService } from "#lib/server/services/facets.js";
+import { listProducts, parseListingParams } from "#lib/server/services/product-search.js";
 import type { PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ url, locals }) => {

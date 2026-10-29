@@ -1,11 +1,11 @@
 <script lang="ts">
-  import { Button } from "$lib/components/admin/ui/button";
-  import { Checkbox } from "$lib/components/admin/ui/checkbox";
-  import DeleteConfirmDialog from "$lib/components/admin/DeleteConfirmDialog.svelte";
-  import ImagePicker from "$lib/components/admin/ImagePicker.svelte";
-  import { imageUrl } from "$lib/image";
-  import { formatDate, formatFileSize, cn } from "$lib/utils";
-  import { saveImages, type SelectedImage } from "$lib/admin-upload";
+  import { Button } from "#lib/components/admin/ui/button/index.js";
+  import { Checkbox } from "#lib/components/admin/ui/checkbox/index.js";
+  import DeleteConfirmDialog from "#lib/components/admin/DeleteConfirmDialog.svelte";
+  import ImagePicker from "#lib/components/admin/ImagePicker.svelte";
+  import { imageUrl } from "#lib/image.js";
+  import { formatDate, formatFileSize, cn } from "#lib/utils.js";
+  import { saveImages, type SelectedImage } from "#lib/admin-upload.js";
   import { toast } from "svelte-sonner";
   import ImageIcon from "@lucide/svelte/icons/image";
   import Plus from "@lucide/svelte/icons/plus";

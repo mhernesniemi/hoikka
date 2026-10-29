@@ -4,7 +4,7 @@
  */
 import { query } from "$app/server";
 import * as v from "valibot";
-import { quickSearchProducts } from "$lib/server/services/product-search.js";
+import { quickSearchProducts } from "#lib/server/services/product-search.js";
 
 export const quickSearch = query(v.pipe(v.string(), v.maxLength(100)), async (term) =>
 	quickSearchProducts(term)

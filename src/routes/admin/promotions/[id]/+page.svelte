@@ -1,17 +1,17 @@
 <script lang="ts">
-  import PageActionsMenu from "$lib/components/admin/PageActionsMenu.svelte";
+  import PageActionsMenu from "#lib/components/admin/PageActionsMenu.svelte";
   import { enhance } from "$app/forms";
   import { page } from "$app/state";
   import { onMount, untrack } from "svelte";
-  import { Button } from "$lib/components/admin/ui/button";
-  import { Checkbox } from "$lib/components/admin/ui/checkbox";
-  import { Input } from "$lib/components/admin/ui/input";
-  import { Label } from "$lib/components/admin/ui/label";
-  import DeleteConfirmDialog from "$lib/components/admin/DeleteConfirmDialog.svelte";
-  import AdminCard from "$lib/components/admin/AdminCard.svelte";
-  import { Badge } from "$lib/components/admin/ui/badge";
-  import PromotionForm, { typeLabels } from "$lib/components/admin/PromotionForm.svelte";
-  import UnsavedChangesDialog from "$lib/components/admin/UnsavedChangesDialog.svelte";
+  import { Button } from "#lib/components/admin/ui/button/index.js";
+  import { Checkbox } from "#lib/components/admin/ui/checkbox/index.js";
+  import { Input } from "#lib/components/admin/ui/input/index.js";
+  import { Label } from "#lib/components/admin/ui/label/index.js";
+  import DeleteConfirmDialog from "#lib/components/admin/DeleteConfirmDialog.svelte";
+  import AdminCard from "#lib/components/admin/AdminCard.svelte";
+  import { Badge } from "#lib/components/admin/ui/badge/index.js";
+  import PromotionForm, { typeLabels } from "#lib/components/admin/PromotionForm.svelte";
+  import UnsavedChangesDialog from "#lib/components/admin/UnsavedChangesDialog.svelte";
   import type { PageData, ActionData } from "./$types";
   import { toast } from "svelte-sonner";
   import ChevronLeft from "@lucide/svelte/icons/chevron-left";

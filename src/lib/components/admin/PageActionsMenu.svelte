@@ -3,8 +3,8 @@
    * The "⋮" menu beside a detail page's Save button, holding the rare,
    * destructive actions that used to sit as a red link at the page bottom.
    */
-  import * as DropdownMenu from "$lib/components/admin/ui/dropdown-menu";
-  import { Button } from "$lib/components/admin/ui/button";
+  import * as DropdownMenu from "#lib/components/admin/ui/dropdown-menu/index.js";
+  import { Button } from "#lib/components/admin/ui/button/index.js";
   import EllipsisVertical from "@lucide/svelte/icons/ellipsis-vertical";
   import Trash2 from "@lucide/svelte/icons/trash-2";
 

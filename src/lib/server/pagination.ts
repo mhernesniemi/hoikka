@@ -1,5 +1,5 @@
 import { asc, desc, type SQL } from "drizzle-orm";
-import type { PaginationInfo } from "$lib/types.js";
+import type { PaginationInfo } from "#lib/types.js";
 
 export function parsePaginationParams(url: URL, pageSize = 20) {
 	const page = Number(url.searchParams.get("page")) || 1;

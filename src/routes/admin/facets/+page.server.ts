@@ -1,6 +1,6 @@
-import { parsePaginationParams } from "$lib/server/pagination.js";
-import { facetService } from "$lib/server/services/facets.js";
-import { dbError } from "$lib/server/db-error.js";
+import { parsePaginationParams } from "#lib/server/pagination.js";
+import { facetService } from "#lib/server/services/facets.js";
+import { dbError } from "#lib/server/db-error.js";
 import { fail, redirect, isRedirect } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
 

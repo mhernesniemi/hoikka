@@ -8,14 +8,14 @@
  */
 import { error, fail, redirect } from "@sveltejs/kit";
 import { and, eq, sql } from "drizzle-orm";
-import { dev } from "$app/environment";
-import { env } from "$env/dynamic/private";
-import { auth } from "$lib/server/auth.js";
-import { db } from "$lib/server/db/index.js";
-import { user } from "$lib/server/db/schema.js";
-import { secretMatches } from "$lib/server/secrets.js";
-import { staffPasswordLoginAllowed } from "$lib/server/sso.js";
-import { STAFF_SSO } from "$lib/config/admin.js";
+import { dev } from "$app/env";
+import * as env from "$app/env/private";
+import { auth } from "#lib/server/auth.js";
+import { db } from "#lib/server/db/index.js";
+import { user } from "#lib/server/db/schema.js";
+import { secretMatches } from "#lib/server/secrets.js";
+import { staffPasswordLoginAllowed } from "#lib/server/sso.js";
+import { STAFF_SSO } from "#lib/config/admin.js";
 import type { Actions, PageServerLoad } from "./$types";
 
 async function hasAdminUser(): Promise<boolean> {

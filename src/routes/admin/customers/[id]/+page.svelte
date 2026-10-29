@@ -8,17 +8,17 @@
     TableRow,
     TableHead,
     TableCell
-  } from "$lib/components/admin/ui/table";
-  import { Badge, type BadgeVariant } from "$lib/components/admin/ui/badge";
-  import { Button } from "$lib/components/admin/ui/button";
-  import { Input } from "$lib/components/admin/ui/input";
-  import { Label } from "$lib/components/admin/ui/label";
+  } from "#lib/components/admin/ui/table/index.js";
+  import { Badge, type BadgeVariant } from "#lib/components/admin/ui/badge/index.js";
+  import { Button } from "#lib/components/admin/ui/button/index.js";
+  import { Input } from "#lib/components/admin/ui/input/index.js";
+  import { Label } from "#lib/components/admin/ui/label/index.js";
   import ChevronLeft from "@lucide/svelte/icons/chevron-left";
-  import AdminCard from "$lib/components/admin/AdminCard.svelte";
-  import FieldRenderer from "$lib/components/admin/FieldRenderer.svelte";
-  import hoikkaConfig from "$hoikka/config";
+  import AdminCard from "#lib/components/admin/AdminCard.svelte";
+  import FieldRenderer from "#lib/components/admin/FieldRenderer.svelte";
+  import hoikkaConfig from "#hoikka/config";
   import type { PageData, ActionData } from "./$types";
-  import { BASE_CURRENCY, formatDate } from "$lib/utils";
+  import { BASE_CURRENCY, formatDate } from "#lib/utils.js";
 
   let { data, form }: { data: PageData; form: ActionData } = $props();
 

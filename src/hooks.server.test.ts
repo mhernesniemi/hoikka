@@ -6,10 +6,8 @@
  */
 import { describe, it, expect, vi } from "vitest";
 
-vi.mock("$env/dynamic/private", () => ({ env: { DATABASE_URL: ":memory:" } }));
-
 const customersConfig = vi.hoisted(() => ({ signUp: true, requireSignIn: false }));
-vi.mock("$lib/config/customers.js", () => ({
+vi.mock("#lib/config/customers.js", () => ({
 	get SIGN_UP_ENABLED() {
 		return customersConfig.signUp;
 	},
@@ -18,7 +16,7 @@ vi.mock("$lib/config/customers.js", () => ({
 	}
 }));
 
-import { env } from "$env/dynamic/private";
+import { testEnv as env } from "#lib/server/test-env.js";
 import {
 	adminGuard,
 	bodyLimitGuard,
@@ -224,30 +222,27 @@ describe("signInGuard", () => {
 });
 
 describe("handleError", () => {
-	async function fail(status: number, waitUntil = vi.fn()) {
-		const { event } = makeEvent("/products/1");
-		(event as { platform?: unknown }).platform = { ctx: { waitUntil } };
-		await handleError({
-			error: new Error("db locked"),
-			event,
-			status,
-			message: "Internal Error"
-		});
-		return waitUntil;
-	}
-
-	it("reports server errors to Sentry when SENTRY_DSN is set, and not 404s", async () => {
+	it("reports unexpected errors to Sentry when SENTRY_DSN is set, and not expected ones", async () => {
 		env.SENTRY_DSN = "https://k@o1.ingest.sentry.io/1";
 		const fetch = vi.fn(async () => new Response("{}"));
 		vi.stubGlobal("fetch", fetch);
 		const log = vi.spyOn(console, "error").mockImplementation(() => {});
+		const { event } = makeEvent("/products/1");
 
 		try {
-			await fail(404);
+			const notFound = { status: 404, message: "Not Found" };
+			expect(
+				await handleError({ kind: "framework", error: notFound, event })
+			).toBeUndefined();
 			expect(fetch).not.toHaveBeenCalled();
 
-			const waitUntil = await fail(500);
-			await waitUntil.mock.calls[0][0];
+			const result = await handleError({
+				kind: "unknown",
+				error: new Error("db locked"),
+				event
+			});
+			expect(result).toMatchObject({ message: "An unexpected error occurred" });
+			await vi.waitFor(() => expect(fetch).toHaveBeenCalledOnce());
 			const body = String((fetch.mock.calls[0] as unknown as [string, RequestInit])[1].body);
 			expect(JSON.parse(body.split("\n")[2]).message.formatted).toBe(
 				"GET /products/1: db locked"

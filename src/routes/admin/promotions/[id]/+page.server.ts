@@ -1,9 +1,9 @@
 import type { PageServerLoad, Actions } from "./$types";
-import { promotionService } from "$lib/server/services/promotions.js";
-import { productService } from "$lib/server/services/products.js";
-import { collectionService } from "$lib/server/services/collections.js";
-import { customerGroupService } from "$lib/server/services/customerGroups.js";
-import { dbError } from "$lib/server/db-error.js";
+import { promotionService } from "#lib/server/services/promotions.js";
+import { productService } from "#lib/server/services/products.js";
+import { collectionService } from "#lib/server/services/collections.js";
+import { customerGroupService } from "#lib/server/services/customerGroups.js";
+import { dbError } from "#lib/server/db-error.js";
 import { parsePromotionUpdateForm } from "../promotion-form.server.js";
 import { error, fail, redirect, isRedirect } from "@sveltejs/kit";
 

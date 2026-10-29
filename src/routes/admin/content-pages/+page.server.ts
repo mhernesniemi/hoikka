@@ -1,8 +1,8 @@
-import { parsePaginationParams } from "$lib/server/pagination.js";
-import { contentPageService } from "$lib/server/services/content-pages.js";
-import { dbError } from "$lib/server/db-error.js";
+import { parsePaginationParams } from "#lib/server/pagination.js";
+import { contentPageService } from "#lib/server/services/content-pages.js";
+import { dbError } from "#lib/server/db-error.js";
 import { fail, redirect, isRedirect } from "@sveltejs/kit";
-import { slugify } from "$lib/utils.js";
+import { slugify } from "#lib/utils.js";
 import type { Actions, PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ url }) => {

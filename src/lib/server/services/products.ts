@@ -31,8 +31,8 @@ import type {
 	FacetCount,
 	FacetValue,
 	PaginatedResult
-} from "$lib/types.js";
-import { DEFAULT_PRODUCT_TYPE } from "$lib/config/products.js";
+} from "#lib/types.js";
+import { DEFAULT_PRODUCT_TYPE } from "#lib/config/products.js";
 
 export class ProductService {
 	/**

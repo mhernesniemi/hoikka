@@ -3,9 +3,9 @@
  * moved (e.g. onto a mounted volume, or the cache out of backups) with
  * UPLOADS_DIR and CACHE_DIR.
  */
-import { env } from "$env/dynamic/private";
+import { UPLOADS_DIR, CACHE_DIR } from "$app/env/private";
 
-export const uploadsDir = (): string => env.UPLOADS_DIR || "data/uploads";
+export const uploadsDir = (): string => UPLOADS_DIR || "data/uploads";
 
 /** Resized images; regenerable, so safe to leave out of backups. */
-export const cacheDir = (): string => env.CACHE_DIR || `${uploadsDir()}/.cache`;
+export const cacheDir = (): string => CACHE_DIR || `${uploadsDir()}/.cache`;

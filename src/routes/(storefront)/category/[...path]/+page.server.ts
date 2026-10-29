@@ -1,9 +1,9 @@
-import config from "$hoikka/config";
+import config from "#hoikka/config";
 import { error } from "@sveltejs/kit";
 import type { PageServerLoad } from "./$types";
-import { categoryService } from "$lib/server/services/categories.js";
-import { facetService } from "$lib/server/services/facets.js";
-import { listProducts, parseListingParams } from "$lib/server/services/product-search.js";
+import { categoryService } from "#lib/server/services/categories.js";
+import { facetService } from "#lib/server/services/facets.js";
+import { listProducts, parseListingParams } from "#lib/server/services/product-search.js";
 
 export const load: PageServerLoad = async ({ params, url, locals }) => {
 	const pathSegments = params.path.split("/").filter(Boolean);

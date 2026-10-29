@@ -1,7 +1,7 @@
 <script lang="ts">
-  import * as Popover from "$lib/components/admin/ui/popover";
-  import * as Command from "$lib/components/admin/ui/command";
-  import { Badge } from "$lib/components/admin/ui/badge";
+  import * as Popover from "#lib/components/admin/ui/popover/index.js";
+  import * as Command from "#lib/components/admin/ui/command/index.js";
+  import { Badge } from "#lib/components/admin/ui/badge/index.js";
   import ChevronsUpDown from "@lucide/svelte/icons/chevrons-up-down";
   import Check from "@lucide/svelte/icons/check";
   import X from "@lucide/svelte/icons/x";

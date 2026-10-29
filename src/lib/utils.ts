@@ -1,7 +1,7 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { DATE_LOCALE } from "$lib/config/locale.js";
-import config from "$hoikka/config";
+import { DATE_LOCALE } from "#lib/config/locale.js";
+import config from "#hoikka/config";
 
 export function cn(...inputs: ClassValue[]) {
 	return twMerge(clsx(inputs));

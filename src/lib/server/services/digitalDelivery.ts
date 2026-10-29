@@ -12,8 +12,8 @@
  */
 import { eq, and, isNotNull, isNull, lt } from "drizzle-orm";
 import { nanoid } from "nanoid";
-import config from "$hoikka/config";
-import { fulfillmentOf } from "$lib/config/products.js";
+import config from "#hoikka/config";
+import { fulfillmentOf } from "#lib/config/products.js";
 import { db } from "../db/index.js";
 import {
 	assets,

@@ -25,14 +25,14 @@
  * - Fulfilment is a separate capture-gated step in fulfillment.ts.
  */
 import type { Cookies } from "@sveltejs/kit";
-import config from "$hoikka/config";
+import config from "#hoikka/config";
 import { orderService, paymentService, isPaymentSuccessful, customerService } from "./index.js";
 import { isFulfillableState, isSettledState } from "./order-utils.js";
 import { ensureFulfilled, isOrderDigitalOnly } from "./fulfillment.js";
 import { digitalDeliveryService } from "./digitalDelivery.js";
 import { CART_COOKIE, CHECKOUT_COOKIE, grantReceipt } from "../cart-cookie.js";
 import type { PaymentStatus } from "./payments/types.js";
-import type { OrderWithRelations, Payment } from "$lib/types.js";
+import type { OrderWithRelations, Payment } from "#lib/types.js";
 
 export type CompletionResult =
 	| { completed: true; orderCode: string }
