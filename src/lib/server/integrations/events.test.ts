@@ -60,6 +60,36 @@ describe("outbox", () => {
 		expect(row.attempts).toBe(2);
 	});
 
+	it("retries only the handlers of an event that haven't succeeded", async () => {
+		const calls: string[] = [];
+		let emailFails = true;
+		registerHandler("test.split", async () => void calls.push("erp"), { name: "erp" });
+		registerHandler(
+			"test.split",
+			async () => {
+				calls.push("email");
+				if (emailFails) throw new Error("mail down");
+			},
+			{ name: "email" }
+		);
+
+		await emitEvent("test.split", {});
+		await drainOutbox();
+		let [row] = await db.select().from(outbox);
+		expect(row).toMatchObject({ status: "pending", doneHandlers: ["erp"] });
+		expect(row.lastError).toBe("email: mail down");
+
+		emailFails = false;
+		await db
+			.update(outbox)
+			.set({ nextAttemptAt: new Date(0) })
+			.where(eq(outbox.id, row.id));
+		await drainOutbox();
+		[row] = await db.select().from(outbox);
+		expect(row.status).toBe("done");
+		expect(calls).toEqual(["erp", "email", "email"]);
+	});
+
 	it("marks an event failed when no handler is registered", async () => {
 		await emitEvent("test.unhandled", {}, { maxAttempts: 1 });
 		const result = await drainOutbox();

@@ -6,7 +6,7 @@
  *   import { registerHandler } from "./handlers.js";
  *   import { registerTask } from "./tasks.js";
  *
- *   registerHandler("order.paid", async (payload) => { ... });
+ *   registerHandler("order.paid", async (payload) => { ... }, { name: "erp" });
  *   registerTask("erp-sync", { everyMinutes: 15, run: () => syncFromErp() });
  */
 export {};

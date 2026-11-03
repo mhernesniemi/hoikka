@@ -10,7 +10,7 @@
 import { and, eq, isNull, lte, sql } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { orders, outbox } from "../db/schema.js";
-import { getHandler } from "./handlers.js";
+import { getHandlers } from "./handlers.js";
 import { eventRow, type EmitOptions } from "./event-row.js";
 // Importing the handlers module registers the built-in handlers as a side effect.
 import "./handlers.js";
@@ -82,7 +82,8 @@ export function pendingEvents(
 					),
 					lastError: sql<string>`null`.as("last_error"),
 					createdAt: sql<number>`${stamp}`.as("createdAt"),
-					updatedAt: sql<number>`${stamp}`.as("updatedAt")
+					updatedAt: sql<number>`${stamp}`.as("updatedAt"),
+					doneHandlers: sql<string>`'[]'`.as("done_handlers")
 				})
 				.from(orders)
 				.where(condition)
@@ -137,7 +138,8 @@ export async function drainOutbox(limit = 25): Promise<DrainResult> {
 
 		result.processed++;
 		const attempt = event.attempts + 1;
-		const handler = getHandler(event.type);
+		const registered = getHandlers(event.type);
+		const done = new Set(event.doneHandlers);
 
 		// Fence every write this worker makes on the claim it actually holds. A
 		// handler that outlives the lease loses the row to a replacement, and
@@ -151,18 +153,35 @@ export async function drainOutbox(limit = 25): Promise<DrainResult> {
 		);
 
 		try {
-			if (!handler) throw new Error(`No handler registered for "${event.type}"`);
-			await handler(event.payload, {
-				eventId: event.id,
-				attempt,
-				idempotencyKey: `hoikka-outbox-${event.id}`
-			});
-			const [done] = await db
+			if (registered.length === 0)
+				throw new Error(`No handler registered for "${event.type}"`);
+			const errors: string[] = [];
+			for (const [name, handler] of registered) {
+				if (done.has(name)) continue;
+				try {
+					await handler(event.payload, {
+						eventId: event.id,
+						attempt,
+						idempotencyKey: `hoikka-outbox-${event.id}`,
+						handler: name
+					});
+					done.add(name);
+					// Recorded as it happens: a crash before the next handler must not repeat this one
+					await db
+						.update(outbox)
+						.set({ doneHandlers: [...done] })
+						.where(stillOurs);
+				} catch (err) {
+					errors.push(`${name}: ${err instanceof Error ? err.message : String(err)}`);
+				}
+			}
+			if (errors.length > 0) throw new Error(errors.join("; "));
+			const [finished] = await db
 				.update(outbox)
 				.set({ status: "done", lastError: null })
 				.where(stillOurs)
 				.returning({ id: outbox.id });
-			if (done) result.succeeded++;
+			if (finished) result.succeeded++;
 			else
 				console.warn(`[outbox] ${event.type} #${event.id} finished after losing its lease`);
 		} catch (err) {

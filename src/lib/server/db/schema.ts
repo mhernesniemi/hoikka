@@ -1186,7 +1186,12 @@ export const outbox = sqliteTable(
 		nextAttemptAt: ts("next_attempt_at").notNull(),
 		lastError: text("last_error"),
 		createdAt: now(),
-		updatedAt: updatedNow()
+		updatedAt: updatedNow(),
+		// Names of this event's handlers that have succeeded; a retry runs the rest
+		doneHandlers: text("done_handlers", { mode: "json" })
+			.$type<string[]>()
+			.default([])
+			.notNull()
 	},
 	(table) => [
 		// The runner's hot query: pending rows whose backoff has elapsed

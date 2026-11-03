@@ -1,0 +1,1 @@
+ALTER TABLE `outbox` ADD `done_handlers` text DEFAULT '[]' NOT NULL;

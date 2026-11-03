@@ -6,6 +6,14 @@ Format: [Keep a Changelog](https://keepachangelog.com). `create-hoikka-app` scaf
 
 ## [Unreleased]
 
+### Upgrade notes
+
+- **`registerHandler` adds a handler instead of replacing the type's only one.** Your own `order.paid` handler now runs next to the built-in `webhook` handler (a no-op without `ORDER_WEBHOOK_URL`) rather than replacing it. To replace a handler, register it under the same `name`.
+
+### Added
+
+- **Several handlers per event type, retried independently.** `registerHandler(type, handler, { name })`; the outbox records which handlers have succeeded (`outbox.done_handlers`, migration `0021`), so a retry runs only the rest. Splitting an ERP export and a confirmation email into two handlers means a failing email no longer repeats the export.
+
 ### Changed
 
 - **A Node process whose code is older than the database stops its scheduler.** When another process has applied migrations this one doesn't know, typically a forgotten dev server on a shared database, its scheduled tasks and outbox delivery stop with an error in the log, instead of running old code against the newer data.
