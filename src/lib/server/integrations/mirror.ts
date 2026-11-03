@@ -11,6 +11,7 @@
  */
 import { eq, getTableColumns, inArray } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
+import { refreshStatistics } from "../db/statistics.js";
 import type { AnySQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";
 import type { Db } from "../db/index.js";
 import { runAtomic } from "../db/run-atomic.js";
@@ -193,5 +194,6 @@ export async function mirrorRecords<Source, Table extends MirrorTable>(
 			{ cause: firstError }
 		);
 	}
+	if (summary.created + summary.changed + summary.removed > 0) await refreshStatistics(db);
 	return summary;
 }

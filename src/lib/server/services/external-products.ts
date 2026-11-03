@@ -16,6 +16,7 @@ import { parseFields } from "#lib/fields/index.js";
 import { slugify } from "#lib/utils.js";
 import type { Product, ProductVariant } from "#lib/types.js";
 import { reindexProduct } from "./reindex.js";
+import { refreshStatistics } from "../db/statistics.js";
 
 export interface ExternalProductRow {
 	sku: string;
@@ -196,5 +197,6 @@ export async function upsertProductsBySku(
 	}
 
 	for (const id of reindex) await reindexProduct(db, id);
+	if (summary.created + summary.updated + summary.hidden > 0) await refreshStatistics(db);
 	return summary;
 }

@@ -18,6 +18,7 @@ Format: [Keep a Changelog](https://keepachangelog.com). `create-hoikka-app` scaf
 
 ### Changed
 
+- **`upsertProductsBySku` and `mirrorRecords` refresh the planner's statistics** (`PRAGMA optimize`, through `refreshStatistics(db)` in `#lib/server/db/statistics.ts`) after a run that changed rows, like `reindexAll`. Best effort: a failing pragma only logs.
 - **A Node process whose code is older than the database stops its scheduler.** When another process has applied migrations this one doesn't know, typically a forgotten dev server on a shared database, its scheduled tasks and outbox delivery stop with an error in the log, instead of running old code against the newer data.
 
 ### Fixed

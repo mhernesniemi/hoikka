@@ -3,6 +3,7 @@
  */
 import { eq, and, sql, isNull } from "drizzle-orm";
 import type { Db } from "../db/index.js";
+import { refreshStatistics } from "../db/statistics.js";
 import {
 	products,
 	productVariants,
@@ -148,7 +149,6 @@ export async function reindexAll(db: Db): Promise<number> {
 		.from(products)
 		.where(isNull(products.deletedAt));
 	for (const p of all) await reindexProduct(db, p.id);
-	// A full rebuild changes most rows; refresh the planner's statistics
-	await db.run(sql`PRAGMA optimize`);
+	await refreshStatistics(db);
 	return all.length;
 }
