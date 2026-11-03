@@ -29,6 +29,12 @@ export function mockPayment(): ProviderDescriptor {
 	return { code: "mock", label: "Mock Payment", options: {} };
 }
 
+/** Pay later on an invoice: nothing is charged online, the order is placed at
+ * once and billed outside the store (B2B, or by the ERP). */
+export function invoice(): ProviderDescriptor {
+	return { code: "invoice", label: "Invoice", options: {} };
+}
+
 export interface FlatRateOptions {
 	/** Rate in minor units (cents). */
 	amount?: number;

@@ -14,7 +14,7 @@ import type {
 	PaymentVerification,
 	RefundInfo
 } from "./types.js";
-import { MockProvider, StripeProvider } from "./providers/index.js";
+import { InvoiceProvider, MockProvider, StripeProvider } from "./providers/index.js";
 import config from "#hoikka/config";
 
 /**
@@ -25,7 +25,8 @@ import config from "#hoikka/config";
  */
 const BUILT_IN: Record<string, (options: Record<string, unknown>) => PaymentProvider> = {
 	mock: () => new MockProvider(),
-	stripe: (options) => new StripeProvider(options)
+	stripe: (options) => new StripeProvider(options),
+	invoice: () => new InvoiceProvider()
 };
 
 function buildRegistry(): Map<string, PaymentProvider> {

@@ -4,3 +4,4 @@
  */
 export { StripeProvider } from "./stripe.js";
 export { MockProvider } from "./mock.js";
+export { InvoiceProvider } from "./invoice.js";
