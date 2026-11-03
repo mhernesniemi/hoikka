@@ -12,6 +12,7 @@ Format: [Keep a Changelog](https://keepachangelog.com). `create-hoikka-app` scaf
 
 ### Added
 
+- **`createApiClient({ readOnly })`** refuses writes with an `ApiReadOnlyError` before they reach the network, so development against a production ERP can't change it. `true` allows `GET`, `HEAD` and `OPTIONS`; a function decides for APIs that read through `POST`.
 - **Several handlers per event type, retried independently.** `registerHandler(type, handler, { name })`; the outbox records which handlers have succeeded (`outbox.done_handlers`, migration `0021`), so a retry runs only the rest. Splitting an ERP export and a confirmation email into two handlers means a failing email no longer repeats the export.
 
 ### Changed

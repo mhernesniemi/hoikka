@@ -25,6 +25,13 @@ export interface ApiClientOptions {
 	retries?: number;
 	/** First retry delay, doubled on each retry. Default: 500 ms. */
 	retryDelayMs?: number;
+	/**
+	 * Refuse writes before they reach the network, e.g. while developing against
+	 * a production system. `true` allows GET, HEAD and OPTIONS; for an API that
+	 * reads through POST (SuiteQL, GraphQL) pass a function that says which
+	 * requests are reads. Token requests are always allowed.
+	 */
+	readOnly?: boolean | ((request: { method: string; url: string }) => boolean);
 	fetch?: typeof fetch;
 }
 
@@ -33,6 +40,16 @@ export interface CollectionOptions {
 	pageSize?: number;
 	/** Fail rather than return a partial pull beyond this many items. Default: 100 000. */
 	maxItems?: number;
+}
+
+export class ApiReadOnlyError extends Error {
+	constructor(
+		readonly method: string,
+		readonly url: string
+	) {
+		super(`Read-only API client refused ${method} ${url}`);
+		this.name = "ApiReadOnlyError";
+	}
 }
 
 export class ApiError extends Error {
@@ -47,6 +64,7 @@ export class ApiError extends Error {
 }
 
 const IDEMPOTENT = new Set(["GET", "HEAD", "PUT", "DELETE", "OPTIONS"]);
+const READS = new Set(["GET", "HEAD", "OPTIONS"]);
 // Refresh this long before the token's stated expiry, for clock skew and slow requests
 const TOKEN_MARGIN_MS = 60_000;
 // A Retry-After beyond this fails the request instead of stalling the sync
@@ -137,6 +155,13 @@ export function createApiClient(options: ApiClientOptions) {
 			? path
 			: `${options.baseUrl.replace(/\/+$/, "")}/${path.replace(/^\/+/, "")}`;
 		const method = (init.method ?? "GET").toUpperCase();
+		const { readOnly } = options;
+		if (
+			readOnly &&
+			!(typeof readOnly === "function" ? readOnly({ method, url }) : READS.has(method))
+		) {
+			throw new ApiReadOnlyError(method, url);
+		}
 		const attempt = async (fresh: boolean) => {
 			const headers = new Headers(options.headers);
 			new Headers(init.headers).forEach((value, key) => headers.set(key, value));

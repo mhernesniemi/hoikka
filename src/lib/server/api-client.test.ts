@@ -1,5 +1,10 @@
 import { describe, it, expect, vi } from "vitest";
-import { ApiError, createApiClient, type ApiClientOptions } from "./api-client.js";
+import {
+	ApiError,
+	ApiReadOnlyError,
+	createApiClient,
+	type ApiClientOptions
+} from "./api-client.js";
 
 type Handler = (url: URL, init: RequestInit) => Response | Promise<Response>;
 
@@ -40,6 +45,37 @@ describe("createApiClient", () => {
 		expect(await api.json("/Parts?$filter=x")).toEqual({ ok: true });
 		expect(calls[0].url.toString()).toBe("https://erp.example.com/odata/v1/Parts?$filter=x");
 		expect(new Headers(calls[0].init.headers).get("accept")).toBe("application/json");
+	});
+
+	it("refuses writes before the network when read-only, but still fetches tokens", async () => {
+		const { api, calls } = client(
+			(url) =>
+				url.pathname === "/token"
+					? json({ access_token: "t", expires_in: 3600 })
+					: json({}),
+			{ readOnly: true, oauth }
+		);
+
+		await api.json("/Parts");
+		await expect(api.request("/Parts", { method: "POST" })).rejects.toBeInstanceOf(
+			ApiReadOnlyError
+		);
+		await expect(api.request("/Parts(1)", { method: "DELETE" })).rejects.toBeInstanceOf(
+			ApiReadOnlyError
+		);
+		expect(calls.map((c) => c.url.pathname)).toEqual(["/token", "/odata/v1/Parts"]);
+	});
+
+	it("lets a read-only predicate allow reads made through POST", async () => {
+		const { api, calls } = client(() => json({ items: [] }), {
+			readOnly: ({ method, url }) => method === "GET" || url.endsWith("/query")
+		});
+
+		await api.json("/query", { method: "POST", body: "{}" });
+		await expect(api.request("/Parts", { method: "POST" })).rejects.toBeInstanceOf(
+			ApiReadOnlyError
+		);
+		expect(calls).toHaveLength(1);
 	});
 
 	it("caches the client-credentials token until shortly before it expires", async () => {
