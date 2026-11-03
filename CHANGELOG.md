@@ -6,6 +6,10 @@ Format: [Keep a Changelog](https://keepachangelog.com). `create-hoikka-app` scaf
 
 ## [Unreleased]
 
+### Changed
+
+- **A Node process whose code is older than the database stops its scheduler.** When another process has applied migrations this one doesn't know, typically a forgotten dev server on a shared database, its scheduled tasks and outbox delivery stop with an error in the log, instead of running old code against the newer data.
+
 ### Fixed
 
 - **An uncategorised product is taxed at its own tax code,** and new products and categories default to `config.tax.defaultRate`. Before, `getProductTaxCode` returned the literal `"standard"` for a product without a category, ignoring the product's `taxCode`, and a store whose rates use other codes got the fallback rate.
