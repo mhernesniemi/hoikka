@@ -140,6 +140,19 @@ describe("getCartView", () => {
 		expect(guestView.lines[0].unitPrice).toBe(1000);
 	});
 
+	it("charges the group price even when the base price is lower or missing", async () => {
+		const { variant } = await makeProduct({ price: 0 });
+		const { customer, groupId } = await makeCustomer({ groupName: "Price list" });
+		await db
+			.insert(productVariantGroupPrices)
+			.values({ variantId: variant.id, groupId: groupId!, price: 61500 });
+
+		const view = await getCartView([{ variantId: variant.id, quantity: 1 }], customer.id);
+
+		expect(view.lines[0].unitPrice).toBe(61500);
+		expect(view.subtotal).toBe(61500);
+	});
+
 	it("zeroes tax for tax-exempt customer groups", async () => {
 		const { variant } = await makeProduct({ price: 1240 });
 		const { customer } = await makeCustomer({ groupName: "Tax Free", isTaxExempt: true });

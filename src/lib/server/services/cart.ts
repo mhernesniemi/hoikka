@@ -196,10 +196,9 @@ export async function getCartView(
 			rateByCode.set(taxCode, taxRate);
 		}
 
-		const unitPrice = Math.min(
-			variant.price,
-			groupPriceByVariant.get(variant.variantId) ?? Infinity
-		);
+		// A group price is the customer's price (a B2B price list), as on the product
+		// page; the base price can be lower or missing (0) for items sold only on lists
+		const unitPrice = groupPriceByVariant.get(variant.variantId) ?? variant.price;
 		const lineTax = taxService.calculateLineTax(unitPrice, quantity, taxRate, isTaxExempt);
 
 		lines.push({

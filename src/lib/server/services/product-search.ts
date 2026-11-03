@@ -110,7 +110,10 @@ function mapRow(row: FtsRow): CachedProduct {
 	};
 }
 
-/** Lower page-item prices for customers with group pricing. */
+/**
+ * Page-item prices for customers with group pricing: a variant's group price
+ * replaces its list price, as in the cart; the product shows its lowest variant.
+ */
 async function applyGroupPricing(items: CachedProduct[], customerId: number | null | undefined) {
 	if (!customerId || items.length === 0) return;
 
@@ -120,36 +123,42 @@ async function applyGroupPricing(items: CachedProduct[], customerId: number | nu
 		.where(eq(customerGroupMembers.customerId, customerId));
 	if (memberships.length === 0) return;
 
-	const groupPriceRows = await db
+	const rows = await db
 		.select({
 			productId: productVariants.productId,
-			price: productVariantGroupPrices.price
+			variantId: productVariants.id,
+			listPrice: productVariants.price,
+			groupPrice: sql<number | null>`MIN(${productVariantGroupPrices.price})`
 		})
-		.from(productVariantGroupPrices)
-		.innerJoin(productVariants, eq(productVariants.id, productVariantGroupPrices.variantId))
-		.where(
+		.from(productVariants)
+		.leftJoin(
+			productVariantGroupPrices,
 			sqlAnd(
+				eq(productVariantGroupPrices.variantId, productVariants.id),
 				inArray(
 					productVariantGroupPrices.groupId,
 					memberships.map((m) => m.groupId)
-				),
+				)
+			)
+		)
+		.where(
+			sqlAnd(
 				inArray(
 					productVariants.productId,
 					items.map((p) => p.id)
 				),
 				isNull(productVariants.deletedAt)
 			)
-		);
+		)
+		.groupBy(productVariants.id);
 
 	const lowest = new Map<number, number>();
-	for (const r of groupPriceRows) {
+	for (const r of rows) {
+		const price = r.groupPrice ?? r.listPrice;
 		const cur = lowest.get(r.productId);
-		if (cur === undefined || r.price < cur) lowest.set(r.productId, r.price);
+		if (cur === undefined || price < cur) lowest.set(r.productId, price);
 	}
-	for (const p of items) {
-		const gp = lowest.get(p.id);
-		if (gp !== undefined && (p.minPrice === null || gp < p.minPrice)) p.minPrice = gp;
-	}
+	for (const p of items) p.minPrice = lowest.get(p.id) ?? p.minPrice;
 }
 
 /** Parse listing state (q / sort / page / facet_* / price_*) from a listing page URL. */
