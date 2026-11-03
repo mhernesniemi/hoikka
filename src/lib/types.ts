@@ -165,10 +165,9 @@ export interface OrderListItem {
 }
 
 /** Order with all related data */
+/** An order with its lines. Payments and the customer are loaded by their own services. */
 export interface OrderWithRelations extends Order {
 	lines: OrderLineWithVariant[];
-	payments: Payment[];
-	customer?: Customer | null;
 }
 
 /** Order line with variant info */

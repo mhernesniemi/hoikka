@@ -8,6 +8,7 @@ Format: [Keep a Changelog](https://keepachangelog.com). `create-hoikka-app` scaf
 
 ### Upgrade notes
 
+- **`OrderWithRelations` no longer has `payments` or `customer`.** They were always `[]` and `null`; load them with the payment and customer services where you need them.
 - **`registerHandler` adds a handler instead of replacing the type's only one.** Your own `order.paid` handler now runs next to the built-in `webhook` handler (a no-op without `ORDER_WEBHOOK_URL`) rather than replacing it. To replace a handler, register it under the same `name`.
 
 ### Added

@@ -1152,9 +1152,7 @@ export class OrderService {
 					imageUrl: imageUrl ?? null,
 					productId: productId ?? null
 				})
-			),
-			payments: [], // Load payments separately if needed
-			customer: null
+			)
 		};
 	}
 
