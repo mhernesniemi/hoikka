@@ -6,6 +6,10 @@ Format: [Keep a Changelog](https://keepachangelog.com). `create-hoikka-app` scaf
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-03
+
+Listings that scale to large catalogs: filtering and facet counts run on an in-memory facet index.
+
 ### Upgrade notes
 
 - **Code that writes `product_search_fts` directly must call `bumpIndexVersion(db)`** (`#lib/server/services/reindex.ts`) afterwards, or listings keep serving the previous rows until the next catalog change. `reindexProduct`, `removeFromIndex` and `reindexAll` already do.

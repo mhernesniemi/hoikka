@@ -207,7 +207,7 @@ async function main() {
 		commit: templateCommit,
 		target,
 		scaffoldedAt: new Date().toISOString(),
-		createHoikkaApp: "0.6.0"
+		createHoikkaApp: "0.7.0"
 	};
 	writeFileSync(
 		path.join(projectDir, ".hoikka-version"),
