@@ -6,6 +6,10 @@ Format: [Keep a Changelog](https://keepachangelog.com). `create-hoikka-app` scaf
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-11-03
+
+Lessons from an ERP-backed B2B store: several handlers per event, an invoice payment provider, a read-only API client, and guards against stale processes and wrong tax codes.
+
 ### Upgrade notes
 
 - **`OrderWithRelations` no longer has `payments` or `customer`.** They were always `[]` and `null`; load them with the payment and customer services where you need them.
