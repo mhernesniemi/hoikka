@@ -6,6 +6,10 @@ Format: [Keep a Changelog](https://keepachangelog.com). `create-hoikka-app` scaf
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-11-03
+
+Group prices apply the same way on the product page, listing cards and in the cart.
+
 ### Changed
 
 - **A group price replaces the base price in the cart and on listing cards,** as it already did on the product page. Before, the cart charged `min(base price, group price)`, so a group price above the base price, or any group price on a variant whose base price is 0 (an item sold only on price lists), was undercut: the cart showed a different price than the product page, and such items were ordered at the base price. If you used group prices only as discounts, nothing changes.
