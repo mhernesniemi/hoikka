@@ -19,6 +19,10 @@ interface FeaturedAssetJson {
 	focalY: number;
 }
 
+/** Tells the in-memory facet index (facet-index.ts) that the FTS rows changed. */
+export const bumpIndexVersion = (db: Db) =>
+	db.run(sql`UPDATE search_index_version SET version = version + 1 WHERE id = 1`);
+
 type FacetsJson = Record<string, { code: string; name: string; facetValueId: number }[]>;
 type VariantFacetImagesJson = Record<string, Record<string, string>>;
 
@@ -129,10 +133,12 @@ export async function reindexProduct(db: Db, productId: number): Promise<void> {
 			${inStock ? 1 : 0}
 		)
 	`);
+	await bumpIndexVersion(db);
 }
 
 export async function removeFromIndex(db: Db, productId: number): Promise<void> {
 	await db.run(sql`DELETE FROM product_search_fts WHERE rowid = ${productId}`);
+	await bumpIndexVersion(db);
 }
 
 export async function reindexAll(db: Db): Promise<number> {
@@ -142,5 +148,7 @@ export async function reindexAll(db: Db): Promise<number> {
 		.from(products)
 		.where(isNull(products.deletedAt));
 	for (const p of all) await reindexProduct(db, p.id);
+	// A full rebuild changes most rows; refresh the planner's statistics
+	await db.run(sql`PRAGMA optimize`);
 	return all.length;
 }

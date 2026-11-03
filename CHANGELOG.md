@@ -6,6 +6,16 @@ Format: [Keep a Changelog](https://keepachangelog.com). `create-hoikka-app` scaf
 
 ## [Unreleased]
 
+### Upgrade notes
+
+- **Code that writes `product_search_fts` directly must call `bumpIndexVersion(db)`** (`#lib/server/services/reindex.ts`) afterwards, or listings keep serving the previous rows until the next catalog change. `reindexProduct`, `removeFromIndex` and `reindexAll` already do.
+
+### Changed
+
+- **Listings scale to large catalogs.** `listProducts` filters, counts facets and pages on an in-memory facet index (`#lib/server/services/facet-index.ts`) instead of SQL: at 36,000 products a listing takes a few milliseconds instead of 100–300 ms. The index rebuilds when `search_index_version` changes, which triggers and reindexing bump (migrations `0019`, `0020`). Results are unchanged, except that facet counts now also respect an active price filter and ties in sorted lists break by newest first.
+- The node database runs `PRAGMA optimize` when opened and after `reindexAll`, so the query planner has table statistics.
+- `ProductListing` shows a facet's first 10 values, and the selected ones, behind a "Show all" toggle.
+
 ## [0.6.0] - 2026-10-29
 
 SvelteKit 3, with adapter-node 6 and adapter-cloudflare 8, and core primitives for mirroring an external system (ERP, PIM) into the store.

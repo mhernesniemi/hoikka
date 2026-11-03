@@ -19,6 +19,9 @@ export function createNodeDb(
 	sqlite.pragma("journal_mode = WAL");
 	sqlite.pragma("foreign_keys = ON");
 	applyMigrations(sqlite, migrationsFolder);
+	// Without table statistics the planner picks bad indexes on a large catalog
+	// (5 ms vs 0.04 ms pricing a page); analyzes only what needs it
+	sqlite.pragma("optimize = 0x10002");
 	return drizzle(sqlite, { schema });
 }
 

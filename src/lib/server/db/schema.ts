@@ -1163,6 +1163,15 @@ export const taskRuns = sqliteTable(
 	]
 );
 
+/**
+ * Bumped by triggers and reindexing whenever listing data changes (products,
+ * facets, prices, stock), so the in-memory facet index knows to rebuild.
+ */
+export const searchIndexVersion = sqliteTable("search_index_version", {
+	id: integer("id").primaryKey(),
+	version: integer("version").notNull()
+});
+
 export const outbox = sqliteTable(
 	"outbox",
 	{

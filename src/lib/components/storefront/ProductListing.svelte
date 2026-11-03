@@ -38,6 +38,10 @@
   const currentPage = $derived(Number(page.url.searchParams.get("page")) || 1);
   const sortKey = $derived((page.url.searchParams.get("sort") as ProductSortKey) || "newest");
 
+  // Long facets (hundreds of sizes on a large catalog) render their first values until expanded
+  const FACET_VISIBLE = 10;
+  let expandedFacets = $state<Record<string, boolean>>({});
+
   const activeFilters = $derived.by(() => {
     const filters: Record<string, string[]> = {};
     for (const [key, value] of page.url.searchParams.entries()) {
@@ -338,11 +342,14 @@
       {@const relevantValues = facet.values.filter(
         (v) => (baseMap.get(v.code) ?? 0) > 0 || isFilterActive(facet.code, v.code)
       )}
+      {@const visibleValues = expandedFacets[facet.code]
+        ? relevantValues
+        : relevantValues.filter((v, i) => i < FACET_VISIBLE || isFilterActive(facet.code, v.code))}
       {#if relevantValues.length > 0}
         <div class="mb-6">
           <h3 class="mb-3 font-semibold">{facet.name}</h3>
           <div class="space-y-2">
-            {#each relevantValues as value}
+            {#each visibleValues as value (value.code)}
               {@const count = countsMap.get(value.code) ?? 0}
               {@const active = isFilterActive(facet.code, value.code)}
               {@const disabled = count === 0 && !active}
@@ -384,6 +391,15 @@
               {/if}
             {/each}
           </div>
+          {#if relevantValues.length > FACET_VISIBLE}
+            <button
+              type="button"
+              onclick={() => (expandedFacets[facet.code] = !expandedFacets[facet.code])}
+              class="mt-2 text-sm text-blue-600 hover:underline"
+            >
+              {expandedFacets[facet.code] ? "Show less" : `Show all (${relevantValues.length})`}
+            </button>
+          {/if}
         </div>
       {/if}
     {/each}
