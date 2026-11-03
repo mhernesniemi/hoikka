@@ -6,6 +6,10 @@ Format: [Keep a Changelog](https://keepachangelog.com). `create-hoikka-app` scaf
 
 ## [Unreleased]
 
+### Fixed
+
+- **An uncategorised product is taxed at its own tax code,** and new products and categories default to `config.tax.defaultRate`. Before, `getProductTaxCode` returned the literal `"standard"` for a product without a category, ignoring the product's `taxCode`, and a store whose rates use other codes got the fallback rate.
+
 ## [0.7.1] - 2026-11-03
 
 Group prices apply the same way on the product page, listing cards and in the cart.

@@ -153,6 +153,16 @@ describe("getCartView", () => {
 		expect(view.subtotal).toBe(61500);
 	});
 
+	it("taxes an uncategorised product at its own tax code", async () => {
+		const { product, variant } = await makeProduct({ price: 1135 });
+		await db.update(products).set({ taxCode: "food" }).where(eq(products.id, product.id));
+
+		const view = await getCartView([{ variantId: variant.id, quantity: 1 }], null);
+
+		expect(view.lines[0].taxRate).toBe(0.135);
+		expect(view.lines[0].taxCode).toBe("food");
+	});
+
 	it("zeroes tax for tax-exempt customer groups", async () => {
 		const { variant } = await makeProduct({ price: 1240 });
 		const { customer } = await makeCustomer({ groupName: "Tax Free", isTaxExempt: true });

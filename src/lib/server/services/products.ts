@@ -33,6 +33,7 @@ import type {
 	PaginatedResult
 } from "#lib/types.js";
 import { DEFAULT_PRODUCT_TYPE } from "#lib/config/products.js";
+import config from "#hoikka/config";
 
 export class ProductService {
 	/**
@@ -251,7 +252,7 @@ export class ProductService {
 				description: input.description,
 				type: input.type ?? DEFAULT_PRODUCT_TYPE,
 				visibility: input.visibility ?? "public",
-				taxCode: input.taxCode ?? "standard"
+				taxCode: input.taxCode ?? config.tax.defaultRate
 			})
 			.returning();
 

@@ -4,7 +4,8 @@
  */
 import { eq, and, isNull, asc, inArray, sql } from "drizzle-orm";
 import { db, atomic } from "../db/index.js";
-import { categories, productCategories } from "../db/schema.js";
+import { categories, productCategories, products } from "../db/schema.js";
+import config from "#hoikka/config";
 
 export type Category = typeof categories.$inferSelect;
 
@@ -36,7 +37,7 @@ export class CategoryService {
 				name: input.name,
 				parentId: input.parentId ?? null,
 				position: input.position ?? 0,
-				taxCode: input.taxCode ?? "standard"
+				taxCode: input.taxCode ?? config.tax.defaultRate
 			})
 			.returning();
 
@@ -283,8 +284,9 @@ export class CategoryService {
 	}
 
 	/**
-	 * Get tax code for a product based on its first assigned category.
-	 * Returns "standard" if the product has no categories.
+	 * Tax code for a product: its first category's, else the product's own, else
+	 * the store default. Never a hard-coded code: a store whose rates are named
+	 * differently would get the fallback rate for every uncategorised product.
 	 */
 	async getProductTaxCode(productId: number): Promise<string> {
 		const [row] = await db
@@ -293,8 +295,13 @@ export class CategoryService {
 			.innerJoin(categories, eq(productCategories.categoryId, categories.id))
 			.where(eq(productCategories.productId, productId))
 			.limit(1);
+		if (row) return row.taxCode;
 
-		return row?.taxCode ?? "standard";
+		const [product] = await db
+			.select({ taxCode: products.taxCode })
+			.from(products)
+			.where(eq(products.id, productId));
+		return product?.taxCode ?? config.tax.defaultRate;
 	}
 }
 
