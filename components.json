@@ -9,7 +9,9 @@
 	"aliases": {
 		"components": "#lib/components",
 		"utils": "#lib/utils",
-		"ui": "#lib/components/storefront/ui"
+		"ui": "#lib/components/storefront/ui",
+		"hooks": "#lib/hooks",
+		"lib": "#lib"
 	},
 	"typescript": true,
 	"registry": "https://shadcn-svelte.com/registry"
