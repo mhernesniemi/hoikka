@@ -58,6 +58,12 @@ describe("slugify", () => {
 		expect(slugify("Hello World")).toBe("hello-world");
 	});
 
+	it("transliterates accented letters", () => {
+		expect(slugify("Itävalta Jälkiruokaviini Crémant")).toBe(
+			"itavalta-jalkiruokaviini-cremant"
+		);
+	});
+
 	it("strips leading and trailing hyphens", () => {
 		expect(slugify("--hello--")).toBe("hello");
 	});
