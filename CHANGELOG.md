@@ -6,14 +6,19 @@ Format: [Keep a Changelog](https://keepachangelog.com). `create-hoikka-app` scaf
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-09
+
+Lessons from a Finnish wine store: facets an admin can order and make searchable, product cards from one data shape, starter-storefront e2e specs kept apart from core ones, and fixes for non-English slugs, config field types and method labels.
+
+### Upgrade notes
+
+- **If you edited the `CACHEABLE` regex in `edge-cache.ts` or `SIGN_IN_PUBLIC_PATHS` in `hooks.server.ts`,** add your routes to the new path lists there instead (see Changed).
+- **`ProductCard` takes a `CachedProduct`** (a listing row from `listProducts`) instead of a `ProductWithRelations`, and its `grayscale` and `showFromPrice` props are gone (a price range is detected from `minPrice`/`maxPrice`). `relatedProductService.getRelatedProducts(productId, limit, customerId)` returns listing rows too, in their admin-set order. A storefront of your own that passes full products to the card should load them with `listProducts({ productIds })`.
+
 ### Added
 
 - **Searchable facets** (migration `0023`). Tick "Searchable" on a facet (a brand, a region) and product search matches its value names too, not just product names and descriptions; name matches still rank first. Off by default, so short values like sizes don't make every product match "m". Saving the facet reindexes its products.
 - **Facet and facet value order** (`position`, migration `0022`). Set a facet's position on its admin page and reorder its values with the arrow buttons (or "Sort A–Z"). `facetService.list()` and the storefront filters follow it, then the code as before, so nothing moves until you set positions. The admin no longer forces values into alphabetical order.
-
-### Upgrade notes
-
-- **`ProductCard` takes a `CachedProduct`** (a listing row from `listProducts`) instead of a `ProductWithRelations`, and its `grayscale` and `showFromPrice` props are gone (a price range is detected from `minPrice`/`maxPrice`). `relatedProductService.getRelatedProducts(productId, limit, customerId)` returns listing rows too, in their admin-set order. A storefront of your own that passes full products to the card should load them with `listProducts({ productIds })`.
 
 ### Changed
 
