@@ -224,7 +224,7 @@
 <!-- Toolbar: Clear filters + Sort -->
 <div
   class="mb-4 flex items-center justify-between gap-2"
-  data-sveltekit-keepfocus
+  data-sveltekit-reset="false"
   data-sveltekit-noscroll
 >
   <div class="flex items-center gap-3">
@@ -281,7 +281,7 @@
         ? "fixed inset-y-0 left-0 z-50 w-72 overflow-y-auto bg-white p-6 shadow-lg"
         : "hidden md:block"
     )}
-    data-sveltekit-keepfocus
+    data-sveltekit-reset="false"
     data-sveltekit-noscroll
   >
     <!-- Mobile filter header -->
@@ -424,12 +424,7 @@
         {/if}
       </div>
     {:else}
-      <!-- viewport preload: card data is fetched as cards scroll into view,
-           so clicking renders from memory (pages are edge-cached anyway) -->
-      <div
-        class="grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-3"
-        data-sveltekit-preload-data="viewport"
-      >
+      <div class="grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-3">
         {#each listing.items as product, index (product.id)}
           <!-- First grid rows are above the fold — eager-load them so the LCP
                image isn't queued behind lazy-loading (2-col mobile grid) -->

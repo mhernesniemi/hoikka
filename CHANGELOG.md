@@ -8,6 +8,7 @@ Format: [Keep a Changelog](https://keepachangelog.com). `create-hoikka-app` scaf
 
 ### Fixed
 
+- **No more SvelteKit link-option warnings in the console.** The starter storefront used `data-sveltekit-preload-data="viewport"`, which SvelteKit 3 doesn't accept (it falls back to hover preloading), and the deprecated `data-sveltekit-keepfocus`, now `data-sveltekit-reset="false"`.
 - **`slugify` keeps accented letters as their base letter** (`Itävalta` → `itavalta`, `Crémant` → `cremant`). It dropped them, so admin-generated slugs and codes for non-English names came out broken (`it-valta`). Existing slugs are not changed.
 - **Iterating a declared field list type-checks.** `config.customers.fields`, `config.collections.fields` and the product-type and template field lists kept only the properties hoikka.config.ts wrote, so code reading `def.required`, `def.help` or `def.readOnly` failed to compile once a store declared its first field (the account page and the admin customer page did). Each entry is now also a full `FieldDef`; `customFields()` keeps its literal keys and types.
 

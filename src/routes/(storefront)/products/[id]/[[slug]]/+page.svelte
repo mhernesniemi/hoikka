@@ -383,10 +383,7 @@
   {#if data.relatedProducts.length > 0}
     <section class="mt-8 border-t border-gray-200 pt-8">
       <h2 class="mb-6 text-xl font-bold">You May Also Like</h2>
-      <div
-        class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4"
-        data-sveltekit-preload-data="viewport"
-      >
+      <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         {#each data.relatedProducts as relatedProduct}
           <ProductCard
             product={relatedProduct}
