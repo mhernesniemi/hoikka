@@ -19,6 +19,7 @@ import { edgeCache } from "#lib/server/edge-cache.js";
 import { captureEvent } from "#lib/server/sentry.js";
 import { waitUntil } from "#lib/server/cloudflare.js";
 import { SIGN_IN_REQUIRED, SIGN_UP_ENABLED } from "#lib/config/customers.js";
+import { matchesPath } from "#lib/server/route-paths.js";
 
 // Session handler — validates session via Better Auth and syncs customer record.
 const sessionHandler: Handle = async ({ event, resolve }) => {
@@ -186,7 +187,9 @@ export const adminGuard: Handle = async ({ event, resolve }) => {
 
 // Stores with customers.requireSignIn show nothing to anonymous visitors. Like
 // adminGuard this covers form actions and endpoints, not just page loads.
-const SIGN_IN_PUBLIC_PATHS = new Set([
+// Storefront pages anonymous visitors may still open — edit to match your
+// storefront (a path covers everything below it).
+const SIGN_IN_PUBLIC_PATHS = [
 	"/sign-in",
 	"/sign-up",
 	"/forgot-password",
@@ -194,7 +197,7 @@ const SIGN_IN_PUBLIC_PATHS = new Set([
 	"/privacy-policy",
 	"/robots.txt",
 	"/api/health"
-]);
+];
 const SIGN_IN_PUBLIC_PREFIXES = [
 	"/admin",
 	"/api/auth/",
@@ -208,7 +211,7 @@ export const signInGuard: Handle = async ({ event, resolve }) => {
 	if (
 		!SIGN_IN_REQUIRED ||
 		event.locals.user ||
-		SIGN_IN_PUBLIC_PATHS.has(pathname) ||
+		matchesPath(pathname, SIGN_IN_PUBLIC_PATHS) ||
 		SIGN_IN_PUBLIC_PREFIXES.some((prefix) => pathname.startsWith(prefix))
 	) {
 		return resolve(event);

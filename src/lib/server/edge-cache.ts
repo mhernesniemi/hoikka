@@ -34,6 +34,7 @@ import { version as buildVersion } from "$app/env";
 import config from "#hoikka/config";
 import type { Handle } from "@sveltejs/kit/hooks";
 import { bindings, defaultCache, waitUntil } from "#lib/server/cloudflare.js";
+import { matchesPath } from "#lib/server/route-paths.js";
 
 const VERSION_KEY = "catalog-version";
 const AUTH_COOKIE = "better-auth.session_token";
@@ -42,9 +43,21 @@ const BACKSTOP_SECONDS = config.limits.edgeCache.backstopSeconds;
  *  bumps (not the TTL) are the real invalidation path */
 const KV_TTL_SECONDS = config.limits.edgeCache.kvTtlSeconds;
 
-/** GET routes rendered identically for every guest */
-const CACHEABLE =
-	/^\/(?:$|products(?:\/|$)|category(?:\/|$)|collections(?:\/|$)|pages(?:\/|$)|privacy-policy\/?$|sitemap\.xml$)/;
+/**
+ * Storefront GET routes rendered identically for every guest — edit to match
+ * your storefront. A path covers everything below it; "/" is the front page
+ * only. Never list per-visitor pages (cart, checkout, account): the cache
+ * would serve one visitor's page to the next.
+ */
+const CACHED_PATHS = [
+	"/",
+	"/products",
+	"/category",
+	"/collections",
+	"/pages",
+	"/privacy-policy",
+	"/sitemap.xml"
+];
 
 /** SvelteKit data requests cache under the page route they belong to */
 function routePath(pathname: string): string {
@@ -62,7 +75,7 @@ function routePath(pathname: string): string {
  */
 export function isCacheableRequest(rawUrl: URL, cookieHeader: string | null): boolean {
 	return (
-		CACHEABLE.test(routePath(rawUrl.pathname)) &&
+		matchesPath(routePath(rawUrl.pathname), CACHED_PATHS) &&
 		!rawUrl.searchParams.has("preview") &&
 		!cookieHeader?.includes(AUTH_COOKIE)
 	);
