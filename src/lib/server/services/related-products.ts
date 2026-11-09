@@ -5,19 +5,27 @@
 import { eq, asc } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { relatedProducts } from "../db/schema.js";
-import { productService } from "./products.js";
-import type { ProductWithRelations } from "#lib/types.js";
+import { listProducts } from "./product-search.js";
+import type { CachedProduct } from "#lib/types.js";
 
 export class RelatedProductService {
 	/**
-	 * Get related products for a product
+	 * Related products in their admin-set order, as listing rows (public only,
+	 * with the customer's group prices)
 	 */
-	async getRelatedProducts(productId: number, limit = 8): Promise<ProductWithRelations[]> {
-		const manual = await this.getManualRelations(productId);
-		if (manual.length === 0) return [];
+	async getRelatedProducts(
+		productId: number,
+		limit = 8,
+		customerId: number | null = null
+	): Promise<CachedProduct[]> {
+		const ids = (await this.getManualRelations(productId))
+			.slice(0, limit)
+			.map((r) => r.relatedProductId);
+		if (ids.length === 0) return [];
 
-		const ids = manual.slice(0, limit).map((r) => r.relatedProductId);
-		return productService.getByIds(ids);
+		const { items } = await listProducts({ productIds: ids, limit: ids.length, customerId });
+		const byId = new Map(items.map((item) => [item.id, item]));
+		return ids.flatMap((id) => byId.get(id) ?? []);
 	}
 
 	/**

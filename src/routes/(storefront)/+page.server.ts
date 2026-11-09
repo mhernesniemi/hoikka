@@ -1,9 +1,8 @@
-import { productService, stampGroupPrices } from "#lib/server/services/products.js";
+import { listProducts } from "#lib/server/services/product-search.js";
 import type { PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ locals }) => {
-	const result = await productService.list({ visibility: "public", limit: 4 });
-	await stampGroupPrices(result.items, locals.customer?.id ?? null);
+	const { items } = await listProducts({ limit: 4, customerId: locals.customer?.id ?? null });
 
-	return { featuredProducts: result.items };
+	return { featuredProducts: items };
 };

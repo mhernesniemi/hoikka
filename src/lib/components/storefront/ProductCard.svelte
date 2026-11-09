@@ -1,6 +1,6 @@
 <script lang="ts">
-  import type { ProductWithRelations } from "#lib/types.js";
-  import { formatPrice, cn } from "#lib/utils.js";
+  import type { CachedProduct } from "#lib/types.js";
+  import { formatPrice } from "#lib/utils.js";
   import Img from "#lib/components/storefront/Img.svelte";
   import {
     findBestDiscount,
@@ -12,15 +12,12 @@
   let {
     product,
     activeDiscounts = [],
-    grayscale = false,
-    showFromPrice,
     loading = "lazy",
     sizes = "(max-width: 640px) 50vw, 33vw"
   }: {
-    product: ProductWithRelations;
+    /** A listing row from the search index (listProducts, related products) */
+    product: CachedProduct;
     activeDiscounts?: ActiveDiscount[];
-    grayscale?: boolean;
-    showFromPrice?: boolean;
     /** Use "eager" for above-the-fold cards */
     loading?: "lazy" | "eager";
     /** Match the actual grid slot — an overstated value over-fetches */
@@ -28,20 +25,10 @@
   } = $props();
 
   const name = $derived(product.name);
-  const slug = $derived(product.slug);
-
-  const lowestPrice = $derived(
-    product.variants.length > 0
-      ? Math.min(...product.variants.map((v) => v.effectivePrice ?? v.price))
-      : null
+  const lowestPrice = $derived(product.minPrice);
+  const hasPriceRange = $derived(
+    product.minPrice !== null && product.maxPrice !== null && product.minPrice !== product.maxPrice
   );
-
-  const hasPriceRange = $derived.by(() => {
-    if (showFromPrice !== undefined) return showFromPrice;
-    if (product.variants.length <= 1) return false;
-    const prices = product.variants.map((v) => v.effectivePrice ?? v.price);
-    return Math.min(...prices) !== Math.max(...prices);
-  });
 
   const bestDiscount = $derived(
     lowestPrice ? findBestDiscount(activeDiscounts, product.id, lowestPrice) : null
@@ -55,7 +42,7 @@
 </script>
 
 <a
-  href="/products/{product.id}/{slug}"
+  href="/products/{product.id}/{product.slug}"
   class="group relative overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition-shadow hover:shadow-md"
 >
   {#if bestDiscount}
@@ -78,10 +65,7 @@
         fetchpriority={loading === "eager" ? "high" : "auto"}
         focalX={product.featuredAsset.focalX}
         focalY={product.featuredAsset.focalY}
-        class={cn(
-          "h-full w-full object-cover transition-transform group-hover:scale-105",
-          grayscale && "opacity-70 grayscale group-hover:opacity-90 group-hover:grayscale-0"
-        )}
+        class="h-full w-full object-cover transition-transform group-hover:scale-105"
       />
     {:else}
       <div class="flex h-full w-full items-center justify-center text-gray-400">

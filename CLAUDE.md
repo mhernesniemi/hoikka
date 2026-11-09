@@ -7,7 +7,7 @@
 - Add tests where appropriate when adding a new feature or modifying existing code.
 - Keep the codebase lightweight and easy to understand.
 - When modifying code, remove any functions, variables, imports, or declarations that become unused as a result of the change. Do not leave dead code behind.
-- When adding fields to the `products` schema, also update the manually constructed `ProductWithRelations` object in `src/lib/components/storefront/ProductListing.svelte` (`toProductCard`).
+- Storefront product cards render `CachedProduct`, the search index row (`listProducts`, related products). Data a card shows must be in the index (`src/lib/server/services/reindex.ts`).
 
 ## Tools
 

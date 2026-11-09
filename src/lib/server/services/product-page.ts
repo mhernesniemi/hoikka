@@ -26,11 +26,11 @@ export async function loadProductPageData(productId: number, customerId: number 
 				.then((cats) =>
 					cats.length > 0 ? categoryService.getBreadcrumbs(cats[0].id) : []
 				),
-			relatedProductService.getRelatedProducts(productId, 8)
+			relatedProductService.getRelatedProducts(productId, 8, customerId)
 		]);
 
 	if (product) {
-		await stampGroupPrices([product, ...relatedProducts], customerId);
+		await stampGroupPrices([product], customerId);
 	}
 
 	return { product, rating, reviewsResult, customerReview, breadcrumbs, relatedProducts };

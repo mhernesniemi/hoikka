@@ -9,8 +9,7 @@
     PRODUCT_SORT_OPTIONS,
     type CachedProduct,
     type FacetWithValues,
-    type ProductSortKey,
-    type ProductWithRelations
+    type ProductSortKey
   } from "#lib/types.js";
   import type { ActiveDiscount } from "#lib/promotion-utils.js";
   import Check from "@lucide/svelte/icons/check";
@@ -68,81 +67,16 @@
 
   const totalPages = $derived(Math.ceil(listing.pagination.total / listing.pagination.limit));
 
-  // Convert CachedProduct → ProductWithRelations for ProductCard
-  function toProductCard(cached: CachedProduct): ProductWithRelations {
-    // Swap image when a variant-level filter is active
-    let effectiveAsset = cached.featuredAsset;
-    if (hasActiveFilters && cached.variantFacetImages) {
-      outer: for (const [facetCode, valueCodes] of Object.entries(activeFilters)) {
-        const facetImages = cached.variantFacetImages[facetCode];
-        if (!facetImages) continue;
-        for (const code of valueCodes) {
-          if (facetImages[code]) {
-            effectiveAsset = { source: facetImages[code], focalX: 0.5, focalY: 0.5 };
-            break outer;
-          }
-        }
+  // Show the variant's image when a variant-level filter (e.g. a colour) is active
+  function withFilteredImage(product: CachedProduct): CachedProduct {
+    if (!hasActiveFilters || !product.variantFacetImages) return product;
+    for (const [facetCode, valueCodes] of Object.entries(activeFilters)) {
+      for (const code of valueCodes) {
+        const source = product.variantFacetImages[facetCode]?.[code];
+        if (source) return { ...product, featuredAsset: { source, focalX: 0.5, focalY: 0.5 } };
       }
     }
-
-    const featuredAsset = effectiveAsset
-      ? {
-          id: 0,
-          name: "",
-          type: "image" as const,
-          mimeType: "image/jpeg",
-          width: 0,
-          height: 0,
-          fileSize: 0,
-          source: effectiveAsset.source,
-          alt: null,
-          focalX: effectiveAsset.focalX,
-          focalY: effectiveAsset.focalY,
-          createdAt: new Date()
-        }
-      : null;
-
-    return {
-      id: cached.id,
-      name: cached.name,
-      slug: cached.slug,
-      description: cached.description,
-      type: "physical",
-      visibility: "public",
-      taxCode: "standard",
-      featuredAssetId: featuredAsset ? 0 : null,
-      digitalAssetId: null,
-      customFields: {},
-      deletedAt: null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      variants:
-        cached.minPrice !== null
-          ? [
-              {
-                id: 0,
-                productId: cached.id,
-                name: null,
-                sku: "",
-                price: cached.minPrice,
-                stock: cached.inStock ? 1 : 0,
-                trackInventory: true,
-                featuredAssetId: null,
-                imageUrl: null,
-                isFeatured: false,
-                deletedAt: null,
-                createdAt: new Date(),
-                updatedAt: new Date(),
-                facetValues: [],
-                assets: [],
-                featuredAsset: null
-              }
-            ]
-          : [],
-      facetValues: [],
-      assets: [],
-      featuredAsset
-    };
+    return product;
   }
 
   function isFilterActive(facetCode: string, valueCode: string): boolean {
@@ -429,12 +363,9 @@
           <!-- First grid rows are above the fold — eager-load them so the LCP
                image isn't queued behind lazy-loading (2-col mobile grid) -->
           <ProductCard
-            product={toProductCard(product)}
+            product={withFilteredImage(product)}
             {activeDiscounts}
             loading={index < 4 ? "eager" : "lazy"}
-            showFromPrice={product.minPrice !== null &&
-              product.maxPrice !== null &&
-              product.minPrice !== product.maxPrice}
           />
         {/each}
       </div>

@@ -6,8 +6,17 @@ Format: [Keep a Changelog](https://keepachangelog.com). `create-hoikka-app` scaf
 
 ## [Unreleased]
 
+### Upgrade notes
+
+- **`ProductCard` takes a `CachedProduct`** (a listing row from `listProducts`) instead of a `ProductWithRelations`, and its `grayscale` and `showFromPrice` props are gone (a price range is detected from `minPrice`/`maxPrice`). `relatedProductService.getRelatedProducts(productId, limit, customerId)` returns listing rows too, in their admin-set order. A storefront of your own that passes full products to the card should load them with `listProducts({ productIds })`.
+
+### Changed
+
+- **Product cards render listing rows everywhere.** The listing no longer converts each row into a fake `ProductWithRelations` (`toProductCard`); the front page and related products load from the search index too, so a card shows the same data wherever it appears.
+
 ### Fixed
 
+- **Related products no longer show draft or private products** on the storefront product page.
 - **No more SvelteKit link-option warnings in the console.** The starter storefront used `data-sveltekit-preload-data="viewport"`, which SvelteKit 3 doesn't accept (it falls back to hover preloading), and the deprecated `data-sveltekit-keepfocus`, now `data-sveltekit-reset="false"`.
 - **`slugify` keeps accented letters as their base letter** (`Itävalta` → `itavalta`, `Crémant` → `cremant`). It dropped them, so admin-generated slugs and codes for non-English names came out broken (`it-valta`). Existing slugs are not changed.
 - **Iterating a declared field list type-checks.** `config.customers.fields`, `config.collections.fields` and the product-type and template field lists kept only the properties hoikka.config.ts wrote, so code reading `def.required`, `def.help` or `def.readOnly` failed to compile once a store declared its first field (the account page and the admin customer page did). Each entry is now also a full `FieldDef`; `customFields()` keeps its literal keys and types.
