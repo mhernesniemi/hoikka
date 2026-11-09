@@ -6,6 +6,10 @@ Format: [Keep a Changelog](https://keepachangelog.com). `create-hoikka-app` scaf
 
 ## [Unreleased]
 
+### Fixed
+
+- **Iterating a declared field list type-checks.** `config.customers.fields`, `config.collections.fields` and the product-type and template field lists kept only the properties hoikka.config.ts wrote, so code reading `def.required`, `def.help` or `def.readOnly` failed to compile once a store declared its first field (the account page and the admin customer page did). Each entry is now also a full `FieldDef`; `customFields()` keeps its literal keys and types.
+
 ## [0.8.0] - 2026-11-03
 
 Lessons from an ERP-backed B2B store: several handlers per event, an invoice payment provider, a read-only API client, and guards against stale processes and wrong tax codes.

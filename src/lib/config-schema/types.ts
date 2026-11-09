@@ -202,6 +202,17 @@ export interface ResolvedHoikkaConfig {
 }
 
 /**
+ * A field list as written, each entry also typed as a full FieldDef: the
+ * literal keys and types stay for `customFields`, and code iterating the list
+ * can still read optional properties (`required`, `help`…) the config left out.
+ */
+type DeclaredFields<F> = { readonly [K in keyof F]: F[K] & FieldDef };
+
+type WithDeclaredFields<T> = T extends { fields: infer F }
+	? Omit<T, "fields"> & { fields: DeclaredFields<F> }
+	: T;
+
+/**
  * The resolved config with the field lists exactly as hoikka.config.ts wrote
  * them, so `customFields(config.productTypes.physical.fields, product)` is typed.
  * Lookups by a runtime key (`productTypes[product.type]`) still work.
@@ -212,20 +223,22 @@ export type HoikkaConfig<I extends HoikkaConfigInput = HoikkaConfigInput> = Omit
 > & {
 	productTypes: ResolvedHoikkaConfig["productTypes"] &
 		(I extends { productTypes: infer P }
-			? { [K in keyof P]: P[K] & { fulfillment: Fulfillment } }
+			? { [K in keyof P]: WithDeclaredFields<P[K]> & { fulfillment: Fulfillment } }
 			: unknown);
 	contentPages: {
 		templates: ResolvedHoikkaConfig["contentPages"]["templates"] &
-			(I extends { contentPages: { templates: infer T } } ? T : unknown);
+			(I extends { contentPages: { templates: infer T } }
+				? { [K in keyof T]: WithDeclaredFields<T[K]> }
+				: unknown);
 	};
 	collections: {
 		fields: I extends { collections: { fields: infer F extends readonly FieldDef[] } }
-			? F
+			? DeclaredFields<F>
 			: readonly FieldDef[];
 	};
 	customers: Omit<ResolvedHoikkaConfig["customers"], "fields"> & {
 		fields: I extends { customers: { fields: infer F extends readonly FieldDef[] } }
-			? F
+			? DeclaredFields<F>
 			: readonly FieldDef[];
 	};
 };

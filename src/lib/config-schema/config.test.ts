@@ -83,6 +83,14 @@ describe("defineHoikkaConfig", () => {
 		expectTypeOf(
 			customFields(config.customers.fields, { customFields: {} }).creditLimit
 		).toEqualTypeOf<number | undefined>();
+		// Iterating a declared list still sees FieldDef's optional properties
+		expectTypeOf(config.customers.fields[0].required).toEqualTypeOf<boolean | undefined>();
+		expectTypeOf(
+			config.collections.fields.filter((def) => !def.readOnly)[0].help
+		).toEqualTypeOf<string | undefined>();
+		expectTypeOf(
+			config.productTypes.physical.fields.map((def) => def.storefront)[0]
+		).toEqualTypeOf<"hidden" | "read" | "edit" | undefined>();
 		const anyType: string = "physical";
 		expectTypeOf(config.productTypes[anyType]).toMatchTypeOf<{ label: string } | undefined>();
 	});
