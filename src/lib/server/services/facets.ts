@@ -18,13 +18,19 @@ export class FacetService {
 	/**
 	 * Create a new facet
 	 */
-	async create(input: { code: string; name: string; isHidden?: boolean }): Promise<Facet> {
+	async create(input: {
+		code: string;
+		name: string;
+		isHidden?: boolean;
+		searchable?: boolean;
+	}): Promise<Facet> {
 		const [facet] = await db
 			.insert(facets)
 			.values({
 				code: input.code,
 				name: input.name,
-				isHidden: input.isHidden ?? false
+				isHidden: input.isHidden ?? false,
+				searchable: input.searchable ?? false
 			})
 			.returning();
 
@@ -133,6 +139,7 @@ export class FacetService {
 			code?: string;
 			name?: string;
 			isHidden?: boolean;
+			searchable?: boolean;
 			position?: number;
 		}
 	): Promise<Facet | null> {
@@ -144,6 +151,7 @@ export class FacetService {
 		if (input.code) updateData.code = input.code;
 		if (input.name !== undefined) updateData.name = input.name;
 		if (input.isHidden !== undefined) updateData.isHidden = input.isHidden;
+		if (input.searchable !== undefined) updateData.searchable = input.searchable;
 		if (input.position !== undefined) updateData.position = input.position;
 
 		const [updated] = await db
@@ -233,6 +241,16 @@ export class FacetService {
 	async deleteValue(id: number): Promise<boolean> {
 		await db.delete(facetValues).where(eq(facetValues.id, id));
 		return true;
+	}
+
+	/** Products carrying any value of a facet (to reindex after its search text changes). */
+	async getProductIds(facetId: number): Promise<number[]> {
+		const rows = await db
+			.selectDistinct({ productId: productFacetValues.productId })
+			.from(productFacetValues)
+			.innerJoin(facetValues, eq(productFacetValues.facetValueId, facetValues.id))
+			.where(eq(facetValues.facetId, facetId));
+		return rows.map((r) => r.productId);
 	}
 
 	/**

@@ -8,6 +8,7 @@ Format: [Keep a Changelog](https://keepachangelog.com). `create-hoikka-app` scaf
 
 ### Added
 
+- **Searchable facets** (migration `0023`). Tick "Searchable" on a facet (a brand, a region) and product search matches its value names too, not just product names and descriptions; name matches still rank first. Off by default, so short values like sizes don't make every product match "m". Saving the facet reindexes its products.
 - **Facet and facet value order** (`position`, migration `0022`). Set a facet's position on its admin page and reorder its values with the arrow buttons (or "Sort A–Z"). `facetService.list()` and the storefront filters follow it, then the code as before, so nothing moves until you set positions. The admin no longer forces values into alphabetical order.
 
 ### Upgrade notes

@@ -5,6 +5,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 
 import { sql } from "drizzle-orm";
 import { db } from "../db/index.js";
+import { productFacetValues, products } from "../db/schema.js";
 import { facetService } from "./facets.js";
 
 describe("facet ordering", () => {
@@ -31,5 +32,22 @@ describe("facet ordering", () => {
 
 		const facet = await facetService.getById(size.id);
 		expect(facet?.values.map((v) => v.code)).toEqual(["s", "m", "l"]);
+	});
+
+	it("finds the products carrying any value of a facet", async () => {
+		const color = await facetService.create({ code: "color", name: "Color" });
+		const red = await facetService.createValue({ facetId: color.id, code: "red", name: "Red" });
+		const blue = await facetService.createValue({
+			facetId: color.id,
+			code: "blue",
+			name: "Blue"
+		});
+		const [shirt] = await db.insert(products).values({ name: "Shirt" }).returning();
+		await db.insert(productFacetValues).values([
+			{ productId: shirt.id, facetValueId: red.id },
+			{ productId: shirt.id, facetValueId: blue.id }
+		]);
+
+		expect(await facetService.getProductIds(color.id)).toEqual([shirt.id]);
 	});
 });

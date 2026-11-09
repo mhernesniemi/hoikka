@@ -81,7 +81,8 @@ export async function reindexProduct(db: Db, productId: number): Promise<void> {
 			facetCode: facets.code,
 			valueCode: facetValues.code,
 			valueName: facetValues.name,
-			facetValueId: facetValues.id
+			facetValueId: facetValues.id,
+			searchable: facets.searchable
 		})
 		.from(productFacetValues)
 		.innerJoin(facetValues, eq(productFacetValues.facetValueId, facetValues.id))
@@ -115,6 +116,12 @@ export async function reindexProduct(db: Db, productId: number): Promise<void> {
 		(variantFacetImages[row.facetCode] ??= {})[row.valueCode] = row.imageUrl;
 	}
 
+	// Values of searchable facets (brand, region…) match alongside the description
+	const searchText = [
+		product.description ?? "",
+		...productFacetRows.filter((r) => r.searchable).map((r) => r.valueName)
+	].join(" ");
+
 	await db.run(sql`DELETE FROM product_search_fts WHERE rowid = ${productId}`);
 	await db.run(sql`
 		INSERT INTO product_search_fts (
@@ -124,7 +131,7 @@ export async function reindexProduct(db: Db, productId: number): Promise<void> {
 		) VALUES (
 			${productId},
 			${product.name},
-			${product.description ?? ""},
+			${searchText},
 			${product.visibility},
 			${featuredAsset ? JSON.stringify(featuredAsset) : null},
 			${JSON.stringify(facetsJson)},

@@ -1,0 +1,1 @@
+ALTER TABLE `facets` ADD `searchable` integer DEFAULT false NOT NULL;

@@ -45,6 +45,7 @@
   let facetName = $state("");
   let facetCode = $state("");
   let facetIsHidden = $state(false);
+  let facetSearchable = $state(false);
   let facetPosition = $state(0);
   let values = $state<ValueEntry[]>([]);
   let valuesJson = $derived(JSON.stringify(values));
@@ -65,6 +66,7 @@
     facetName = data.facet.name ?? "";
     facetCode = data.facet.code;
     facetIsHidden = data.facet.isHidden;
+    facetSearchable = data.facet.searchable;
     facetPosition = data.facet.position;
     values = data.facet.values.map((v) => ({
       id: v.id,
@@ -100,6 +102,7 @@
       facetName !== (data.facet.name ?? "") ||
       facetCode !== data.facet.code ||
       facetIsHidden !== data.facet.isHidden ||
+      facetSearchable !== data.facet.searchable ||
       facetPosition !== data.facet.position ||
       JSON.stringify(values) !== originalValuesJson
     );
@@ -259,6 +262,7 @@
       >
         <input type="hidden" name="values_json" value={valuesJson} />
         <input type="hidden" name="is_hidden" value={facetIsHidden ? "on" : ""} />
+        <input type="hidden" name="searchable" value={facetSearchable ? "on" : ""} />
         <input type="hidden" name="position" value={facetPosition} />
         <TranslationEditor
           title="Facet Details"
@@ -380,6 +384,18 @@
           <label for="is_hidden" class="text-sm font-medium text-foreground-secondary">
             Hidden from storefront filters
           </label>
+        </div>
+        <div class="mt-4 flex items-start gap-2">
+          <Checkbox id="searchable" bind:checked={facetSearchable} class="mt-0.5" />
+          <div>
+            <label for="searchable" class="text-sm font-medium text-foreground-secondary">
+              Searchable
+            </label>
+            <p class="text-xs text-foreground-tertiary">
+              Product search matches these values, e.g. a brand. Leave off for short values like
+              sizes.
+            </p>
+          </div>
         </div>
         <div class="mt-4">
           <Label for="facet_position">Position</Label>

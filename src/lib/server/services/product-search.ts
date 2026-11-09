@@ -62,6 +62,7 @@ interface FtsRow {
 	name: string;
 	/** Joined from products — the FTS table itself doesn't store it */
 	slug: string | null;
+	/** Joined from products — the FTS column also holds searchable facet names */
 	description: string | null;
 	visibility: "public" | "private" | "draft";
 	featured_asset: string | null;
@@ -256,10 +257,11 @@ export async function listProducts(options: ListingOptions = {}): Promise<Listin
 		? ((await db.all(sql`
 			SELECT
 				rowid AS productId,
-				name, description, visibility,
+				name, visibility,
 				featured_asset, facets, variant_facet_images,
 				min_price, max_price, in_stock,
-				(SELECT slug FROM products WHERE id = product_search_fts.rowid) AS slug
+				(SELECT slug FROM products WHERE id = product_search_fts.rowid) AS slug,
+				(SELECT description FROM products WHERE id = product_search_fts.rowid) AS description
 			FROM product_search_fts
 			WHERE rowid IN (${sql.join(
 				pageIds.map((id) => sql`${id}`),

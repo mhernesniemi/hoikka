@@ -1,4 +1,5 @@
 import { facetService } from "#lib/server/services/facets.js";
+import { reindexProduct } from "#lib/server/services/product-search.js";
 import { translationService } from "#lib/server/services/translations.js";
 import { TRANSLATION_LANGUAGES } from "#lib/config/languages.js";
 import { dbError } from "#lib/server/db-error.js";
@@ -30,6 +31,7 @@ export const actions: Actions = {
 		const code = formData.get("code") as string;
 		const name = formData.get("name") as string;
 		const isHidden = formData.get("is_hidden") === "on";
+		const searchable = formData.get("searchable") === "on";
 		const position = Number(formData.get("position")) || 0;
 
 		if (!code || !name) {
@@ -41,6 +43,7 @@ export const actions: Actions = {
 				code: code.toLowerCase().replace(/\s+/g, "_"),
 				name: name,
 				isHidden,
+				searchable,
 				position
 			});
 
@@ -64,6 +67,7 @@ export const actions: Actions = {
 
 			// Delete removed values
 			const facet = await facetService.getById(id);
+			const wasSearchable = facet?.searchable ?? false;
 			if (facet) {
 				for (const existing of facet.values) {
 					if (!submittedIds.has(existing.id)) {
@@ -99,6 +103,13 @@ export const actions: Actions = {
 					await translationService.upsertFacetValueTranslation(valueId, lang.code, {
 						name: v.translations?.[lang.code] || ""
 					});
+				}
+			}
+
+			// Value names are part of the search text of a searchable facet
+			if (searchable || wasSearchable) {
+				for (const productId of await facetService.getProductIds(id)) {
+					await reindexProduct(productId);
 				}
 			}
 

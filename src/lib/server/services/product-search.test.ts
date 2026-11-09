@@ -51,7 +51,7 @@ describe("facet index listing", () => {
 		await db.run(sql`DELETE FROM facets`);
 		const [color, size] = await db
 			.insert(facets)
-			.values([{ code: "color" }, { code: "size" }])
+			.values([{ code: "color", searchable: true }, { code: "size" }])
 			.returning();
 		const values = await db
 			.insert(facetValues)
@@ -64,7 +64,7 @@ describe("facet index listing", () => {
 			.returning();
 		const id = (code: string) => values.find((v) => v.code === code)!.id;
 		await db.insert(products).values([
-			{ id: 1, name: "Shirt" },
+			{ id: 1, name: "Shirt", description: "Soft cotton." },
 			{ id: 2, name: "Hoodie" },
 			{ id: 3, name: "Cap" }
 		]);
@@ -111,6 +111,19 @@ describe("facet index listing", () => {
 		const next = await listProducts({ sort: "price-asc", limit: 2, page: 2 });
 		expect(next.items.map((p) => p.id)).toEqual([1]);
 		expect((await listProducts({ limit: 0 })).items).toEqual([]);
+	});
+
+	it("finds products by the value names of searchable facets only", async () => {
+		const { items } = await listProducts({ search: "blue" });
+		expect(items.map((p) => p.id)).toEqual([2]);
+		expect((await quickSearchProducts("red")).map((r) => r.id).sort()).toEqual([1, 3]);
+		// Size isn't searchable: "m" must not match every medium product
+		expect((await listProducts({ search: "m" })).items).toEqual([]);
+	});
+
+	it("returns the product description without the indexed facet names", async () => {
+		const { items } = await listProducts({ search: "soft" });
+		expect(items.map((p) => p.description)).toEqual(["Soft cotton."]);
 	});
 
 	it("sees a price change without a reindex", async () => {
