@@ -6,6 +6,10 @@ Format: [Keep a Changelog](https://keepachangelog.com). `create-hoikka-app` scaf
 
 ## [Unreleased]
 
+### Added
+
+- **Facet and facet value order** (`position`, migration `0022`). Set a facet's position on its admin page and reorder its values with the arrow buttons (or "Sort A–Z"). `facetService.list()` and the storefront filters follow it, then the code as before, so nothing moves until you set positions. The admin no longer forces values into alphabetical order.
+
 ### Upgrade notes
 
 - **`ProductCard` takes a `CachedProduct`** (a listing row from `listProducts`) instead of a `ProductWithRelations`, and its `grayscale` and `showFromPrice` props are gone (a price range is detected from `minPrice`/`maxPrice`). `relatedProductService.getRelatedProducts(productId, limit, customerId)` returns listing rows too, in their admin-set order. A storefront of your own that passes full products to the card should load them with `listProducts({ productIds })`.

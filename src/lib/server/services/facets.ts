@@ -57,7 +57,7 @@ export class FacetService {
 	 * List all facets
 	 */
 	async list(): Promise<FacetWithValues[]> {
-		const facetList = await db.select().from(facets).orderBy(facets.code);
+		const facetList = await db.select().from(facets).orderBy(facets.position, facets.code);
 
 		return Promise.all(facetList.map((f: Facet) => this.loadFacetWithValues(f)));
 	}
@@ -133,6 +133,7 @@ export class FacetService {
 			code?: string;
 			name?: string;
 			isHidden?: boolean;
+			position?: number;
 		}
 	): Promise<Facet | null> {
 		const [facet] = await db.select().from(facets).where(eq(facets.id, id));
@@ -143,6 +144,7 @@ export class FacetService {
 		if (input.code) updateData.code = input.code;
 		if (input.name !== undefined) updateData.name = input.name;
 		if (input.isHidden !== undefined) updateData.isHidden = input.isHidden;
+		if (input.position !== undefined) updateData.position = input.position;
 
 		const [updated] = await db
 			.update(facets)
@@ -168,13 +170,19 @@ export class FacetService {
 	/**
 	 * Create a facet value
 	 */
-	async createValue(input: { facetId: number; code: string; name: string }): Promise<FacetValue> {
+	async createValue(input: {
+		facetId: number;
+		code: string;
+		name: string;
+		position?: number;
+	}): Promise<FacetValue> {
 		const [value] = await db
 			.insert(facetValues)
 			.values({
 				facetId: input.facetId,
 				code: input.code,
-				name: input.name
+				name: input.name,
+				position: input.position ?? 0
 			})
 			.returning();
 
@@ -198,6 +206,7 @@ export class FacetService {
 		input: {
 			code?: string;
 			name?: string;
+			position?: number;
 		}
 	): Promise<FacetValue | null> {
 		const [value] = await db.select().from(facetValues).where(eq(facetValues.id, id));
@@ -207,6 +216,7 @@ export class FacetService {
 		const updateData: Record<string, unknown> = {};
 		if (input.code) updateData.code = input.code;
 		if (input.name !== undefined) updateData.name = input.name;
+		if (input.position !== undefined) updateData.position = input.position;
 
 		const [updated] = await db
 			.update(facetValues)
@@ -247,7 +257,7 @@ export class FacetService {
 			.select()
 			.from(facetValues)
 			.where(eq(facetValues.facetId, facet.id))
-			.orderBy(facetValues.code);
+			.orderBy(facetValues.position, facetValues.code);
 
 		return {
 			...facet,

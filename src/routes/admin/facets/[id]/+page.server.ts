@@ -30,6 +30,7 @@ export const actions: Actions = {
 		const code = formData.get("code") as string;
 		const name = formData.get("name") as string;
 		const isHidden = formData.get("is_hidden") === "on";
+		const position = Number(formData.get("position")) || 0;
 
 		if (!code || !name) {
 			return fail(400, { error: "All fields are required" });
@@ -39,7 +40,8 @@ export const actions: Actions = {
 			await facetService.update(id, {
 				code: code.toLowerCase().replace(/\s+/g, "_"),
 				name: name,
-				isHidden
+				isHidden,
+				position
 			});
 
 			// Save facet translations
@@ -70,20 +72,25 @@ export const actions: Actions = {
 				}
 			}
 
-			// Create or update values
-			for (const v of submittedValues) {
+			// Create or update values; their order in the list is their position
+			for (const [position, v] of submittedValues.entries()) {
 				if (!v.name || !v.code) continue;
 				const normalizedCode = v.code.toLowerCase().replace(/\s+/g, "_");
 
 				let valueId: number;
 				if (v.id) {
-					await facetService.updateValue(v.id, { name: v.name, code: normalizedCode });
+					await facetService.updateValue(v.id, {
+						name: v.name,
+						code: normalizedCode,
+						position
+					});
 					valueId = v.id;
 				} else {
 					const created = await facetService.createValue({
 						facetId: id,
 						name: v.name,
-						code: normalizedCode
+						code: normalizedCode,
+						position
 					});
 					valueId = created.id;
 				}

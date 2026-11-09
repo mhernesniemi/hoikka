@@ -12,6 +12,7 @@
     type = "button",
     variant = "default",
     size = "default",
+    disabled = false,
     class: className
   }: {
     icon: Component<{ class?: string }>;
@@ -21,6 +22,7 @@
     type?: "button" | "submit";
     variant?: "default" | "danger";
     size?: "default" | "sm";
+    disabled?: boolean;
     class?: string;
   } = $props();
 
@@ -52,7 +54,7 @@
         {/snippet}
       </Tooltip.Trigger>
     {:else}
-      <Tooltip.Trigger {type} class={btnClass} {onclick}>
+      <Tooltip.Trigger {type} class={btnClass} {onclick} {disabled}>
         {@render iconSlot()}
       </Tooltip.Trigger>
     {/if}

@@ -21,6 +21,8 @@
   import Plus from "@lucide/svelte/icons/plus";
   import Pencil from "@lucide/svelte/icons/pencil";
   import Trash2 from "@lucide/svelte/icons/trash-2";
+  import ArrowUp from "@lucide/svelte/icons/arrow-up";
+  import ArrowDown from "@lucide/svelte/icons/arrow-down";
   import ChevronLeft from "@lucide/svelte/icons/chevron-left";
   import type { PageData, ActionData } from "./$types";
 
@@ -43,6 +45,7 @@
   let facetName = $state("");
   let facetCode = $state("");
   let facetIsHidden = $state(false);
+  let facetPosition = $state(0);
   let values = $state<ValueEntry[]>([]);
   let valuesJson = $derived(JSON.stringify(values));
 
@@ -62,8 +65,23 @@
     facetName = data.facet.name ?? "";
     facetCode = data.facet.code;
     facetIsHidden = data.facet.isHidden;
-    values = data.facet.values
-      .map((v) => ({
+    facetPosition = data.facet.position;
+    values = data.facet.values.map((v) => ({
+      id: v.id,
+      name: v.name ?? "",
+      code: v.code,
+      translations: Object.fromEntries(
+        TRANSLATION_LANGUAGES.map((lang) => {
+          const t = data.valueTranslations[v.id]?.find((t) => t.languageCode === lang.code);
+          return [lang.code, t?.name ?? ""];
+        })
+      )
+    }));
+  });
+
+  const originalValuesJson = $derived(
+    JSON.stringify(
+      data.facet.values.map((v) => ({
         id: v.id,
         name: v.name ?? "",
         code: v.code,
@@ -74,24 +92,6 @@
           })
         )
       }))
-      .sort((a, b) => a.name.localeCompare(b.name));
-  });
-
-  const originalValuesJson = $derived(
-    JSON.stringify(
-      data.facet.values
-        .map((v) => ({
-          id: v.id,
-          name: v.name ?? "",
-          code: v.code,
-          translations: Object.fromEntries(
-            TRANSLATION_LANGUAGES.map((lang) => {
-              const t = data.valueTranslations[v.id]?.find((t) => t.languageCode === lang.code);
-              return [lang.code, t?.name ?? ""];
-            })
-          )
-        }))
-        .sort((a, b) => a.name.localeCompare(b.name))
     )
   );
 
@@ -100,6 +100,7 @@
       facetName !== (data.facet.name ?? "") ||
       facetCode !== data.facet.code ||
       facetIsHidden !== data.facet.isHidden ||
+      facetPosition !== data.facet.position ||
       JSON.stringify(values) !== originalValuesJson
     );
   });
@@ -131,7 +132,7 @@
       translations: Object.fromEntries(TRANSLATION_LANGUAGES.map((l) => [l.code, ""]))
     }));
 
-    values = [...values, ...newValues].sort((a, b) => a.name.localeCompare(b.name));
+    values = [...values, ...newValues];
     bulkInput = "";
   }
 
@@ -178,6 +179,16 @@
 
   function removeValue(index: number) {
     values = values.filter((_, j) => j !== index);
+  }
+
+  function moveValue(index: number, offset: -1 | 1) {
+    const next = [...values];
+    [next[index], next[index + offset]] = [next[index + offset], next[index]];
+    values = next;
+  }
+
+  function sortValuesByName() {
+    values = [...values].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
   }
 </script>
 
@@ -248,6 +259,7 @@
       >
         <input type="hidden" name="values_json" value={valuesJson} />
         <input type="hidden" name="is_hidden" value={facetIsHidden ? "on" : ""} />
+        <input type="hidden" name="position" value={facetPosition} />
         <TranslationEditor
           title="Facet Details"
           fields={[{ name: "name", label: "Name", type: "text" }]}
@@ -271,9 +283,17 @@
       <AdminCard title="Values" noPadding noBorder>
         {#snippet headerExtra()}
           <div class="border-b border-border px-6 py-4">
-            <p class="text-sm text-foreground-tertiary">
-              Add one or more values. Separate multiple with commas.
-            </p>
+            <div class="flex items-center justify-between gap-4">
+              <p class="text-sm text-foreground-tertiary">
+                Add one or more values. Separate multiple with commas. Filters list values in this
+                order.
+              </p>
+              {#if values.length > 1}
+                <Button type="button" variant="ghost" size="sm" onclick={sortValuesByName}>
+                  Sort A–Z
+                </Button>
+              {/if}
+            </div>
             <div class="mt-3 flex gap-2">
               <input
                 type="text"
@@ -318,6 +338,20 @@
                 </div>
                 <div class="flex shrink-0 items-center gap-1 pl-4">
                   <IconButton
+                    icon={ArrowUp}
+                    tooltip="Move up"
+                    size="sm"
+                    disabled={i === 0}
+                    onclick={() => moveValue(i, -1)}
+                  />
+                  <IconButton
+                    icon={ArrowDown}
+                    tooltip="Move down"
+                    size="sm"
+                    disabled={i === values.length - 1}
+                    onclick={() => moveValue(i, 1)}
+                  />
+                  <IconButton
                     icon={Pencil}
                     tooltip="Edit value"
                     size="sm"
@@ -346,6 +380,13 @@
           <label for="is_hidden" class="text-sm font-medium text-foreground-secondary">
             Hidden from storefront filters
           </label>
+        </div>
+        <div class="mt-4">
+          <Label for="facet_position">Position</Label>
+          <Input type="number" id="facet_position" bind:value={facetPosition} />
+          <p class="mt-1 text-xs text-foreground-tertiary">
+            Filters are listed by position, lowest first.
+          </p>
         </div>
       </AdminCard>
     </div>

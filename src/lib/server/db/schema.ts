@@ -231,6 +231,8 @@ export const facets = sqliteTable("facets", {
 	name: text("name").default("").notNull(),
 	code: text("code").notNull().unique(),
 	isHidden: bool("is_hidden").default(false).notNull(),
+	// Display order in storefront filters; ties fall back to the code
+	position: integer("position").default(0).notNull(),
 	createdAt: now(),
 	updatedAt: updatedNow()
 });
@@ -259,6 +261,7 @@ export const facetValues = sqliteTable(
 			.notNull(),
 		name: text("name").default("").notNull(),
 		code: text("code").notNull(),
+		position: integer("position").default(0).notNull(),
 		createdAt: now(),
 		updatedAt: updatedNow()
 	},
