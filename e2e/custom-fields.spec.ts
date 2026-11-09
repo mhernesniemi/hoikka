@@ -2,9 +2,10 @@ import { test, expect, type Page } from "@playwright/test";
 import { signInAsAdmin } from "./helpers";
 
 /**
- * The custom-fields round trip: hoikka.config.ts declares fields on the
- * physical product type; the admin edit form renders inputs for them; saving
- * stores them in the JSON column; the storefront product page shows them.
+ * The custom-fields round trip in the admin: hoikka.config.ts declares fields
+ * on the physical product type and on page templates; the edit forms render
+ * inputs for them and saving stores them in the JSON column. How the starter
+ * storefront shows them is in storefront/custom-fields.spec.ts.
  *
  * Requires an admin account — created through the first-run setup if the
  * database has none, signed in via the login form otherwise.
@@ -24,7 +25,7 @@ test.describe("custom fields", () => {
 		await page.close();
 	});
 
-	test("admin sets a config-declared field and the storefront shows it", async () => {
+	test("admin sets a config-declared product field", async () => {
 		// Open the first product's edit page
 		await page.goto("/admin/products");
 		await page.locator('a[href^="/admin/products/"]').first().click();
@@ -43,21 +44,10 @@ test.describe("custom fields", () => {
 		await page.waitForTimeout(1500);
 		await page.reload();
 		await expect(page.locator('input[name="cf_material"]')).toHaveValue("Recycled wool");
-
-		// ...and appear on the storefront product page as spec lines
-		const storefrontPath = await page
-			.locator('a[href^="/products/"]')
-			.first()
-			.getAttribute("href");
-		expect(storefrontPath).toBeTruthy();
-		await page.goto(storefrontPath!);
-		await expect(page.getByText("Material")).toBeVisible();
-		await expect(page.getByText("Recycled wool")).toBeVisible();
-		await expect(page.getByText("Weight (g)")).toBeVisible();
-		await expect(page.getByText("240")).toBeVisible();
+		await expect(page.locator('input[name="cf_weightGrams"]')).toHaveValue("240");
 	});
 
-	test("a content-page template's fields show on the storefront page", async () => {
+	test("admin sets a content-page template's field", async () => {
 		// The create dialog opens client-side, so wait for hydration
 		await page.goto("/admin/content-pages", { waitUntil: "networkidle" });
 		await page
@@ -76,12 +66,10 @@ test.describe("custom fields", () => {
 		await page.reload({ waitUntil: "networkidle" });
 		await expect(page.locator('input[name="cf_endsAt"]')).toHaveValue("2026-12-24");
 
-		// Unpublished, so this goes through the admin preview
-		const previewPath = await page.getByRole("link", { name: "Preview" }).getAttribute("href");
-		expect(previewPath).toContain("?preview");
-		await page.goto(previewPath!);
-		await expect(page.getByRole("heading", { name: "Winter campaign" })).toBeVisible();
-		await expect(page.locator("dt", { hasText: "Campaign ends" })).toBeVisible();
-		await expect(page.locator("dd", { hasText: "2026" })).toBeVisible();
+		// Unpublished, so the admin links to a preview
+		await expect(page.getByRole("link", { name: "Preview" })).toHaveAttribute(
+			"href",
+			/\?preview/
+		);
 	});
 });

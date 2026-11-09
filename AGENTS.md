@@ -11,6 +11,7 @@
 
 ## Tools
 
+- E2E specs in `e2e/` cover the admin and core flows; `e2e/storefront/` drives the starter storefront and is rewritten or deleted along with it.
 - Run `./scripts/svelte-check.sh --threshold error` for type checking. This wrapper runs `svelte-kit sync` + `svelte-check` and then restores the timestamps of unchanged `.svelte-kit/generated/` files, so a running Vite dev server doesn't see spurious changes and crash.
 - After modifying files, run `pnpm exec prettier --write <files>` on the changed files to format them.
 - When making changes to the DB schema, generate a migration with `pnpm db:generate`. On the Node target, migrations apply automatically when the server starts (dev or production). On the Cloudflare target, apply them with `pnpm db:migrate:cf` (`wrangler d1 migrations apply`). Do **not** use `drizzle-kit push`.

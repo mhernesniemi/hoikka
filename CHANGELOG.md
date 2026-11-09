@@ -17,6 +17,7 @@ Format: [Keep a Changelog](https://keepachangelog.com). `create-hoikka-app` scaf
 
 ### Changed
 
+- **E2E specs that drive the starter storefront moved to `e2e/storefront/`** (smoke, checkout, receipt access, provisioned customer, and how custom fields render). The specs left in `e2e/` cover the admin and core flows and keep passing when you replace the storefront; rewrite or delete the storefront ones with it. The custom-fields spec is split: admin persistence stays, storefront rendering moved.
 - **The storefront routes the edge cache serves and a `requireSignIn` store leaves open are plain path lists** (`CACHED_PATHS` in `edge-cache.ts`, `SIGN_IN_PUBLIC_PATHS` in `hooks.server.ts`) instead of a regex and an exact-match set. Edit them when your storefront has other routes; a path covers everything below it, `"/"` only the front page.
 - **Product cards render listing rows everywhere.** The listing no longer converts each row into a fake `ProductWithRelations` (`toProductCard`); the front page and related products load from the search index too, so a card shows the same data wherever it appears.
 

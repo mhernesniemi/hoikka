@@ -1,15 +1,15 @@
 import { test, expect } from "@playwright/test";
 import Database from "better-sqlite3";
+import { E2E_DB_PATH } from "../helpers.js";
 
 /**
  * A customer created ahead of their login (an import, an ERP sync) sets a
  * password through "forgot password" and signs in to their own record.
  */
-const DB_PATH = "./data/e2e-test.db";
 
 test("a pre-created customer sets a password and signs in to their record", async ({ page }) => {
 	const email = `provisioned-${Date.now()}@test.local`;
-	const sqlite = new Database(DB_PATH);
+	const sqlite = new Database(E2E_DB_PATH);
 	const now = Date.now();
 	sqlite
 		.prepare(
