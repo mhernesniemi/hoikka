@@ -22,6 +22,7 @@ Format: [Keep a Changelog](https://keepachangelog.com). `create-hoikka-app` scaf
 
 ### Fixed
 
+- **A configured shipping or payment label shows on a new store.** Migration `0002` seeds the built-in methods as "Standard Shipping", "Mock Payment" and "Stripe" before any config is read, and the config sync never touched existing rows, so `flatRate({ label: "…" })` never appeared. A row still carrying its seeded name now takes the configured label; names edited in the admin are kept.
 - **Related products no longer show draft or private products** on the storefront product page.
 - **No more SvelteKit link-option warnings in the console.** The starter storefront used `data-sveltekit-preload-data="viewport"`, which SvelteKit 3 doesn't accept (it falls back to hover preloading), and the deprecated `data-sveltekit-keepfocus`, now `data-sveltekit-reset="false"`.
 - **`slugify` keeps accented letters as their base letter** (`Itävalta` → `itavalta`, `Crémant` → `cremant`). It dropped them, so admin-generated slugs and codes for non-English names came out broken (`it-valta`). Existing slugs are not changed.
